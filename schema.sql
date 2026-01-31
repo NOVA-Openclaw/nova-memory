@@ -275,3 +275,34 @@ FROM tasks t
 LEFT JOIN projects p ON t.project_id = p.id
 WHERE t.status IN ('pending', 'in_progress', 'blocked')
 ORDER BY t.priority, t.due_date NULLS LAST;
+
+-- Standard Operating Procedures
+CREATE TABLE IF NOT EXISTS sops (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    steps JSONB,
+    tools TEXT[],
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sops_name ON sops(name);
+
+-- Link SOPs to projects
+CREATE TABLE IF NOT EXISTS project_sops (
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    sop_id INTEGER NOT NULL REFERENCES sops(id) ON DELETE CASCADE,
+    PRIMARY KEY (project_id, sop_id)
+);
+
+-- Vocabulary for STT correction
+CREATE TABLE IF NOT EXISTS vocabulary (
+    id SERIAL PRIMARY KEY,
+    word VARCHAR(255) NOT NULL UNIQUE,
+    category VARCHAR(100),
+    pronunciation VARCHAR(255),
+    misheard_as TEXT[],
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

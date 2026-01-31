@@ -1,165 +1,164 @@
-# NOVA Memory System - Architecture
+# NOVA Memory Architecture
 
-## Data Flow Overview
+## Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        MESSAGE PROCESSING FLOW                           │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐                                                        │
-│  │   Incoming   │  Signal, Telegram, Discord, etc.                       │
-│  │   Message    │                                                        │
-│  └──────┬───────┘                                                        │
-│         │                                                                │
-│         ▼                                                                │
-│  ┌──────────────┐     ┌─────────────────┐                               │
-│  │   Clawdbot   │────►│  Claude API     │  Main conversation            │
-│  │   Gateway    │◄────│  (Response)     │                               │
-│  └──────┬───────┘     └─────────────────┘                               │
-│         │                                                                │
-│         │ After response (async)                                         │
-│         ▼                                                                │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │                    MEMORY EXTRACTION PIPELINE                     │   │
-│  │                                                                   │   │
-│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐   │   │
-│  │  │ process-    │───►│ extract-    │───►│ store-memories.sh   │   │   │
-│  │  │ input.sh    │    │ memories.sh │    │                     │   │   │
-│  │  │             │    │             │    │ Inserts into        │   │   │
-│  │  │ Entry point │    │ Claude API  │    │ PostgreSQL          │   │   │
-│  │  │             │    │ parses text │    │                     │   │   │
-│  │  └─────────────┘    └─────────────┘    └──────────┬──────────┘   │   │
-│  │                                                    │              │   │
-│  └────────────────────────────────────────────────────│──────────────┘   │
-│                                                       │                  │
-│                                                       ▼                  │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │                     POSTGRESQL DATABASE                           │   │
-│  │                                                                   │   │
-│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────────────┐ │   │
-│  │  │ entities  │ │  places   │ │  events   │ │ entity_facts      │ │   │
-│  │  │           │ │           │ │           │ │                   │ │   │
-│  │  │ People,   │ │ Locations │ │ Timeline  │ │ Key-value facts   │ │   │
-│  │  │ AIs, orgs │ │ venues    │ │ of events │ │ about entities    │ │   │
-│  │  └───────────┘ └───────────┘ └───────────┘ └───────────────────┘ │   │
-│  │                                                                   │   │
-│  │  ┌───────────────────┐ ┌───────────┐ ┌─────────────────────────┐ │   │
-│  │  │ entity_           │ │ projects  │ │ lessons / preferences   │ │   │
-│  │  │ relationships     │ │           │ │                         │ │   │
-│  │  │                   │ │ Tasks &   │ │ Learned insights &      │ │   │
-│  │  │ Connections       │ │ status    │ │ user preferences        │ │   │
-│  │  └───────────────────┘ └───────────┘ └─────────────────────────┘ │   │
-│  │                                                                   │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-│                              ▲                                           │
-│                              │ Query at session start                    │
-│                              │                                           │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │                      MEMORY RECALL                                │   │
-│  │                                                                   │   │
-│  │  memory_search tool → Semantic search MEMORY.md + memory/*.md    │   │
-│  │  memory_get tool    → Retrieve specific lines from memory files  │   │
-│  │  SQL queries        → Direct database lookups for structured data│   │
-│  │                                                                   │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-## Integration Points
-
-### 1. Current: Manual/On-Demand Processing
-
-Scripts can be run manually to process specific text:
-
-```bash
-# Process a single statement
-./scripts/process-input.sh "User said they love coffee from Blue Bottle"
-
-# Process a conversation log
-cat conversation.txt | ./scripts/process-input.sh
-```
-
-### 2. Planned: Heartbeat Integration
-
-During periodic heartbeat checks, process recent conversation context:
-
-```bash
-# In HEARTBEAT.md or cron job
-# Extract memories from recent messages
-recent_messages | ./scripts/process-input.sh
-```
-
-### 3. Planned: Real-time Processing
-
-Hook into Clawdbot message pipeline to process each message:
+NOVA uses a multi-layer memory system designed to handle different types of information with appropriate persistence and access patterns.
 
 ```
-Message received → Response generated → Async: extract & store memories
+┌─────────────────────────────────────────────────────────────────┐
+│                     MEMORY HIERARCHY                            │
+├─────────────────────────────────────────────────────────────────┤
+│  PERMANENT (PERMANENT.md)     │ Core context, refreshed every   │
+│  - Critical facts             │ 30 min via cron. Never forget.  │
+│  - Memory architecture        │                                 │
+│  - SOPs reminder              │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│  LONG-TERM (PostgreSQL)       │ Structured data, queryable,     │
+│  - Entities & relationships   │ survives indefinitely.          │
+│  - Events & timeline          │ PRIMARY source of truth.        │
+│  - SOPs & procedures          │                                 │
+│  - Lessons learned            │                                 │
+│  - Vocabulary for STT         │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│  SHORT-TERM (MEMORY.md)       │ Working notes, curated context. │
+│  - Recent decisions           │ Migrated to DB over time.       │
+│  - Active context             │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│  DAILY (memory/YYYY-MM-DD.md) │ Raw session logs, scratch.      │
+│  - Session notes              │ Reviewed and archived.          │
+│  - Temporary context          │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│  SEMANTIC (Clawdbot SQLite)   │ Embeddings for memory_search.   │
+│  - Vector search over files   │ Auto-indexed by Clawdbot.       │
+│  - Full-text search           │                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Script Details
+## PERMANENT Memory (PERMANENT.md)
 
-### extract-memories.sh
+**Purpose:** Core context that must never be forgotten, even after context compaction.
 
-**Input:** Natural language text (string)
-**Output:** Structured JSON
+**Location:** `~/clawd/PERMANENT.md`
 
-Uses Claude API with a carefully crafted prompt to identify:
-- Named entities (people, places, things)
-- Facts (objective information)
-- Opinions (subjective, attributed to holder)
-- Preferences (likes/dislikes)
-- Events (things that happened)
-- Relationships (connections between entities)
+**Refresh:** Cron job every 30 minutes triggers a system event to re-read this file.
 
-**Key feature:** Distinguishes between facts and opinions, always attributing opinions to the person who holds them.
+**Contents:**
+- Memory architecture overview (PostgreSQL = primary, MEMORY.md = secondary)
+- Reminder that SOPs table exists
+- Critical entity IDs (I)ruid, NOVA)
+- Key behaviors (database first, log events, check SOPs)
 
-### store-memories.sh
+This prevents the failure mode where the AI "forgets" it has extended memory capabilities.
 
-**Input:** JSON from extract-memories.sh
-**Output:** Database insertions
+## Long-Term Memory (PostgreSQL)
 
-Maps extracted data to database tables:
-- `entities[]` → `entities` table
-- `places[]` → `places` table  
-- `facts[]` → `entity_facts` table
-- `opinions[]` → `entity_facts` with `opinion_` prefix
-- `preferences[]` → `entity_facts` with `preference_` prefix
+**Database:** `nova_memory` on localhost
 
-### process-input.sh
+**Priority:** PRIMARY — always check database before flat files.
 
-**Input:** Natural language text
-**Output:** JSON + database insertions
+### Core Tables
 
-Convenience wrapper that chains extract → store.
+| Table | Purpose |
+|-------|---------|
+| `entities` | People, AIs, organizations — things with agency |
+| `entity_facts` | Key-value facts about entities |
+| `entity_relationships` | Connections between entities |
+| `places` | Locations, networks, venues |
+| `projects` | Active efforts with goals |
+| `tasks` | Actionable items linked to projects |
+| `events` | Timeline of what happened |
+| `lessons` | Things learned from experience |
+| `sops` | Standard Operating Procedures |
+| `vocabulary` | Words for STT correction |
+| `preferences` | User and system preferences |
 
-## Memory Recall
+### SOPs (Standard Operating Procedures)
 
-The stored memories are accessed via:
+The `sops` table stores documented procedures for recurring tasks.
 
-1. **Semantic search** - `memory_search` tool searches markdown files
-2. **Direct SQL** - Query database for structured lookups
-3. **Session context** - Key facts loaded at session start
-
-Example queries:
 ```sql
--- Get all facts about a person
-SELECT * FROM v_entity_facts WHERE entity_name = 'I)ruid';
-
--- Get relationships
-SELECT * FROM v_relationships WHERE entity1 = 'NOVA';
-
--- Find places by type
-SELECT * FROM places WHERE type = 'restaurant';
+SELECT name, description FROM sops;
+SELECT * FROM sops WHERE name ILIKE '%keyword%';
 ```
 
-## Future Enhancements
+Before performing any recurring task, check if an SOP exists.
 
-- [ ] Real-time message hook in Clawdbot
-- [ ] Confidence decay over time
-- [ ] Contradiction detection
-- [ ] Memory consolidation (merge related facts)
-- [ ] Vector embeddings for semantic search
+### Vocabulary (STT Correction)
+
+The `vocabulary` table helps speech-to-text correct unusual words.
+
+```sql
+-- Words with their misheard variants
+SELECT word, misheard_as FROM vocabulary;
+```
+
+When the memory extraction pipeline finds new vocabulary, it adds them here and the STT service auto-restarts to load them.
+
+## Short-Term Memory (MEMORY.md)
+
+**Location:** `~/clawd/MEMORY.md`
+
+**Purpose:** Curated working notes, active context.
+
+**Lifecycle:** Information here should eventually migrate to the database.
+
+Only loaded in main sessions (direct chats with the human). Not loaded in group chats or shared contexts for security.
+
+## Daily Notes (memory/YYYY-MM-DD.md)
+
+**Location:** `~/clawd/memory/YYYY-MM-DD.md`
+
+**Purpose:** Raw session logs, scratch space.
+
+**Lifecycle:** Reviewed periodically, significant items extracted to database, then archived.
+
+## Semantic Memory (Clawdbot SQLite)
+
+**Location:** `~/.clawdbot/memory/main.sqlite`
+
+**Purpose:** Powers the `memory_search` tool.
+
+Clawdbot automatically indexes workspace markdown files and stores embeddings for semantic search. This is separate from the PostgreSQL long-term memory.
+
+## Memory Extraction Pipeline
+
+A cron job runs every minute to extract memories from chat:
+
+```
+Chat transcript → memory-catchup.sh (every 1 min)
+               → extract-memories.sh (Claude extracts 8 categories)
+               → store-memories.sh (inserts to PostgreSQL)
+               → New vocabulary? → STT service restarts
+```
+
+### Extraction Categories
+
+1. **entities** — People, AIs, organizations
+2. **places** — Locations, venues
+3. **facts** — Objective information
+4. **opinions** — Subjective views (with holder)
+5. **preferences** — Likes/dislikes
+6. **events** — Things that happened
+7. **relationships** — Connections
+8. **vocabulary** — Words for STT
+
+## Data Flow
+
+```
+User speaks → STT (Whisper + vocabulary corrections)
+           → Chat → Response
+           → Memory extraction (async, 1/min)
+           → PostgreSQL
+
+Query needed → Check PostgreSQL first
+            → Then MEMORY.md
+            → Then memory_search (semantic)
+```
+
+## Key Principles
+
+1. **Database first** — PostgreSQL is the source of truth
+2. **SOPs exist** — Check before improvising recurring tasks  
+3. **PERMANENT refreshes** — Core context reloads every 30 min
+4. **Log important events** — Use `events` table, not just markdown
+5. **Vocabulary grows** — New words auto-extracted and loaded to STT
