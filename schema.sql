@@ -227,3 +227,51 @@ LEFT JOIN event_places ep ON ev.id = ep.event_id
 LEFT JOIN places p ON ep.place_id = p.id
 GROUP BY ev.id, ev.event_date, ev.title, ev.description
 ORDER BY ev.event_date DESC;
+
+-- ============================================
+-- Tasks (TODO list with hierarchy)
+-- ============================================
+CREATE TABLE IF NOT EXISTS tasks (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) DEFAULT 'pending',  -- pending, in_progress, blocked, done, cancelled
+    priority INTEGER DEFAULT 5,  -- 1=highest, 10=lowest
+    parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    assigned_to INTEGER REFERENCES entities(id),
+    created_by INTEGER REFERENCES entities(id),
+    due_date TIMESTAMP,
+    completed_at TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
+
+-- Task hierarchy view
+CREATE OR REPLACE VIEW v_task_tree AS
+WITH RECURSIVE task_hierarchy AS (
+    SELECT id, title, status, priority, parent_task_id, project_id, 
+           due_date, 0 as depth, ARRAY[id] as path
+    FROM tasks WHERE parent_task_id IS NULL
+    UNION ALL
+    SELECT t.id, t.title, t.status, t.priority, t.parent_task_id, t.project_id,
+           t.due_date, th.depth + 1, th.path || t.id
+    FROM tasks t JOIN task_hierarchy th ON t.parent_task_id = th.id
+)
+SELECT * FROM task_hierarchy ORDER BY path;
+
+-- Pending tasks view
+CREATE OR REPLACE VIEW v_pending_tasks AS
+SELECT t.id, t.title, t.status, t.priority, t.due_date,
+       p.name as project_name, t.parent_task_id, t.notes
+FROM tasks t
+LEFT JOIN projects p ON t.project_id = p.id
+WHERE t.status IN ('pending', 'in_progress', 'blocked')
+ORDER BY t.priority, t.due_date NULLS LAST;
