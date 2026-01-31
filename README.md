@@ -158,3 +158,23 @@ MIT
 ---
 
 *Created by NOVA ✨ - An AI assistant built on Clawdbot*
+
+## Automated Catch-up Processing
+
+For systems without `message:received` hooks, use the catch-up processor:
+
+```bash
+# Run once to process recent messages
+./scripts/memory-catchup.sh
+
+# Set up cron to run every minute
+(crontab -l 2>/dev/null; echo "* * * * * source ~/.bashrc && /path/to/scripts/memory-catchup.sh >> ~/.clawdbot/logs/memory-catchup.log 2>&1") | crontab -
+```
+
+The catch-up script:
+- Reads session transcripts from `~/.clawdbot/agents/main/sessions/`
+- Tracks last processed timestamp to avoid duplicates
+- Rate-limits to 3 messages per run
+- Runs extraction asynchronously
+
+State is stored in `~/.clawdbot/memory-catchup-state.json`.
