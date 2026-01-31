@@ -92,7 +92,8 @@ All credentials stored in **1Password → NOVA Shared Vault**
 
 ## Preferences & Lessons
 
-- Acknowledge directives with "Yes, Sir." not casual "Got it!"
+- **Yes/No questions:** Answer with "Yes, Sir." or "No, Sir." FIRST, then explanation after
+- **Acknowledge directives:** "Yes, Sir." not casual "Got it!"
 - Store credentials immediately when creating accounts
 - Use 1Password's shared vault (NOVA Shared Vault) by default
 - Alpha Vantage: execution only, web search for research
