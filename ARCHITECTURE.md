@@ -8,11 +8,6 @@ NOVA uses a multi-layer memory system designed to handle different types of info
 ┌─────────────────────────────────────────────────────────────────┐
 │                     MEMORY HIERARCHY                            │
 ├─────────────────────────────────────────────────────────────────┤
-│  PERMANENT (PERMANENT.md)     │ Core context, refreshed every   │
-│  - Critical facts             │ 30 min via cron. Never forget.  │
-│  - Memory architecture        │                                 │
-│  - SOPs reminder              │                                 │
-├───────────────────────────────┼─────────────────────────────────┤
 │  LONG-TERM (PostgreSQL)       │ Structured data, queryable,     │
 │  - Entities & relationships   │ survives indefinitely.          │
 │  - Events & timeline          │ PRIMARY source of truth.        │
@@ -20,13 +15,19 @@ NOVA uses a multi-layer memory system designed to handle different types of info
 │  - Lessons learned            │                                 │
 │  - Vocabulary for STT         │                                 │
 ├───────────────────────────────┼─────────────────────────────────┤
-│  SHORT-TERM (MEMORY.md)       │ Working notes, curated context. │
-│  - Recent decisions           │ Migrated to DB over time.       │
-│  - Active context             │                                 │
+│  SHORT-TERM (MEMORY.md)       │ Working notes loaded every turn │
+│  - Quick reference            │ Behavioral reminders included.  │
+│  - Active context             │ Keep lean (~2-3KB).             │
+│  - Key preferences            │                                 │
 ├───────────────────────────────┼─────────────────────────────────┤
 │  DAILY (memory/YYYY-MM-DD.md) │ Raw session logs, scratch.      │
 │  - Session notes              │ Reviewed and archived.          │
 │  - Temporary context          │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│  PERIODIC (REMINDERS.md)      │ Actions executed every 30 min   │
+│  - Scan 1Password vault       │ via cron. Keeps memory fresh.   │
+│  - Check SOPs from database   │                                 │
+│  - Review pending tasks       │                                 │
 ├───────────────────────────────┼─────────────────────────────────┤
 │  SEMANTIC (Clawdbot SQLite)   │ Embeddings for memory_search.   │
 │  - Vector search over files   │ Auto-indexed by Clawdbot.       │
@@ -34,29 +35,17 @@ NOVA uses a multi-layer memory system designed to handle different types of info
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## PERMANENT Memory (PERMANENT.md)
+## Memory Tiers Explained
 
-**Purpose:** Core context that must never be forgotten, even after context compaction.
-
-**Location:** `~/clawd/PERMANENT.md`
-
-**Refresh:** Cron job every 30 minutes triggers a system event to re-read this file.
-
-**Contents:**
-- Memory architecture overview (PostgreSQL = primary, MEMORY.md = secondary)
-- Reminder that SOPs table exists
-- Critical entity IDs (I)ruid, NOVA)
-- Key behaviors (database first, log events, check SOPs)
-
-This prevents the failure mode where the AI "forgets" it has extended memory capabilities.
-
-## Long-Term Memory (PostgreSQL)
+### 1. Long-Term Memory (PostgreSQL) — PRIMARY
 
 **Database:** `nova_memory` on localhost
 
-**Priority:** PRIMARY — always check database before flat files.
+**Priority:** ALWAYS check database first before flat files.
 
-### Core Tables
+This is the source of truth for persistent information.
+
+#### Core Tables
 
 | Table | Purpose |
 |-------|---------|
@@ -72,7 +61,7 @@ This prevents the failure mode where the AI "forgets" it has extended memory cap
 | `vocabulary` | Words for STT correction |
 | `preferences` | User and system preferences |
 
-### SOPs (Standard Operating Procedures)
+#### SOPs (Standard Operating Procedures)
 
 The `sops` table stores documented procedures for recurring tasks.
 
@@ -83,36 +72,53 @@ SELECT * FROM sops WHERE name ILIKE '%keyword%';
 
 Before performing any recurring task, check if an SOP exists.
 
-### Vocabulary (STT Correction)
+### 2. Short-Term Memory (MEMORY.md) — Every Turn
 
-The `vocabulary` table helps speech-to-text correct unusual words.
+**Location:** `~/clawd/MEMORY.md` (workspace root)
 
-```sql
--- Words with their misheard variants
-SELECT word, misheard_as FROM vocabulary;
-```
+**Purpose:** Quick-reference context and behavioral reminders.
 
-When the memory extraction pipeline finds new vocabulary, it adds them here and the STT service auto-restarts to load them.
+**How it works:** Clawdbot automatically loads workspace files (MEMORY.md, AGENTS.md, etc.) into the system prompt at the start of every turn. This survives context compaction because it's re-read from disk each time.
 
-## Short-Term Memory (MEMORY.md)
+**Contents should include:**
+- Key entity IDs (e.g., I)ruid = Entity 2)
+- Important behaviors ("database first", "check SOPs")
+- Account/service quick reference
+- Active project status
+- Communication preferences
 
-**Location:** `~/clawd/MEMORY.md`
+**Keep it lean** — this loads every turn, so ~2-3KB is ideal.
 
-**Purpose:** Curated working notes, active context.
+**Security:** Only loaded in main sessions (direct chats). Not loaded in group chats or shared contexts.
 
-**Lifecycle:** Information here should eventually migrate to the database.
-
-Only loaded in main sessions (direct chats with the human). Not loaded in group chats or shared contexts for security.
-
-## Daily Notes (memory/YYYY-MM-DD.md)
+### 3. Daily Notes (memory/YYYY-MM-DD.md)
 
 **Location:** `~/clawd/memory/YYYY-MM-DD.md`
 
-**Purpose:** Raw session logs, scratch space.
+**Purpose:** Raw session logs and scratch space.
 
-**Lifecycle:** Reviewed periodically, significant items extracted to database, then archived.
+**Lifecycle:** 
+1. Log notable events during the day
+2. Review periodically
+3. Extract significant items to database
+4. Archive old daily files
 
-## Semantic Memory (Clawdbot SQLite)
+### 4. Periodic Reminders (REMINDERS.md) — Every 30 Minutes
+
+**Location:** `~/clawd/REMINDERS.md`
+
+**Purpose:** Actions to EXECUTE periodically, not just read.
+
+**How it works:** A cron job fires every 30 minutes, sending a system event that tells the agent to read REMINDERS.md and execute the listed actions.
+
+**Typical actions:**
+- Scan 1Password vault (`op item list`) to remember available accounts
+- Query SOPs from database to refresh procedural knowledge
+- Check pending tasks to stay on track
+
+See `REMINDERS.md` in this repo for the template.
+
+### 5. Semantic Memory (Clawdbot SQLite)
 
 **Location:** `~/.clawdbot/memory/main.sqlite`
 
@@ -153,12 +159,32 @@ User speaks → STT (Whisper + vocabulary corrections)
 Query needed → Check PostgreSQL first
             → Then MEMORY.md
             → Then memory_search (semantic)
+
+Every 30 min → Cron fires
+            → Read REMINDERS.md
+            → Execute scans (1Password, SOPs, tasks)
+            → Log findings to daily notes
 ```
 
 ## Key Principles
 
 1. **Database first** — PostgreSQL is the source of truth
-2. **SOPs exist** — Check before improvising recurring tasks  
-3. **PERMANENT refreshes** — Core context reloads every 30 min
-4. **Log important events** — Use `events` table, not just markdown
-5. **Vocabulary grows** — New words auto-extracted and loaded to STT
+2. **SOPs exist** — Check `sops` table before improvising recurring tasks
+3. **MEMORY.md is lean** — Quick reference only, loaded every turn
+4. **REMINDERS.md is active** — Execute actions, don't just read
+5. **Log important events** — Use `events` table, not just markdown
+6. **Vocabulary grows** — New words auto-extracted and loaded to STT
+
+## Modifications from Default Clawdbot
+
+This setup extends the default Clawdbot memory with:
+
+1. **PostgreSQL database** — Structured long-term storage (entities, events, SOPs, etc.)
+2. **Memory extraction pipeline** — Auto-extracts memories from chat every minute
+3. **REMINDERS.md + cron** — Periodic active scans to refresh memory
+4. **Vocabulary table** — STT correction words, auto-loaded on restart
+
+The default Clawdbot provides:
+- MEMORY.md/AGENTS.md workspace file injection
+- Semantic memory search via SQLite embeddings
+- Heartbeat system for periodic check-ins
