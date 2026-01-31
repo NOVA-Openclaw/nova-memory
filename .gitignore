@@ -1,0 +1,34 @@
+# Database dumps and backups
+*.dump
+*.backup
+*.sql.gz
+*.sql.bz2
+data/
+backups/
+
+# Credentials and secrets
+*.env
+.env*
+secrets/
+credentials/
+*.pem
+*.key
+
+# API keys or tokens
+api_key*
+*_token*
+*_secret*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
