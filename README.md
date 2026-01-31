@@ -134,7 +134,7 @@ export NOVA_MEMORY_SCRIPTS="/path/to/nova-memory/scripts"
 
 The hook listens for `message:received` events, which is currently **planned but not yet implemented** in Clawdbot. 
 
-**Feature Request:** https://github.com/clawdbot/clawdbot/issues/XXX
+**Feature Request:** https://github.com/openclaw/openclaw/issues/5053
 
 Once implemented, the hook will automatically extract and store memories from every incoming message.
 
