@@ -182,6 +182,51 @@ op item get "Discord" --fields POLICY
 
 This keeps access control decentralized — each resource carries its own rules, and periodic vault scans ensure you stay current on what's allowed.
 
+## Schema in Agent Memory Files
+
+For AI agents using this system with Clawdbot (or similar frameworks), **include a condensed schema reference in your MEMORY.md file**.
+
+### Why?
+
+- **Instant recall:** You'll know what tables/columns exist without querying `\d tablename`
+- **Fewer errors:** No more "column doesn't exist" mistakes from guessing column names
+- **Context efficiency:** A compact schema (~60 lines) is cheaper than repeated introspection queries
+- **Self-documenting:** Adding a "Purpose" column helps you understand *why* each table exists
+
+### Recommended Format
+
+```markdown
+### Database Schema (nova_memory)
+
+**People & Relationships:**
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `entities` | People, AIs, orgs I interact with | id, name, type, full_name |
+| `entity_facts` | Key-value facts about entities | entity_id, key, value |
+...
+```
+
+### What to Include
+
+1. **Table name** — exact name for queries
+2. **Purpose** — one-line description of what it stores
+3. **Key columns** — the columns you'll actually use (skip boilerplate like created_at)
+
+### Maintenance
+
+When you modify the schema:
+1. Update `schema.sql` in this repo
+2. Update your local `MEMORY.md` schema section
+3. Both should stay in sync
+
+### Where to Put It
+
+In Clawdbot's workspace structure:
+- `MEMORY.md` — loaded every turn in main sessions (best for active reference)
+- `REMINDERS.md` — only post-compaction (lower per-turn cost, but may forget mid-session)
+
+Start with MEMORY.md. If context bloat becomes an issue, move to REMINDERS.md.
+
 ## Contributing
 
 PRs welcome! Areas that need work:
