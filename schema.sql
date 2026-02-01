@@ -306,3 +306,37 @@ CREATE TABLE IF NOT EXISTS vocabulary (
     misheard_as TEXT[],
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================
+-- SCHEMA CHANGE NOTIFICATIONS
+-- ============================================
+-- Event trigger to notify external systems of DDL changes
+-- Requires superuser to create; run as postgres user
+
+CREATE OR REPLACE FUNCTION notify_schema_change()
+RETURNS event_trigger AS $$
+DECLARE
+    obj record;
+    payload text;
+BEGIN
+    FOR obj IN SELECT * FROM pg_event_trigger_ddl_commands()
+    LOOP
+        payload := json_build_object(
+            'command_tag', obj.command_tag,
+            'object_type', obj.object_type,
+            'schema_name', obj.schema_name,
+            'object_identity', obj.object_identity
+        )::text;
+        PERFORM pg_notify('schema_changed', payload);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Must be created by superuser (postgres)
+-- DROP EVENT TRIGGER IF EXISTS schema_change_trigger;
+-- CREATE EVENT TRIGGER schema_change_trigger
+--     ON ddl_command_end
+--     EXECUTE FUNCTION notify_schema_change();
+
+-- Note: A listener process should subscribe to LISTEN schema_changed;
+-- and notify the agent to update MEMORY.md and documentation when changes occur.
