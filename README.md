@@ -143,6 +143,45 @@ Once implemented, the hook will automatically extract and store memories from ev
 ./scripts/process-input.sh "User said: I love pizza from Mario's"
 ```
 
+## Resource Policies (1Password Integration)
+
+For resources that require access control (social media accounts, APIs, external services), we store **POLICY fields alongside credentials** in 1Password.
+
+### Why?
+
+When scanning credentials during periodic reminders, you also refresh on what actions are permitted. The policy lives with the credential — they stay in sync.
+
+### Pattern
+
+Add a `POLICY` text field to any 1Password item:
+
+```bash
+op item edit "X" "POLICY[text]=DO NOT respond to DMs. Posting requires approval."
+op item edit "Instagram" "POLICY[text]=Approved: Daily inspiration art. No DMs."
+op item edit "Discord" "POLICY[text]=Approved servers only. No DM responses to strangers."
+```
+
+### Scanning Policies
+
+During periodic scans (REMINDERS.md), check policies for sensitive accounts:
+
+```bash
+op item get "X" --fields POLICY
+op item get "Instagram" --fields POLICY
+op item get "Discord" --fields POLICY
+```
+
+### Example Policies
+
+| Resource | Policy |
+|----------|--------|
+| X/Twitter | No DM responses. Posting requires approval. |
+| Instagram | Daily inspiration art approved. No DM responses. |
+| Discord | Approved servers only. No DM responses to strangers. |
+| Email | Can send/receive freely. External newsletters require approval. |
+
+This keeps access control decentralized — each resource carries its own rules, and periodic vault scans ensure you stay current on what's allowed.
+
 ## Contributing
 
 PRs welcome! Areas that need work:
