@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5R9SFNX50xlV6kGUeqDnRhnUKaqgMST6Y4KMuHVKNYSOYdlfKhsStNGO1LAvOB8
+\restrict 26Izs58oxsEaInz4mC0OZMcx11lgF4AuXSzx7O3imZMf8xIb0xD8U0kVwghDDdU
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -903,7 +903,8 @@ CREATE TABLE public.tasks (
     completed_at timestamp without time zone,
     notes text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    task_number integer
 );
 
 
@@ -2044,5 +2045,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5R9SFNX50xlV6kGUeqDnRhnUKaqgMST6Y4KMuHVKNYSOYdlfKhsStNGO1LAvOB8
+\unrestrict 26Izs58oxsEaInz4mC0OZMcx11lgF4AuXSzx7O3imZMf8xIb0xD8U0kVwghDDdU
 
