@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict c5EUm6h2KHZGS1QieGt6nh6UEXyRFMaWBcYT9Xz94p7Vtxm4Cf3LYG5rjLXQCUG
+\restrict 5R9SFNX50xlV6kGUeqDnRhnUKaqgMST6Y4KMuHVKNYSOYdlfKhsStNGO1LAvOB8
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1176,6 +1176,13 @@ CREATE TABLE public.vocabulary (
 ALTER TABLE public.vocabulary OWNER TO nova;
 
 --
+-- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition';
+
+
+--
 -- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -2037,5 +2044,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict c5EUm6h2KHZGS1QieGt6nh6UEXyRFMaWBcYT9Xz94p7Vtxm4Cf3LYG5rjLXQCUG
+\unrestrict 5R9SFNX50xlV6kGUeqDnRhnUKaqgMST6Y4KMuHVKNYSOYdlfKhsStNGO1LAvOB8
 
