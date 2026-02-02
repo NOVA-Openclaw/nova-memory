@@ -127,4 +127,41 @@ echo "$JSON_DATA" | jq -c '.preferences[]? // empty' | while read -r pref; do
     echo "  + Preference: $person prefers $preference"
 done
 
+# Process vocabulary
+VOCAB_ADDED=0
+echo "$JSON_DATA" | jq -c '.vocabulary[]? // empty' | while read -r vocab; do
+    word=$(echo "$vocab" | jq -r '.word')
+    category=$(echo "$vocab" | jq -r '.category // "custom"')
+    misheard_raw=$(echo "$vocab" | jq -r '.misheard_as // [] | @json')
+    
+    # Convert JSON array to PostgreSQL array format
+    misheard_pg=$(echo "$misheard_raw" | jq -r 'if type == "array" then "ARRAY[" + (map("'\''" + . + "'\''") | join(",")) + "]" else "NULL" end')
+    
+    # Check if word already exists
+    existing=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "SELECT word FROM vocabulary WHERE word = '$(sql_escape "$word")' LIMIT 1;" 2>/dev/null)
+    
+    # Insert vocabulary word
+    if [ "$misheard_pg" != "NULL" ] && [ -n "$misheard_pg" ]; then
+        echo "INSERT INTO vocabulary (word, category, misheard_as) VALUES ('$(sql_escape "$word")', '$(sql_escape "$category")', $misheard_pg) ON CONFLICT (word) DO UPDATE SET misheard_as = EXCLUDED.misheard_as;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+    else
+        echo "INSERT INTO vocabulary (word, category) VALUES ('$(sql_escape "$word")', '$(sql_escape "$category")') ON CONFLICT (word) DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+    fi
+    
+    # Track if this was a new word
+    if [ -z "$existing" ]; then
+        echo "  + Vocabulary (NEW): $word ($category)"
+        echo "1" >> /tmp/vocab_added_flag
+    else
+        echo "  = Vocabulary (exists): $word"
+    fi
+done
+
+# Restart STT service if new vocabulary was added
+if [ -f /tmp/vocab_added_flag ]; then
+    NEW_COUNT=$(wc -l < /tmp/vocab_added_flag)
+    rm -f /tmp/vocab_added_flag
+    echo "  >> Restarting STT service to load $NEW_COUNT new vocabulary word(s)..."
+    systemctl --user restart nova-stt-ws 2>/dev/null || true
+fi
+
 echo "Memory storage complete."
