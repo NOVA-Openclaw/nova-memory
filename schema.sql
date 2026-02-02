@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict AARy6rg0o0hJZzL5p9LtXuJ1RLUzYO0DZalJpsIwRjRrKuW0YkWSaovTCkjGSUZ
+\restrict p4qXPPactQECrYwgHLwhLqqtI6dI2emghIJqcDcULsFF4fYcT3rU2d1F7oatyen
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -547,6 +547,13 @@ CREATE TABLE public.lessons (
 
 
 ALTER TABLE public.lessons OWNER TO nova;
+
+--
+-- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.lessons IS 'Lessons and insights learned by NOVA';
+
 
 --
 -- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -2030,5 +2037,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict AARy6rg0o0hJZzL5p9LtXuJ1RLUzYO0DZalJpsIwRjRrKuW0YkWSaovTCkjGSUZ
+\unrestrict p4qXPPactQECrYwgHLwhLqqtI6dI2emghIJqcDcULsFF4fYcT3rU2d1F7oatyen
 
