@@ -340,3 +340,53 @@ $$ LANGUAGE plpgsql;
 
 -- Note: A listener process should subscribe to LISTEN schema_changed;
 -- and notify the agent to update MEMORY.md and documentation when changes occur.
+
+-- ============================================
+-- VECTOR EMBEDDINGS (pgvector)
+-- ============================================
+-- Requires: CREATE EXTENSION vector;
+
+CREATE TABLE IF NOT EXISTS memory_embeddings (
+    id SERIAL PRIMARY KEY,
+    source_type VARCHAR(50) NOT NULL,  -- 'daily_log', 'memory_md', 'entity_fact', 'event', 'lesson'
+    source_id TEXT,                     -- Reference to source (filename, entity_id, event_id, etc.)
+    content TEXT NOT NULL,              -- Original text that was embedded
+    embedding vector(1536),             -- OpenAI text-embedding-3-small dimension
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast similarity search
+CREATE INDEX IF NOT EXISTS idx_memory_embeddings_vector 
+ON memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+CREATE INDEX IF NOT EXISTS idx_memory_embeddings_source 
+ON memory_embeddings(source_type);
+
+-- Semantic search function
+CREATE OR REPLACE FUNCTION search_memories(
+    query_embedding vector(1536),
+    match_count INT DEFAULT 5,
+    similarity_threshold FLOAT DEFAULT 0.7
+)
+RETURNS TABLE (
+    id INT,
+    source_type VARCHAR,
+    source_id TEXT,
+    content TEXT,
+    similarity FLOAT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        me.id,
+        me.source_type,
+        me.source_id,
+        me.content,
+        1 - (me.embedding <=> query_embedding) AS similarity
+    FROM memory_embeddings me
+    WHERE 1 - (me.embedding <=> query_embedding) > similarity_threshold
+    ORDER BY me.embedding <=> query_embedding
+    LIMIT match_count;
+END;
+$$ LANGUAGE plpgsql;
