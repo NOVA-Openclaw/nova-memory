@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict dxBhfWOH62zex97qXFfYgZqeVFmnsLkd1kAN5vMDtDC47VZ88TjDbZgpWacSdoR
+\restrict PeasuFY8iPXeKdLbAZ017zEqenjjmEhOY2U0cexBPuqlXmGNfEjiOHLqh7uD7hc
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -278,7 +278,8 @@ CREATE TABLE public.entity_facts (
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     visibility character varying(20) DEFAULT 'public'::character varying,
     privacy_scope integer[],
-    source_entity_id integer
+    source_entity_id integer,
+    visibility_reason text
 );
 
 
@@ -303,6 +304,13 @@ COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs expl
 --
 
 COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
+
+
+--
+-- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
 
 
 --
@@ -2022,5 +2030,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dxBhfWOH62zex97qXFfYgZqeVFmnsLkd1kAN5vMDtDC47VZ88TjDbZgpWacSdoR
+\unrestrict PeasuFY8iPXeKdLbAZ017zEqenjjmEhOY2U0cexBPuqlXmGNfEjiOHLqh7uD7hc
 

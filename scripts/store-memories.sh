@@ -122,20 +122,28 @@ echo "$JSON_DATA" | jq -c '.facts[]? // empty' | while read -r fact; do
     predicate=$(echo "$fact" | jq -r '.predicate')
     value=$(echo "$fact" | jq -r '.value')
     source_person=$(echo "$fact" | jq -r '.source_person // "auto-extracted"')
+    visibility=$(echo "$fact" | jq -r '.visibility // "public"')
+    visibility_reason=$(echo "$fact" | jq -r '.visibility_reason // empty')
     source_entity_id=$(resolve_source_entity_id "$source_person")
     
-    # Build source_entity_id clause
+    # Build column list and values
+    cols="entity_id, key, value, source, visibility"
+    vals="id, '$(sql_escape "$predicate")', '$(sql_escape "$value")', '$(sql_escape "$source_person")', '$(sql_escape "$visibility")'"
+    
     if [ -n "$source_entity_id" ]; then
-        src_id_clause=", source_entity_id) SELECT id, '$(sql_escape "$predicate")', '$(sql_escape "$value")', '$(sql_escape "$source_person")', $source_entity_id"
-    else
-        src_id_clause=") SELECT id, '$(sql_escape "$predicate")', '$(sql_escape "$value")', '$(sql_escape "$source_person")'"
+        cols="$cols, source_entity_id"
+        vals="$vals, $source_entity_id"
+    fi
+    if [ -n "$visibility_reason" ]; then
+        cols="$cols, visibility_reason"
+        vals="$vals, '$(sql_escape "$visibility_reason")'"
     fi
     
     # Try to add as entity_fact
-    echo "INSERT INTO entity_facts (entity_id, key, value, source${src_id_clause}
+    echo "INSERT INTO entity_facts ($cols) SELECT $vals
           FROM entities WHERE name = '$(sql_escape "$subject")'
           ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
-    echo "  + Fact: $subject.$predicate = $value (from: $source_person, entity_id: ${source_entity_id:-null})"
+    echo "  + Fact: $subject.$predicate = $value (vis: $visibility${visibility_reason:+, reason: $visibility_reason})"
 done
 
 # Process opinions
@@ -144,6 +152,8 @@ echo "$JSON_DATA" | jq -c '.opinions[]? // empty' | while read -r opinion; do
     subject=$(echo "$opinion" | jq -r '.subject')
     opinion_text=$(echo "$opinion" | jq -r '.opinion')
     source_person=$(echo "$opinion" | jq -r '.source_person // "auto-extracted"')
+    visibility=$(echo "$opinion" | jq -r '.visibility // "public"')
+    visibility_reason=$(echo "$opinion" | jq -r '.visibility_reason // empty')
     source_entity_id=$(resolve_source_entity_id "$source_person")
     
     # Find the actual entity name (match by nickname if needed)
@@ -152,18 +162,24 @@ echo "$JSON_DATA" | jq -c '.opinions[]? // empty' | while read -r opinion; do
         actual_holder="$holder"
     fi
     
-    # Build source_entity_id clause
+    # Build column list and values
+    cols="entity_id, key, value, source, visibility"
+    vals="id, 'opinion_$(sql_escape "$subject")', '$(sql_escape "$opinion_text")', '$(sql_escape "$source_person")', '$(sql_escape "$visibility")'"
+    
     if [ -n "$source_entity_id" ]; then
-        src_id_clause=", source_entity_id) SELECT id, 'opinion_$(sql_escape "$subject")', '$(sql_escape "$opinion_text")', '$(sql_escape "$source_person")', $source_entity_id"
-    else
-        src_id_clause=") SELECT id, 'opinion_$(sql_escape "$subject")', '$(sql_escape "$opinion_text")', '$(sql_escape "$source_person")'"
+        cols="$cols, source_entity_id"
+        vals="$vals, $source_entity_id"
+    fi
+    if [ -n "$visibility_reason" ]; then
+        cols="$cols, visibility_reason"
+        vals="$vals, '$(sql_escape "$visibility_reason")'"
     fi
     
     # Store as entity_fact with opinion prefix
-    echo "INSERT INTO entity_facts (entity_id, key, value, source${src_id_clause}
+    echo "INSERT INTO entity_facts ($cols) SELECT $vals
           FROM entities WHERE name = '$(sql_escape "$actual_holder")'
           ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
-    echo "  + Opinion: $actual_holder thinks '$opinion_text' about $subject (from: $source_person, entity_id: ${source_entity_id:-null})"
+    echo "  + Opinion: $actual_holder thinks '$opinion_text' about $subject (vis: $visibility${visibility_reason:+, reason: $visibility_reason})"
 done
 
 # Process preferences
@@ -172,19 +188,27 @@ echo "$JSON_DATA" | jq -c '.preferences[]? // empty' | while read -r pref; do
     preference=$(echo "$pref" | jq -r '.preference // .likes // .prefers')
     category=$(echo "$pref" | jq -r '.category // "general"')
     source_person=$(echo "$pref" | jq -r '.source_person // "auto-extracted"')
+    visibility=$(echo "$pref" | jq -r '.visibility // "public"')
+    visibility_reason=$(echo "$pref" | jq -r '.visibility_reason // empty')
     source_entity_id=$(resolve_source_entity_id "$source_person")
     
-    # Build source_entity_id clause
+    # Build column list and values
+    cols="entity_id, key, value, source, visibility"
+    vals="id, 'preference_$(sql_escape "$category")', '$(sql_escape "$preference")', '$(sql_escape "$source_person")', '$(sql_escape "$visibility")'"
+    
     if [ -n "$source_entity_id" ]; then
-        src_id_clause=", source_entity_id) SELECT id, 'preference_$(sql_escape "$category")', '$(sql_escape "$preference")', '$(sql_escape "$source_person")', $source_entity_id"
-    else
-        src_id_clause=") SELECT id, 'preference_$(sql_escape "$category")', '$(sql_escape "$preference")', '$(sql_escape "$source_person")'"
+        cols="$cols, source_entity_id"
+        vals="$vals, $source_entity_id"
+    fi
+    if [ -n "$visibility_reason" ]; then
+        cols="$cols, visibility_reason"
+        vals="$vals, '$(sql_escape "$visibility_reason")'"
     fi
     
-    echo "INSERT INTO entity_facts (entity_id, key, value, source${src_id_clause}
+    echo "INSERT INTO entity_facts ($cols) SELECT $vals
           FROM entities WHERE name = '$(sql_escape "$person")'
           ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
-    echo "  + Preference: $person prefers $preference (from: $source_person, entity_id: ${source_entity_id:-null})"
+    echo "  + Preference: $person prefers $preference (vis: $visibility${visibility_reason:+, reason: $visibility_reason})"
 done
 
 # Process vocabulary
