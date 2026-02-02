@@ -31,6 +31,22 @@ sql_escape() {
     echo "$1" | sed "s/'/''/g"
 }
 
+# Function to resolve source name to entity ID
+resolve_source_entity_id() {
+    local source_name="$1"
+    if [ -z "$source_name" ] || [ "$source_name" = "null" ] || [ "$source_name" = "unknown" ]; then
+        echo ""
+        return
+    fi
+    psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+        SELECT id FROM entities 
+        WHERE LOWER(name) = LOWER('$(sql_escape "$source_name")')
+           OR LOWER(full_name) = LOWER('$(sql_escape "$source_name")')
+           OR LOWER('$(sql_escape "$source_name")') = ANY(SELECT LOWER(unnest(nicknames)))
+        LIMIT 1;
+    " 2>/dev/null | head -1
+}
+
 # Function to find existing entity by name or nickname
 find_entity() {
     local search_name="$1"
@@ -85,13 +101,21 @@ echo "$JSON_DATA" | jq -c '.facts[]? // empty' | while read -r fact; do
     subject=$(echo "$fact" | jq -r '.subject')
     predicate=$(echo "$fact" | jq -r '.predicate')
     value=$(echo "$fact" | jq -r '.value')
+    source_person=$(echo "$fact" | jq -r '.source_person // "auto-extracted"')
+    source_entity_id=$(resolve_source_entity_id "$source_person")
+    
+    # Build source_entity_id clause
+    if [ -n "$source_entity_id" ]; then
+        src_id_clause=", source_entity_id) SELECT id, '$(sql_escape "$predicate")', '$(sql_escape "$value")', '$(sql_escape "$source_person")', $source_entity_id"
+    else
+        src_id_clause=") SELECT id, '$(sql_escape "$predicate")', '$(sql_escape "$value")', '$(sql_escape "$source_person")'"
+    fi
     
     # Try to add as entity_fact
-    echo "INSERT INTO entity_facts (entity_id, key, value, source)
-          SELECT id, '$(sql_escape "$predicate")', '$(sql_escape "$value")', 'auto-extracted'
+    echo "INSERT INTO entity_facts (entity_id, key, value, source${src_id_clause}
           FROM entities WHERE name = '$(sql_escape "$subject")'
           ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
-    echo "  + Fact: $subject.$predicate = $value"
+    echo "  + Fact: $subject.$predicate = $value (from: $source_person, entity_id: ${source_entity_id:-null})"
 done
 
 # Process opinions
@@ -99,6 +123,8 @@ echo "$JSON_DATA" | jq -c '.opinions[]? // empty' | while read -r opinion; do
     holder=$(echo "$opinion" | jq -r '.holder')
     subject=$(echo "$opinion" | jq -r '.subject')
     opinion_text=$(echo "$opinion" | jq -r '.opinion')
+    source_person=$(echo "$opinion" | jq -r '.source_person // "auto-extracted"')
+    source_entity_id=$(resolve_source_entity_id "$source_person")
     
     # Find the actual entity name (match by nickname if needed)
     actual_holder=$(find_entity "$holder")
@@ -106,12 +132,18 @@ echo "$JSON_DATA" | jq -c '.opinions[]? // empty' | while read -r opinion; do
         actual_holder="$holder"
     fi
     
+    # Build source_entity_id clause
+    if [ -n "$source_entity_id" ]; then
+        src_id_clause=", source_entity_id) SELECT id, 'opinion_$(sql_escape "$subject")', '$(sql_escape "$opinion_text")', '$(sql_escape "$source_person")', $source_entity_id"
+    else
+        src_id_clause=") SELECT id, 'opinion_$(sql_escape "$subject")', '$(sql_escape "$opinion_text")', '$(sql_escape "$source_person")'"
+    fi
+    
     # Store as entity_fact with opinion prefix
-    echo "INSERT INTO entity_facts (entity_id, key, value, source)
-          SELECT id, 'opinion_$(sql_escape "$subject")', '$(sql_escape "$opinion_text")', 'auto-extracted'
-          FROM entities WHERE name = '$(sql_escape "$actual_holder")')
+    echo "INSERT INTO entity_facts (entity_id, key, value, source${src_id_clause}
+          FROM entities WHERE name = '$(sql_escape "$actual_holder")'
           ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
-    echo "  + Opinion: $actual_holder thinks '$opinion_text' about $subject"
+    echo "  + Opinion: $actual_holder thinks '$opinion_text' about $subject (from: $source_person, entity_id: ${source_entity_id:-null})"
 done
 
 # Process preferences
@@ -119,12 +151,20 @@ echo "$JSON_DATA" | jq -c '.preferences[]? // empty' | while read -r pref; do
     person=$(echo "$pref" | jq -r '.person // .holder')
     preference=$(echo "$pref" | jq -r '.preference // .likes // .prefers')
     category=$(echo "$pref" | jq -r '.category // "general"')
+    source_person=$(echo "$pref" | jq -r '.source_person // "auto-extracted"')
+    source_entity_id=$(resolve_source_entity_id "$source_person")
     
-    echo "INSERT INTO entity_facts (entity_id, key, value, source)
-          SELECT id, 'preference_$(sql_escape "$category")', '$(sql_escape "$preference")', 'auto-extracted'
+    # Build source_entity_id clause
+    if [ -n "$source_entity_id" ]; then
+        src_id_clause=", source_entity_id) SELECT id, 'preference_$(sql_escape "$category")', '$(sql_escape "$preference")', '$(sql_escape "$source_person")', $source_entity_id"
+    else
+        src_id_clause=") SELECT id, 'preference_$(sql_escape "$category")', '$(sql_escape "$preference")', '$(sql_escape "$source_person")'"
+    fi
+    
+    echo "INSERT INTO entity_facts (entity_id, key, value, source${src_id_clause}
           FROM entities WHERE name = '$(sql_escape "$person")'
           ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
-    echo "  + Preference: $person prefers $preference"
+    echo "  + Preference: $person prefers $preference (from: $source_person, entity_id: ${source_entity_id:-null})"
 done
 
 # Process vocabulary
