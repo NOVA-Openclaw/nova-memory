@@ -32,12 +32,32 @@ sql_escape() {
 }
 
 # Function to resolve source name to entity ID
+# Uses SENDER_ID (phone/uuid) for precise matching, falls back to name matching
 resolve_source_entity_id() {
     local source_name="$1"
+    local sender_id="${SENDER_ID:-}"
+    
     if [ -z "$source_name" ] || [ "$source_name" = "null" ] || [ "$source_name" = "unknown" ]; then
         echo ""
         return
     fi
+    
+    # First try matching by sender_id (phone number) in entity_facts
+    if [ -n "$sender_id" ] && [ "$sender_id" != "unknown" ]; then
+        local id_match=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+            SELECT DISTINCT entity_id FROM entity_facts 
+            WHERE (key IN ('phone', 'has_phone_number', 'signal', 'signal_id') 
+                   AND REPLACE(REPLACE(value, '-', ''), ' ', '') LIKE '%$(echo "$sender_id" | tr -d '+-  ')%')
+            LIMIT 1;
+        " 2>/dev/null | head -1)
+        
+        if [ -n "$id_match" ]; then
+            echo "$id_match"
+            return
+        fi
+    fi
+    
+    # Fall back to name/nickname matching
     psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
         SELECT id FROM entities 
         WHERE LOWER(name) = LOWER('$(sql_escape "$source_name")')

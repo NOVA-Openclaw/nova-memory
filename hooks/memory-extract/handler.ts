@@ -1,37 +1,35 @@
 import { exec } from "child_process";
 import { appendFileSync } from "fs";
 
-const LOG = "/home/nova/clawd/logs/message-hooks.log";
-const processedIds = new Set<string>();
-
-function log(msg: string) {
-  try {
-    appendFileSync(LOG, `${new Date().toISOString()} | ${msg}\n`);
-  } catch (e) {}
-}
-
-const handler = async (event: any) => {
-  // Deduplicate by message ID
-  const msgId = event.context?.messageId;
-  if (event.action === "received" && msgId) {
-    if (processedIds.has(msgId)) {
-      return; // Skip duplicate
-    }
-    processedIds.add(msgId);
-    // Cleanup old IDs after 5 minutes
-    setTimeout(() => processedIds.delete(msgId), 300000);
-  }
+const handler = async (event) => {
+  const LOG = "/home/nova/clawd/logs/memory-extract-hook.log";
+  const ts = new Date().toISOString();
   
-  log(`${event.type}:${event.action}`);
+  appendFileSync(LOG, `${ts} | Event: ${event.type}:${event.action}\n`);
   
-  if (event.type === "message" && event.action === "received") {
-    const rawBody = event.context?.rawBody;
-    if (rawBody && rawBody.length > 5) {
-      log(`Extracting: ${rawBody.substring(0, 60)}...`);
-      const escaped = rawBody.replace(/'/g, "'\\''");
-      exec(`/home/nova/clawd/scripts/process-input.sh '${escaped}' >> /home/nova/clawd/logs/memory-extract.log 2>&1`);
-    }
-  }
+  if (event.type !== "message" || event.action !== "received") return;
+  
+  const ctx = event.context ?? {};
+  const rawBody = ctx.rawBody ?? ctx.message ?? "";
+  if (!rawBody || rawBody.trim().length < 10) return;
+  
+  // Skip commands
+  if (rawBody.startsWith("/")) return;
+  
+  // Get sender info for attribution
+  const senderName = ctx.senderName ?? "unknown";
+  const senderId = ctx.senderId ?? "";  // Phone number or UUID for unique matching
+  const isGroup = ctx.isGroup ?? false;
+  
+  appendFileSync(LOG, `${ts} | From: ${senderName} (${senderId}) (group: ${isGroup}) | Message: ${rawBody.substring(0, 80)}...\n`);
+  
+  // Run extraction with attribution env vars (include senderId for unique matching)
+  const escaped = rawBody.replace(/'/g, "'\\''");
+  const envVars = `SENDER_NAME='${senderName}' SENDER_ID='${senderId}' IS_GROUP='${isGroup}'`;
+  
+  exec(`${envVars} /home/nova/clawd/scripts/process-input.sh '${escaped}'`, (err) => {
+    appendFileSync(LOG, `${ts} | ${err ? 'Error: ' + err.message : 'Extraction complete for ' + senderName}\n`);
+  });
 };
 
 export default handler;
