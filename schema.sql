@@ -1,320 +1,60 @@
--- NOVA Long-Term Memory Schema
--- PostgreSQL 16
+--
+-- PostgreSQL database dump
+--
 
--- ============================================
--- ENTITIES (things with agency)
--- ============================================
-CREATE TABLE entities (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('person', 'ai', 'organization')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_seen TIMESTAMP,
-    photo BYTEA,  -- Store face/avatar images
-    notes TEXT,
-    UNIQUE(name, type)
-);
+\restrict dxBhfWOH62zex97qXFfYgZqeVFmnsLkd1kAN5vMDtDC47VZ88TjDbZgpWacSdoR
 
-CREATE INDEX idx_entities_type ON entities(type);
-CREATE INDEX idx_entities_name ON entities(name);
+-- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 
--- Flexible key-value facts about entities
-CREATE TABLE entity_facts (
-    id SERIAL PRIMARY KEY,
-    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-    key VARCHAR(255) NOT NULL,
-    value TEXT NOT NULL,
-    data JSONB,  -- For structured/complex values
-    source VARCHAR(255),  -- Where I learned this
-    confidence FLOAT DEFAULT 1.0,
-    learned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
-CREATE INDEX idx_entity_facts_entity ON entity_facts(entity_id);
-CREATE INDEX idx_entity_facts_key ON entity_facts(key);
-CREATE INDEX idx_entity_facts_data ON entity_facts USING GIN (data);
+--
+-- Name: vector; Type: EXTENSION; Schema: -; Owner: -
+--
 
--- Relationships between entities
-CREATE TABLE entity_relationships (
-    id SERIAL PRIMARY KEY,
-    entity_a INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-    entity_b INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-    relationship VARCHAR(100) NOT NULL,  -- 'partner', 'friend', 'colleague', 'created_by', etc.
-    since TIMESTAMP,
-    notes TEXT,
-    UNIQUE(entity_a, entity_b, relationship)
-);
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
-CREATE INDEX idx_entity_rel_a ON entity_relationships(entity_a);
-CREATE INDEX idx_entity_rel_b ON entity_relationships(entity_b);
 
--- ============================================
--- PLACES (locations)
--- ============================================
-CREATE TABLE places (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    type VARCHAR(50) CHECK (type IN ('home', 'office', 'venue', 'network', 'city', 'region')),
-    address TEXT,
-    network_subnet VARCHAR(50),  -- e.g., '10.3.3.0/24'
-    network_theme VARCHAR(100),  -- e.g., 'Ghostbusters'
-    coordinates POINT,  -- PostgreSQL geometric type
-    parent_place_id INTEGER REFERENCES places(id),
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+--
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: 
+--
 
-CREATE INDEX idx_places_type ON places(type);
+COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
-CREATE TABLE place_properties (
-    id SERIAL PRIMARY KEY,
-    place_id INTEGER REFERENCES places(id) ON DELETE CASCADE,
-    key VARCHAR(255) NOT NULL,
-    value TEXT NOT NULL,
-    data JSONB
-);
 
-CREATE INDEX idx_place_props_place ON place_properties(place_id);
+--
+-- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: nova
+--
 
--- ============================================
--- PROJECTS (efforts)
--- ============================================
-CREATE TABLE projects (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'blocked', 'complete', 'paused', 'abandoned')),
-    goal TEXT,
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    notes TEXT
-);
+CREATE FUNCTION public.notify_gambling_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    PERFORM pg_notify('gambling_changed', TG_TABLE_NAME || ':' || TG_OP);
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
 
-CREATE INDEX idx_projects_status ON projects(status);
 
-CREATE TABLE project_tasks (
-    id SERIAL PRIMARY KEY,
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-    task TEXT NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'blocked', 'complete')),
-    blocked_by TEXT,
-    due_date TIMESTAMP,
-    completed_at TIMESTAMP,
-    priority INTEGER DEFAULT 0
-);
+ALTER FUNCTION public.notify_gambling_change() OWNER TO nova;
 
-CREATE INDEX idx_project_tasks_project ON project_tasks(project_id);
-CREATE INDEX idx_project_tasks_status ON project_tasks(status);
+--
+-- Name: notify_schema_change(); Type: FUNCTION; Schema: public; Owner: postgres
+--
 
--- Link entities to projects (who's involved)
-CREATE TABLE project_entities (
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-    role VARCHAR(100),  -- 'owner', 'contributor', 'stakeholder'
-    PRIMARY KEY (project_id, entity_id)
-);
-
--- ============================================
--- EVENTS (timeline / what happened)
--- ============================================
-CREATE TABLE events (
-    id SERIAL PRIMARY KEY,
-    event_date TIMESTAMP NOT NULL,
-    title VARCHAR(500) NOT NULL,
-    description TEXT,
-    source VARCHAR(255),  -- Where I learned about this
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_events_date ON events(event_date);
-
--- Full-text search on events
-ALTER TABLE events ADD COLUMN search_vector tsvector 
-    GENERATED ALWAYS AS (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))) STORED;
-CREATE INDEX idx_events_search ON events USING GIN (search_vector);
-
--- Junction tables for events
-CREATE TABLE event_entities (
-    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
-    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-    role VARCHAR(100),  -- 'participant', 'subject', 'mentioned'
-    PRIMARY KEY (event_id, entity_id)
-);
-
-CREATE TABLE event_places (
-    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
-    place_id INTEGER REFERENCES places(id) ON DELETE CASCADE,
-    PRIMARY KEY (event_id, place_id)
-);
-
-CREATE TABLE event_projects (
-    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-    PRIMARY KEY (event_id, project_id)
-);
-
--- ============================================
--- LESSONS & PREFERENCES (meta-knowledge)
--- ============================================
-CREATE TABLE lessons (
-    id SERIAL PRIMARY KEY,
-    lesson TEXT NOT NULL,
-    context TEXT,
-    source VARCHAR(255),
-    learned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE preferences (
-    id SERIAL PRIMARY KEY,
-    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,  -- Whose preference (NULL = mine)
-    key VARCHAR(255) NOT NULL,
-    value TEXT NOT NULL,
-    context TEXT,
-    learned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_preferences_entity ON preferences(entity_id);
-CREATE INDEX idx_preferences_key ON preferences(key);
-
--- ============================================
--- CONVERSATIONS / SESSIONS (meta)
--- ============================================
-CREATE TABLE conversations (
-    id SERIAL PRIMARY KEY,
-    session_key VARCHAR(255),
-    channel VARCHAR(50),  -- 'signal', 'telegram', etc.
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    summary TEXT,
-    notes TEXT
-);
-
--- ============================================
--- UTILITY VIEWS
--- ============================================
-
--- All facts about a person with their name
-CREATE VIEW v_entity_facts AS
-SELECT e.id, e.name, e.type, ef.key, ef.value, ef.data, ef.learned_at
-FROM entities e
-JOIN entity_facts ef ON e.id = ef.entity_id;
-
--- Relationship graph
-CREATE VIEW v_relationships AS
-SELECT 
-    e1.name AS entity_a_name,
-    e1.type AS entity_a_type,
-    r.relationship,
-    e2.name AS entity_b_name,
-    e2.type AS entity_b_type,
-    r.since
-FROM entity_relationships r
-JOIN entities e1 ON r.entity_a = e1.id
-JOIN entities e2 ON r.entity_b = e2.id;
-
--- Event timeline with participants
-CREATE VIEW v_event_timeline AS
-SELECT 
-    ev.event_date,
-    ev.title,
-    ev.description,
-    array_agg(DISTINCT e.name) FILTER (WHERE e.name IS NOT NULL) AS entities,
-    array_agg(DISTINCT p.name) FILTER (WHERE p.name IS NOT NULL) AS places
-FROM events ev
-LEFT JOIN event_entities ee ON ev.id = ee.event_id
-LEFT JOIN entities e ON ee.entity_id = e.id
-LEFT JOIN event_places ep ON ev.id = ep.event_id
-LEFT JOIN places p ON ep.place_id = p.id
-GROUP BY ev.id, ev.event_date, ev.title, ev.description
-ORDER BY ev.event_date DESC;
-
--- ============================================
--- Tasks (TODO list with hierarchy)
--- ============================================
-CREATE TABLE IF NOT EXISTS tasks (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    status VARCHAR(50) DEFAULT 'pending',  -- pending, in_progress, blocked, done, cancelled
-    priority INTEGER DEFAULT 5,  -- 1=highest, 10=lowest
-    parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
-    project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
-    assigned_to INTEGER REFERENCES entities(id),
-    created_by INTEGER REFERENCES entities(id),
-    due_date TIMESTAMP,
-    completed_at TIMESTAMP,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
-CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
-
--- Task hierarchy view
-CREATE OR REPLACE VIEW v_task_tree AS
-WITH RECURSIVE task_hierarchy AS (
-    SELECT id, title, status, priority, parent_task_id, project_id, 
-           due_date, 0 as depth, ARRAY[id] as path
-    FROM tasks WHERE parent_task_id IS NULL
-    UNION ALL
-    SELECT t.id, t.title, t.status, t.priority, t.parent_task_id, t.project_id,
-           t.due_date, th.depth + 1, th.path || t.id
-    FROM tasks t JOIN task_hierarchy th ON t.parent_task_id = th.id
-)
-SELECT * FROM task_hierarchy ORDER BY path;
-
--- Pending tasks view
-CREATE OR REPLACE VIEW v_pending_tasks AS
-SELECT t.id, t.title, t.status, t.priority, t.due_date,
-       p.name as project_name, t.parent_task_id, t.notes
-FROM tasks t
-LEFT JOIN projects p ON t.project_id = p.id
-WHERE t.status IN ('pending', 'in_progress', 'blocked')
-ORDER BY t.priority, t.due_date NULLS LAST;
-
--- Standard Operating Procedures
-CREATE TABLE IF NOT EXISTS sops (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT,
-    steps JSONB,
-    tools TEXT[],
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_sops_name ON sops(name);
-
--- Link SOPs to projects
-CREATE TABLE IF NOT EXISTS project_sops (
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    sop_id INTEGER NOT NULL REFERENCES sops(id) ON DELETE CASCADE,
-    PRIMARY KEY (project_id, sop_id)
-);
-
--- Vocabulary for STT correction
-CREATE TABLE IF NOT EXISTS vocabulary (
-    id SERIAL PRIMARY KEY,
-    word VARCHAR(255) NOT NULL UNIQUE,
-    category VARCHAR(100),
-    pronunciation VARCHAR(255),
-    misheard_as TEXT[],
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- SCHEMA CHANGE NOTIFICATIONS
--- ============================================
--- Event trigger to notify external systems of DDL changes
--- Requires superuser to create; run as postgres user
-
-CREATE OR REPLACE FUNCTION notify_schema_change()
-RETURNS event_trigger AS $$
+CREATE FUNCTION public.notify_schema_change() RETURNS event_trigger
+    LANGUAGE plpgsql
+    AS $$
 DECLARE
     obj record;
     payload text;
@@ -330,52 +70,18 @@ BEGIN
         PERFORM pg_notify('schema_changed', payload);
     END LOOP;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Must be created by superuser (postgres)
--- DROP EVENT TRIGGER IF EXISTS schema_change_trigger;
--- CREATE EVENT TRIGGER schema_change_trigger
---     ON ddl_command_end
---     EXECUTE FUNCTION notify_schema_change();
 
--- Note: A listener process should subscribe to LISTEN schema_changed;
--- and notify the agent to update MEMORY.md and documentation when changes occur.
+ALTER FUNCTION public.notify_schema_change() OWNER TO postgres;
 
--- ============================================
--- VECTOR EMBEDDINGS (pgvector)
--- ============================================
--- Requires: CREATE EXTENSION vector;
+--
+-- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: nova
+--
 
-CREATE TABLE IF NOT EXISTS memory_embeddings (
-    id SERIAL PRIMARY KEY,
-    source_type VARCHAR(50) NOT NULL,  -- 'daily_log', 'memory_md', 'entity_fact', 'event', 'lesson'
-    source_id TEXT,                     -- Reference to source (filename, entity_id, event_id, etc.)
-    content TEXT NOT NULL,              -- Original text that was embedded
-    embedding vector(1536),             -- OpenAI text-embedding-3-small dimension
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Index for fast similarity search
-CREATE INDEX IF NOT EXISTS idx_memory_embeddings_vector 
-ON memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
-CREATE INDEX IF NOT EXISTS idx_memory_embeddings_source 
-ON memory_embeddings(source_type);
-
--- Semantic search function
-CREATE OR REPLACE FUNCTION search_memories(
-    query_embedding vector(1536),
-    match_count INT DEFAULT 5,
-    similarity_threshold FLOAT DEFAULT 0.7
-)
-RETURNS TABLE (
-    id INT,
-    source_type VARCHAR,
-    source_id TEXT,
-    content TEXT,
-    similarity FLOAT
-) AS $$
+CREATE FUNCTION public.search_memories(query_embedding public.vector, match_count integer DEFAULT 5, similarity_threshold double precision DEFAULT 0.7) RETURNS TABLE(id integer, source_type character varying, source_id text, content text, similarity double precision)
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
     RETURN QUERY
     SELECT 
@@ -389,4 +95,1932 @@ BEGIN
     ORDER BY me.embedding <=> query_embedding
     LIMIT match_count;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+
+ALTER FUNCTION public.search_memories(query_embedding public.vector, match_count integer, similarity_threshold double precision) OWNER TO nova;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: artwork; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.artwork (
+    id integer NOT NULL,
+    instagram_url text,
+    instagram_media_id text,
+    title text,
+    caption text,
+    theme text,
+    original_prompt text,
+    revised_prompt text,
+    image_data bytea,
+    image_filename text,
+    posted_at timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now(),
+    notes text,
+    inspiration_source text
+);
+
+
+ALTER TABLE public.artwork OWNER TO nova;
+
+--
+-- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.artwork IS 'Archive of NOVA''s Instagram artwork for future compilation';
+
+
+--
+-- Name: COLUMN artwork.image_data; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.artwork.image_data IS 'Raw image binary data (PNG/JPG)';
+
+
+--
+-- Name: COLUMN artwork.inspiration_source; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.artwork.inspiration_source IS 'News snippet or source that inspired this artwork';
+
+
+--
+-- Name: artwork_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.artwork_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.artwork_id_seq OWNER TO nova;
+
+--
+-- Name: artwork_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.artwork_id_seq OWNED BY public.artwork.id;
+
+
+--
+-- Name: conversations; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.conversations (
+    id integer NOT NULL,
+    session_key character varying(255),
+    channel character varying(50),
+    started_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    summary text,
+    notes text
+);
+
+
+ALTER TABLE public.conversations OWNER TO nova;
+
+--
+-- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.conversations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.conversations_id_seq OWNER TO nova;
+
+--
+-- Name: conversations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.conversations_id_seq OWNED BY public.conversations.id;
+
+
+--
+-- Name: entities; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entities (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    type character varying(50) NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    last_seen timestamp without time zone,
+    photo bytea,
+    notes text,
+    full_name character varying(255),
+    nicknames text[],
+    gender character varying(50),
+    pronouns character varying(50),
+    user_id character varying(255),
+    auth_token character varying(255),
+    CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.entities OWNER TO nova;
+
+--
+-- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entities IS 'People, AIs, organizations, and other entities';
+
+
+--
+-- Name: entities_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.entities_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.entities_id_seq OWNER TO nova;
+
+--
+-- Name: entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.entities_id_seq OWNED BY public.entities.id;
+
+
+--
+-- Name: entity_facts; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entity_facts (
+    id integer NOT NULL,
+    entity_id integer,
+    key character varying(255) NOT NULL,
+    value text NOT NULL,
+    data jsonb,
+    source character varying(255),
+    confidence double precision DEFAULT 1.0,
+    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    visibility character varying(20) DEFAULT 'public'::character varying,
+    privacy_scope integer[],
+    source_entity_id integer
+);
+
+
+ALTER TABLE public.entity_facts OWNER TO nova;
+
+--
+-- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
+
+
+--
+-- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
+
+
+--
+-- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
+
+
+--
+-- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.entity_facts_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.entity_facts_id_seq OWNER TO nova;
+
+--
+-- Name: entity_facts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.entity_facts_id_seq OWNED BY public.entity_facts.id;
+
+
+--
+-- Name: entity_relationships; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entity_relationships (
+    id integer NOT NULL,
+    entity_a integer,
+    entity_b integer,
+    relationship character varying(100) NOT NULL,
+    since timestamp without time zone,
+    notes text,
+    is_long_distance boolean DEFAULT false,
+    seriousness character varying(20) DEFAULT 'standard'::character varying
+);
+
+
+ALTER TABLE public.entity_relationships OWNER TO nova;
+
+--
+-- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.entity_relationships_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.entity_relationships_id_seq OWNER TO nova;
+
+--
+-- Name: entity_relationships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.entity_relationships_id_seq OWNED BY public.entity_relationships.id;
+
+
+--
+-- Name: event_entities; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.event_entities (
+    event_id integer NOT NULL,
+    entity_id integer NOT NULL,
+    role character varying(100)
+);
+
+
+ALTER TABLE public.event_entities OWNER TO nova;
+
+--
+-- Name: event_places; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.event_places (
+    event_id integer NOT NULL,
+    place_id integer NOT NULL
+);
+
+
+ALTER TABLE public.event_places OWNER TO nova;
+
+--
+-- Name: event_projects; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.event_projects (
+    event_id integer NOT NULL,
+    project_id integer NOT NULL
+);
+
+
+ALTER TABLE public.event_projects OWNER TO nova;
+
+--
+-- Name: events; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.events (
+    id integer NOT NULL,
+    event_date timestamp without time zone NOT NULL,
+    title character varying(500) NOT NULL,
+    description text,
+    source character varying(255),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED
+);
+
+
+ALTER TABLE public.events OWNER TO nova;
+
+--
+-- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.events_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.events_id_seq OWNER TO nova;
+
+--
+-- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
+
+
+--
+-- Name: gambling_entries; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.gambling_entries (
+    id integer NOT NULL,
+    log_id integer,
+    session_date timestamp without time zone,
+    casino character varying(255),
+    game character varying(100),
+    amount numeric(10,2) NOT NULL,
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    duration_minutes numeric(6,2),
+    base_bet numeric(10,2)
+);
+
+
+ALTER TABLE public.gambling_entries OWNER TO nova;
+
+--
+-- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.gambling_entries_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.gambling_entries_id_seq OWNER TO nova;
+
+--
+-- Name: gambling_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.gambling_entries_id_seq OWNED BY public.gambling_entries.id;
+
+
+--
+-- Name: gambling_logs; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.gambling_logs (
+    id integer NOT NULL,
+    entity_id integer,
+    name character varying(255) NOT NULL,
+    location character varying(255),
+    started_at date,
+    ended_at date,
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.gambling_logs OWNER TO nova;
+
+--
+-- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.gambling_logs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.gambling_logs_id_seq OWNER TO nova;
+
+--
+-- Name: gambling_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.gambling_logs_id_seq OWNED BY public.gambling_logs.id;
+
+
+--
+-- Name: lessons; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.lessons (
+    id integer NOT NULL,
+    lesson text NOT NULL,
+    context text,
+    source character varying(255),
+    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.lessons OWNER TO nova;
+
+--
+-- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.lessons_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.lessons_id_seq OWNER TO nova;
+
+--
+-- Name: lessons_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.lessons_id_seq OWNED BY public.lessons.id;
+
+
+--
+-- Name: memory_embeddings; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.memory_embeddings (
+    id integer NOT NULL,
+    source_type character varying(50) NOT NULL,
+    source_id text,
+    content text NOT NULL,
+    embedding public.vector(1536),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.memory_embeddings OWNER TO nova;
+
+--
+-- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.memory_embeddings_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.memory_embeddings_id_seq OWNER TO nova;
+
+--
+-- Name: memory_embeddings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings.id;
+
+
+--
+-- Name: place_properties; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.place_properties (
+    id integer NOT NULL,
+    place_id integer,
+    key character varying(255) NOT NULL,
+    value text NOT NULL,
+    data jsonb
+);
+
+
+ALTER TABLE public.place_properties OWNER TO nova;
+
+--
+-- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.place_properties_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.place_properties_id_seq OWNER TO nova;
+
+--
+-- Name: place_properties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.place_properties_id_seq OWNED BY public.place_properties.id;
+
+
+--
+-- Name: places; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.places (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    type character varying(50),
+    address text,
+    network_subnet character varying(50),
+    network_theme character varying(100),
+    coordinates point,
+    parent_place_id integer,
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    street_address character varying(255),
+    city character varying(100),
+    state character varying(100),
+    zipcode character varying(20),
+    country character varying(100) DEFAULT 'USA'::character varying
+);
+
+
+ALTER TABLE public.places OWNER TO nova;
+
+--
+-- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.places_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.places_id_seq OWNER TO nova;
+
+--
+-- Name: places_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.places_id_seq OWNED BY public.places.id;
+
+
+--
+-- Name: preferences; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.preferences (
+    id integer NOT NULL,
+    entity_id integer,
+    key character varying(255) NOT NULL,
+    value text NOT NULL,
+    context text,
+    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.preferences OWNER TO nova;
+
+--
+-- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.preferences_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.preferences_id_seq OWNER TO nova;
+
+--
+-- Name: preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.preferences_id_seq OWNED BY public.preferences.id;
+
+
+--
+-- Name: sops; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.sops (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    description text,
+    steps jsonb,
+    tools text[],
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.sops OWNER TO nova;
+
+--
+-- Name: processes_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.processes_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.processes_id_seq OWNER TO nova;
+
+--
+-- Name: processes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.processes_id_seq OWNED BY public.sops.id;
+
+
+--
+-- Name: project_entities; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.project_entities (
+    project_id integer NOT NULL,
+    entity_id integer NOT NULL,
+    role character varying(100)
+);
+
+
+ALTER TABLE public.project_entities OWNER TO nova;
+
+--
+-- Name: project_sops; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.project_sops (
+    project_id integer NOT NULL,
+    sop_id integer NOT NULL
+);
+
+
+ALTER TABLE public.project_sops OWNER TO nova;
+
+--
+-- Name: project_tasks; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.project_tasks (
+    id integer NOT NULL,
+    project_id integer,
+    task text NOT NULL,
+    status character varying(50) DEFAULT 'pending'::character varying,
+    blocked_by text,
+    due_date timestamp without time zone,
+    completed_at timestamp without time zone,
+    priority integer DEFAULT 0,
+    CONSTRAINT project_tasks_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying, 'complete'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.project_tasks OWNER TO nova;
+
+--
+-- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.project_tasks_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.project_tasks_id_seq OWNER TO nova;
+
+--
+-- Name: project_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.project_tasks_id_seq OWNED BY public.project_tasks.id;
+
+
+--
+-- Name: projects; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.projects (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    status character varying(50) DEFAULT 'active'::character varying,
+    goal text,
+    started_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    completed_at timestamp without time zone,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    notes text,
+    CONSTRAINT projects_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.projects OWNER TO nova;
+
+--
+-- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.projects_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.projects_id_seq OWNER TO nova;
+
+--
+-- Name: projects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.projects_id_seq OWNED BY public.projects.id;
+
+
+--
+-- Name: tasks; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.tasks (
+    id integer NOT NULL,
+    title character varying(255) NOT NULL,
+    description text,
+    status character varying(50) DEFAULT 'pending'::character varying,
+    priority integer DEFAULT 5,
+    parent_task_id integer,
+    project_id integer,
+    assigned_to integer,
+    created_by integer,
+    due_date timestamp without time zone,
+    completed_at timestamp without time zone,
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.tasks OWNER TO nova;
+
+--
+-- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.tasks_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tasks_id_seq OWNER TO nova;
+
+--
+-- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
+
+
+--
+-- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_entity_facts AS
+ SELECT e.id,
+    e.name,
+    e.type,
+    ef.key,
+    ef.value,
+    ef.data,
+    ef.learned_at
+   FROM (public.entities e
+     JOIN public.entity_facts ef ON ((e.id = ef.entity_id)));
+
+
+ALTER VIEW public.v_entity_facts OWNER TO nova;
+
+--
+-- Name: v_event_timeline; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_event_timeline AS
+ SELECT ev.event_date,
+    ev.title,
+    ev.description,
+    array_agg(DISTINCT e.name) FILTER (WHERE (e.name IS NOT NULL)) AS entities,
+    array_agg(DISTINCT p.name) FILTER (WHERE (p.name IS NOT NULL)) AS places
+   FROM ((((public.events ev
+     LEFT JOIN public.event_entities ee ON ((ev.id = ee.event_id)))
+     LEFT JOIN public.entities e ON ((ee.entity_id = e.id)))
+     LEFT JOIN public.event_places ep ON ((ev.id = ep.event_id)))
+     LEFT JOIN public.places p ON ((ep.place_id = p.id)))
+  GROUP BY ev.id, ev.event_date, ev.title, ev.description
+  ORDER BY ev.event_date DESC;
+
+
+ALTER VIEW public.v_event_timeline OWNER TO nova;
+
+--
+-- Name: v_gambling_summary; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_gambling_summary AS
+ SELECT l.name AS log_name,
+    l.location,
+    count(e.id) AS sessions,
+    sum(e.amount) AS total,
+    sum(
+        CASE
+            WHEN (e.amount > (0)::numeric) THEN e.amount
+            ELSE (0)::numeric
+        END) AS total_won,
+    sum(
+        CASE
+            WHEN (e.amount < (0)::numeric) THEN e.amount
+            ELSE (0)::numeric
+        END) AS total_lost
+   FROM (public.gambling_logs l
+     LEFT JOIN public.gambling_entries e ON ((e.log_id = l.id)))
+  WHERE (l.entity_id = 2)
+  GROUP BY l.id, l.name, l.location;
+
+
+ALTER VIEW public.v_gambling_summary OWNER TO nova;
+
+--
+-- Name: v_metamours; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_metamours AS
+ SELECT DISTINCT e1.name AS person,
+    e3.name AS metamour,
+    e2.name AS connected_through
+   FROM ((((public.entities e1
+     JOIN public.entity_relationships r1 ON ((e1.id = r1.entity_a)))
+     JOIN public.entities e2 ON ((r1.entity_b = e2.id)))
+     JOIN public.entity_relationships r2 ON (((e2.id = r2.entity_a) OR (e2.id = r2.entity_b))))
+     JOIN public.entities e3 ON (((r2.entity_a = e3.id) OR (r2.entity_b = e3.id))))
+  WHERE (((e1.name)::text = 'I)ruid'::text) AND ((r1.relationship)::text = ANY ((ARRAY['partner'::character varying, 'casual'::character varying])::text[])) AND (e3.id <> e1.id) AND (e3.id <> e2.id) AND ((e3.type)::text = 'person'::text));
+
+
+ALTER VIEW public.v_metamours OWNER TO nova;
+
+--
+-- Name: v_pending_tasks; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_pending_tasks AS
+ SELECT t.id,
+    t.title,
+    t.status,
+    t.priority,
+    t.due_date,
+    p.name AS project_name,
+    t.parent_task_id,
+    t.notes
+   FROM (public.tasks t
+     LEFT JOIN public.projects p ON ((t.project_id = p.id)))
+  WHERE ((t.status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying])::text[]))
+  ORDER BY t.priority, t.due_date;
+
+
+ALTER VIEW public.v_pending_tasks OWNER TO nova;
+
+--
+-- Name: v_project_sops; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_project_sops AS
+ SELECT p.name AS project,
+    s.name AS sop,
+    s.description
+   FROM ((public.project_sops ps
+     JOIN public.projects p ON ((ps.project_id = p.id)))
+     JOIN public.sops s ON ((ps.sop_id = s.id)));
+
+
+ALTER VIEW public.v_project_sops OWNER TO nova;
+
+--
+-- Name: v_relationships; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_relationships AS
+ SELECT e1.name AS entity_a_name,
+    e1.type AS entity_a_type,
+    r.relationship,
+    e2.name AS entity_b_name,
+    e2.type AS entity_b_type,
+    r.since
+   FROM ((public.entity_relationships r
+     JOIN public.entities e1 ON ((r.entity_a = e1.id)))
+     JOIN public.entities e2 ON ((r.entity_b = e2.id)));
+
+
+ALTER VIEW public.v_relationships OWNER TO nova;
+
+--
+-- Name: v_task_tree; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_task_tree AS
+ WITH RECURSIVE task_hierarchy AS (
+         SELECT tasks.id,
+            tasks.title,
+            tasks.status,
+            tasks.priority,
+            tasks.parent_task_id,
+            tasks.project_id,
+            tasks.due_date,
+            0 AS depth,
+            ARRAY[tasks.id] AS path
+           FROM public.tasks
+          WHERE (tasks.parent_task_id IS NULL)
+        UNION ALL
+         SELECT t.id,
+            t.title,
+            t.status,
+            t.priority,
+            t.parent_task_id,
+            t.project_id,
+            t.due_date,
+            (th.depth + 1),
+            (th.path || t.id)
+           FROM (public.tasks t
+             JOIN task_hierarchy th ON ((t.parent_task_id = th.id)))
+        )
+ SELECT id,
+    title,
+    status,
+    priority,
+    parent_task_id,
+    project_id,
+    due_date,
+    depth,
+    path
+   FROM task_hierarchy
+  ORDER BY path;
+
+
+ALTER VIEW public.v_task_tree OWNER TO nova;
+
+--
+-- Name: vehicles; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.vehicles (
+    id integer NOT NULL,
+    owner_id integer,
+    color character varying(50),
+    year integer,
+    make character varying(100),
+    model character varying(100),
+    vin character varying(17),
+    license_plate_state character varying(20),
+    license_plate_number character varying(20),
+    nickname character varying(100),
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.vehicles OWNER TO nova;
+
+--
+-- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.vehicles_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.vehicles_id_seq OWNER TO nova;
+
+--
+-- Name: vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.vehicles_id_seq OWNED BY public.vehicles.id;
+
+
+--
+-- Name: vocabulary; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.vocabulary (
+    id integer NOT NULL,
+    word character varying(255) NOT NULL,
+    category character varying(100),
+    pronunciation character varying(255),
+    misheard_as text[],
+    added_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.vocabulary OWNER TO nova;
+
+--
+-- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.vocabulary_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.vocabulary_id_seq OWNER TO nova;
+
+--
+-- Name: vocabulary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
+
+
+--
+-- Name: artwork id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artwork_id_seq'::regclass);
+
+
+--
+-- Name: conversations id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.conversations ALTER COLUMN id SET DEFAULT nextval('public.conversations_id_seq'::regclass);
+
+
+--
+-- Name: entities id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entities ALTER COLUMN id SET DEFAULT nextval('public.entities_id_seq'::regclass);
+
+
+--
+-- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_facts ALTER COLUMN id SET DEFAULT nextval('public.entity_facts_id_seq'::regclass);
+
+
+--
+-- Name: entity_relationships id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_relationships ALTER COLUMN id SET DEFAULT nextval('public.entity_relationships_id_seq'::regclass);
+
+
+--
+-- Name: events id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.events_id_seq'::regclass);
+
+
+--
+-- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.gambling_entries ALTER COLUMN id SET DEFAULT nextval('public.gambling_entries_id_seq'::regclass);
+
+
+--
+-- Name: gambling_logs id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.gambling_logs ALTER COLUMN id SET DEFAULT nextval('public.gambling_logs_id_seq'::regclass);
+
+
+--
+-- Name: lessons id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.lessons ALTER COLUMN id SET DEFAULT nextval('public.lessons_id_seq'::regclass);
+
+
+--
+-- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('public.memory_embeddings_id_seq'::regclass);
+
+
+--
+-- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.place_properties ALTER COLUMN id SET DEFAULT nextval('public.place_properties_id_seq'::regclass);
+
+
+--
+-- Name: places id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.places ALTER COLUMN id SET DEFAULT nextval('public.places_id_seq'::regclass);
+
+
+--
+-- Name: preferences id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.preferences ALTER COLUMN id SET DEFAULT nextval('public.preferences_id_seq'::regclass);
+
+
+--
+-- Name: project_tasks id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_tasks ALTER COLUMN id SET DEFAULT nextval('public.project_tasks_id_seq'::regclass);
+
+
+--
+-- Name: projects id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.projects_id_seq'::regclass);
+
+
+--
+-- Name: sops id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.sops ALTER COLUMN id SET DEFAULT nextval('public.processes_id_seq'::regclass);
+
+
+--
+-- Name: tasks id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks ALTER COLUMN id SET DEFAULT nextval('public.tasks_id_seq'::regclass);
+
+
+--
+-- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.vehicles_id_seq'::regclass);
+
+
+--
+-- Name: vocabulary id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
+
+
+--
+-- Name: artwork artwork_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.artwork
+    ADD CONSTRAINT artwork_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.conversations
+    ADD CONSTRAINT conversations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entities entities_name_type_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entities
+    ADD CONSTRAINT entities_name_type_key UNIQUE (name, type);
+
+
+--
+-- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entities
+    ADD CONSTRAINT entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entities entities_user_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entities
+    ADD CONSTRAINT entities_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_facts
+    ADD CONSTRAINT entity_facts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entity_relationships entity_relationships_entity_a_entity_b_relationship_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_relationships
+    ADD CONSTRAINT entity_relationships_entity_a_entity_b_relationship_key UNIQUE (entity_a, entity_b, relationship);
+
+
+--
+-- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_relationships
+    ADD CONSTRAINT entity_relationships_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: event_entities event_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_entities
+    ADD CONSTRAINT event_entities_pkey PRIMARY KEY (event_id, entity_id);
+
+
+--
+-- Name: event_places event_places_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_places
+    ADD CONSTRAINT event_places_pkey PRIMARY KEY (event_id, place_id);
+
+
+--
+-- Name: event_projects event_projects_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_projects
+    ADD CONSTRAINT event_projects_pkey PRIMARY KEY (event_id, project_id);
+
+
+--
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gambling_entries gambling_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.gambling_entries
+    ADD CONSTRAINT gambling_entries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gambling_logs gambling_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.gambling_logs
+    ADD CONSTRAINT gambling_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: lessons lessons_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.lessons
+    ADD CONSTRAINT lessons_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: memory_embeddings memory_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.memory_embeddings
+    ADD CONSTRAINT memory_embeddings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: place_properties place_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.place_properties
+    ADD CONSTRAINT place_properties_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: places places_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.places
+    ADD CONSTRAINT places_name_key UNIQUE (name);
+
+
+--
+-- Name: places places_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.places
+    ADD CONSTRAINT places_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.preferences
+    ADD CONSTRAINT preferences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sops processes_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.sops
+    ADD CONSTRAINT processes_name_key UNIQUE (name);
+
+
+--
+-- Name: sops processes_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.sops
+    ADD CONSTRAINT processes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_entities project_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_entities
+    ADD CONSTRAINT project_entities_pkey PRIMARY KEY (project_id, entity_id);
+
+
+--
+-- Name: project_sops project_sops_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_sops
+    ADD CONSTRAINT project_sops_pkey PRIMARY KEY (project_id, sop_id);
+
+
+--
+-- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_tasks
+    ADD CONSTRAINT project_tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: projects projects_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_name_key UNIQUE (name);
+
+
+--
+-- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.vehicles
+    ADD CONSTRAINT vehicles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: vocabulary vocabulary_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.vocabulary
+    ADD CONSTRAINT vocabulary_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: vocabulary vocabulary_word_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.vocabulary
+    ADD CONSTRAINT vocabulary_word_key UNIQUE (word);
+
+
+--
+-- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entities_name ON public.entities USING btree (name);
+
+
+--
+-- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entities_type ON public.entities USING btree (type);
+
+
+--
+-- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entities_user_id ON public.entities USING btree (user_id) WHERE (user_id IS NOT NULL);
+
+
+--
+-- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_data ON public.entity_facts USING gin (data);
+
+
+--
+-- Name: idx_entity_facts_entity; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_entity ON public.entity_facts USING btree (entity_id);
+
+
+--
+-- Name: idx_entity_facts_key; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_key ON public.entity_facts USING btree (key);
+
+
+--
+-- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_privacy_scope ON public.entity_facts USING gin (privacy_scope);
+
+
+--
+-- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_source_entity ON public.entity_facts USING btree (source_entity_id);
+
+
+--
+-- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_visibility ON public.entity_facts USING btree (visibility);
+
+
+--
+-- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_rel_a ON public.entity_relationships USING btree (entity_a);
+
+
+--
+-- Name: idx_entity_rel_b; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_rel_b ON public.entity_relationships USING btree (entity_b);
+
+
+--
+-- Name: idx_events_date; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_events_date ON public.events USING btree (event_date);
+
+
+--
+-- Name: idx_events_search; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_events_search ON public.events USING gin (search_vector);
+
+
+--
+-- Name: idx_gambling_entries_date; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_gambling_entries_date ON public.gambling_entries USING btree (session_date);
+
+
+--
+-- Name: idx_gambling_entries_log; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_gambling_entries_log ON public.gambling_entries USING btree (log_id);
+
+
+--
+-- Name: idx_gambling_logs_entity; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entity_id);
+
+
+--
+-- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_memory_embeddings_source ON public.memory_embeddings USING btree (source_type);
+
+
+--
+-- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+
+
+--
+-- Name: idx_place_props_place; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_place_props_place ON public.place_properties USING btree (place_id);
+
+
+--
+-- Name: idx_places_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_places_type ON public.places USING btree (type);
+
+
+--
+-- Name: idx_preferences_entity; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_preferences_entity ON public.preferences USING btree (entity_id);
+
+
+--
+-- Name: idx_preferences_key; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_preferences_key ON public.preferences USING btree (key);
+
+
+--
+-- Name: idx_project_tasks_project; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_project_tasks_project ON public.project_tasks USING btree (project_id);
+
+
+--
+-- Name: idx_project_tasks_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_project_tasks_status ON public.project_tasks USING btree (status);
+
+
+--
+-- Name: idx_projects_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_projects_status ON public.projects USING btree (status);
+
+
+--
+-- Name: idx_sops_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_sops_name ON public.sops USING btree (name);
+
+
+--
+-- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_tasks_due ON public.tasks USING btree (due_date);
+
+
+--
+-- Name: idx_tasks_parent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_tasks_parent ON public.tasks USING btree (parent_task_id);
+
+
+--
+-- Name: idx_tasks_priority; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_tasks_priority ON public.tasks USING btree (priority);
+
+
+--
+-- Name: idx_tasks_project; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_tasks_project ON public.tasks USING btree (project_id);
+
+
+--
+-- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
+
+
+--
+-- Name: idx_vehicles_owner; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_vehicles_owner ON public.vehicles USING btree (owner_id);
+
+
+--
+-- Name: idx_vehicles_vin; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
+
+
+--
+-- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER gambling_entries_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_entries FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
+
+
+--
+-- Name: gambling_logs gambling_logs_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_logs FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
+
+
+--
+-- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_facts
+    ADD CONSTRAINT entity_facts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_facts entity_facts_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_facts
+    ADD CONSTRAINT entity_facts_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: entity_relationships entity_relationships_entity_a_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_relationships
+    ADD CONSTRAINT entity_relationships_entity_a_fkey FOREIGN KEY (entity_a) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_relationships entity_relationships_entity_b_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_relationships
+    ADD CONSTRAINT entity_relationships_entity_b_fkey FOREIGN KEY (entity_b) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_entities event_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_entities
+    ADD CONSTRAINT event_entities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_entities event_entities_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_entities
+    ADD CONSTRAINT event_entities_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_places event_places_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_places
+    ADD CONSTRAINT event_places_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_places event_places_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_places
+    ADD CONSTRAINT event_places_place_id_fkey FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_projects event_projects_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_projects
+    ADD CONSTRAINT event_projects_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_projects event_projects_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.event_projects
+    ADD CONSTRAINT event_projects_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: gambling_entries gambling_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.gambling_entries
+    ADD CONSTRAINT gambling_entries_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.gambling_logs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: gambling_logs gambling_logs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.gambling_logs
+    ADD CONSTRAINT gambling_logs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.place_properties
+    ADD CONSTRAINT place_properties_place_id_fkey FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE;
+
+
+--
+-- Name: places places_parent_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.places
+    ADD CONSTRAINT places_parent_place_id_fkey FOREIGN KEY (parent_place_id) REFERENCES public.places(id);
+
+
+--
+-- Name: preferences preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.preferences
+    ADD CONSTRAINT preferences_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_entities project_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_entities
+    ADD CONSTRAINT project_entities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_entities project_entities_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_entities
+    ADD CONSTRAINT project_entities_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_sops project_sops_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_sops
+    ADD CONSTRAINT project_sops_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_sops project_sops_sop_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_sops
+    ADD CONSTRAINT project_sops_sop_id_fkey FOREIGN KEY (sop_id) REFERENCES public.sops(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.project_tasks
+    ADD CONSTRAINT project_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.entities(id);
+
+
+--
+-- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.entities(id);
+
+
+--
+-- Name: tasks tasks_parent_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_parent_task_id_fkey FOREIGN KEY (parent_task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tasks tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
+
+
+--
+-- Name: vehicles vehicles_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.vehicles
+    ADD CONSTRAINT vehicles_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: postgres
+--
+
+CREATE EVENT TRIGGER schema_change_trigger ON ddl_command_end
+   EXECUTE FUNCTION public.notify_schema_change();
+
+
+ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict dxBhfWOH62zex97qXFfYgZqeVFmnsLkd1kAN5vMDtDC47VZ88TjDbZgpWacSdoR
+
