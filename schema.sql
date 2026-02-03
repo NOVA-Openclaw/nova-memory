@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict shJUMAasVnD0O5PZ5ZPCH3dxPXCLtIUnshMowUAGyT0IUsQn7dKz1Vrmh9XAfqo
+\restrict dI0DtJ2mF5I2zhfdPydeF5W1K7MOgat6moh58OApiem64DbncJCBm07NZaI1wE7
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -26,14 +26,14 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
 
 --
--- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
 CREATE FUNCTION public.notify_gambling_change() RETURNS trigger
@@ -46,8 +46,10 @@ END;
 $$;
 
 
+ALTER FUNCTION public.notify_gambling_change() OWNER TO nova;
+
 --
--- Name: notify_schema_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_schema_change(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION public.notify_schema_change() RETURNS event_trigger
@@ -71,8 +73,10 @@ END;
 $$;
 
 
+ALTER FUNCTION public.notify_schema_change() OWNER TO postgres;
+
 --
--- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: -
+-- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: nova
 --
 
 CREATE FUNCTION public.search_memories(query_embedding public.vector, match_count integer DEFAULT 5, similarity_threshold double precision DEFAULT 0.7) RETURNS TABLE(id integer, source_type character varying, source_id text, content text, similarity double precision)
@@ -94,12 +98,14 @@ END;
 $$;
 
 
+ALTER FUNCTION public.search_memories(query_embedding public.vector, match_count integer, similarity_threshold double precision) OWNER TO nova;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: artwork; Type: TABLE; Schema: public; Owner: -
+-- Name: artwork; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.artwork (
@@ -120,29 +126,31 @@ CREATE TABLE public.artwork (
 );
 
 
+ALTER TABLE public.artwork OWNER TO nova;
+
 --
--- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON TABLE public.artwork IS 'Archive of NOVA''s Instagram artwork for future compilation';
 
 
 --
--- Name: COLUMN artwork.image_data; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN artwork.image_data; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON COLUMN public.artwork.image_data IS 'Raw image binary data (PNG/JPG)';
 
 
 --
--- Name: COLUMN artwork.inspiration_source; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN artwork.inspiration_source; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON COLUMN public.artwork.inspiration_source IS 'News snippet or source that inspired this artwork';
 
 
 --
--- Name: artwork_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: artwork_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.artwork_id_seq
@@ -154,15 +162,89 @@ CREATE SEQUENCE public.artwork_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.artwork_id_seq OWNER TO nova;
+
 --
--- Name: artwork_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: artwork_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.artwork_id_seq OWNED BY public.artwork.id;
 
 
 --
--- Name: conversations; Type: TABLE; Schema: public; Owner: -
+-- Name: certificates; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.certificates (
+    id integer NOT NULL,
+    entity_id integer NOT NULL,
+    fingerprint character varying(128) NOT NULL,
+    serial character varying(64) NOT NULL,
+    subject_dn character varying(512) NOT NULL,
+    issued_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at timestamp without time zone,
+    revoked_at timestamp without time zone,
+    revocation_reason character varying(255),
+    device_name character varying(255),
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.certificates OWNER TO nova;
+
+--
+-- Name: TABLE certificates; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.certificates IS 'Client certificates issued by NOVA CA for mTLS authentication';
+
+
+--
+-- Name: COLUMN certificates.fingerprint; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.certificates.fingerprint IS 'SHA256 fingerprint of the certificate';
+
+
+--
+-- Name: COLUMN certificates.serial; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.certificates.serial IS 'Certificate serial number';
+
+
+--
+-- Name: COLUMN certificates.revoked_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.certificates.revoked_at IS 'If set, certificate is revoked and should be rejected';
+
+
+--
+-- Name: certificates_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.certificates_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.certificates_id_seq OWNER TO nova;
+
+--
+-- Name: certificates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.certificates_id_seq OWNED BY public.certificates.id;
+
+
+--
+-- Name: conversations; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.conversations (
@@ -175,8 +257,10 @@ CREATE TABLE public.conversations (
 );
 
 
+ALTER TABLE public.conversations OWNER TO nova;
+
 --
--- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.conversations_id_seq
@@ -188,15 +272,17 @@ CREATE SEQUENCE public.conversations_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.conversations_id_seq OWNER TO nova;
+
 --
--- Name: conversations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: conversations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.conversations_id_seq OWNED BY public.conversations.id;
 
 
 --
--- Name: entities; Type: TABLE; Schema: public; Owner: -
+-- Name: entities; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.entities (
@@ -217,15 +303,17 @@ CREATE TABLE public.entities (
 );
 
 
+ALTER TABLE public.entities OWNER TO nova;
+
 --
--- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON TABLE public.entities IS 'People, AIs, organizations, and other entities';
 
 
 --
--- Name: entities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: entities_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.entities_id_seq
@@ -237,15 +325,17 @@ CREATE SEQUENCE public.entities_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.entities_id_seq OWNER TO nova;
+
 --
--- Name: entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.entities_id_seq OWNED BY public.entities.id;
 
 
 --
--- Name: entity_facts; Type: TABLE; Schema: public; Owner: -
+-- Name: entity_facts; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.entity_facts (
@@ -265,36 +355,38 @@ CREATE TABLE public.entity_facts (
 );
 
 
+ALTER TABLE public.entity_facts OWNER TO nova;
+
 --
--- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON COLUMN public.entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
 
 
 --
--- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
 
 
 --
--- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
 
 
 --
--- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
 
 
 --
--- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.entity_facts_id_seq
@@ -306,15 +398,17 @@ CREATE SEQUENCE public.entity_facts_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.entity_facts_id_seq OWNER TO nova;
+
 --
--- Name: entity_facts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: entity_facts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.entity_facts_id_seq OWNED BY public.entity_facts.id;
 
 
 --
--- Name: entity_relationships; Type: TABLE; Schema: public; Owner: -
+-- Name: entity_relationships; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.entity_relationships (
@@ -329,8 +423,10 @@ CREATE TABLE public.entity_relationships (
 );
 
 
+ALTER TABLE public.entity_relationships OWNER TO nova;
+
 --
--- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.entity_relationships_id_seq
@@ -342,15 +438,17 @@ CREATE SEQUENCE public.entity_relationships_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.entity_relationships_id_seq OWNER TO nova;
+
 --
--- Name: entity_relationships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: entity_relationships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.entity_relationships_id_seq OWNED BY public.entity_relationships.id;
 
 
 --
--- Name: event_entities; Type: TABLE; Schema: public; Owner: -
+-- Name: event_entities; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.event_entities (
@@ -360,8 +458,10 @@ CREATE TABLE public.event_entities (
 );
 
 
+ALTER TABLE public.event_entities OWNER TO nova;
+
 --
--- Name: event_places; Type: TABLE; Schema: public; Owner: -
+-- Name: event_places; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.event_places (
@@ -370,8 +470,10 @@ CREATE TABLE public.event_places (
 );
 
 
+ALTER TABLE public.event_places OWNER TO nova;
+
 --
--- Name: event_projects; Type: TABLE; Schema: public; Owner: -
+-- Name: event_projects; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.event_projects (
@@ -380,8 +482,10 @@ CREATE TABLE public.event_projects (
 );
 
 
+ALTER TABLE public.event_projects OWNER TO nova;
+
 --
--- Name: events; Type: TABLE; Schema: public; Owner: -
+-- Name: events; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.events (
@@ -395,8 +499,10 @@ CREATE TABLE public.events (
 );
 
 
+ALTER TABLE public.events OWNER TO nova;
+
 --
--- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.events_id_seq
@@ -408,15 +514,17 @@ CREATE SEQUENCE public.events_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.events_id_seq OWNER TO nova;
+
 --
--- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
 
 --
--- Name: gambling_entries; Type: TABLE; Schema: public; Owner: -
+-- Name: gambling_entries; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.gambling_entries (
@@ -433,8 +541,10 @@ CREATE TABLE public.gambling_entries (
 );
 
 
+ALTER TABLE public.gambling_entries OWNER TO nova;
+
 --
--- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.gambling_entries_id_seq
@@ -446,15 +556,17 @@ CREATE SEQUENCE public.gambling_entries_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.gambling_entries_id_seq OWNER TO nova;
+
 --
--- Name: gambling_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: gambling_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.gambling_entries_id_seq OWNED BY public.gambling_entries.id;
 
 
 --
--- Name: gambling_logs; Type: TABLE; Schema: public; Owner: -
+-- Name: gambling_logs; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.gambling_logs (
@@ -469,8 +581,10 @@ CREATE TABLE public.gambling_logs (
 );
 
 
+ALTER TABLE public.gambling_logs OWNER TO nova;
+
 --
--- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.gambling_logs_id_seq
@@ -482,15 +596,17 @@ CREATE SEQUENCE public.gambling_logs_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.gambling_logs_id_seq OWNER TO nova;
+
 --
--- Name: gambling_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: gambling_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.gambling_logs_id_seq OWNED BY public.gambling_logs.id;
 
 
 --
--- Name: lessons; Type: TABLE; Schema: public; Owner: -
+-- Name: lessons; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.lessons (
@@ -502,15 +618,17 @@ CREATE TABLE public.lessons (
 );
 
 
+ALTER TABLE public.lessons OWNER TO nova;
+
 --
--- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON TABLE public.lessons IS 'Lessons and insights learned by NOVA';
 
 
 --
--- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.lessons_id_seq
@@ -522,15 +640,17 @@ CREATE SEQUENCE public.lessons_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.lessons_id_seq OWNER TO nova;
+
 --
--- Name: lessons_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: lessons_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.lessons_id_seq OWNED BY public.lessons.id;
 
 
 --
--- Name: memory_embeddings; Type: TABLE; Schema: public; Owner: -
+-- Name: memory_embeddings; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.memory_embeddings (
@@ -544,8 +664,10 @@ CREATE TABLE public.memory_embeddings (
 );
 
 
+ALTER TABLE public.memory_embeddings OWNER TO nova;
+
 --
--- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.memory_embeddings_id_seq
@@ -557,15 +679,17 @@ CREATE SEQUENCE public.memory_embeddings_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.memory_embeddings_id_seq OWNER TO nova;
+
 --
--- Name: memory_embeddings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: memory_embeddings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings.id;
 
 
 --
--- Name: place_properties; Type: TABLE; Schema: public; Owner: -
+-- Name: place_properties; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.place_properties (
@@ -577,8 +701,10 @@ CREATE TABLE public.place_properties (
 );
 
 
+ALTER TABLE public.place_properties OWNER TO nova;
+
 --
--- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.place_properties_id_seq
@@ -590,15 +716,17 @@ CREATE SEQUENCE public.place_properties_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.place_properties_id_seq OWNER TO nova;
+
 --
--- Name: place_properties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: place_properties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.place_properties_id_seq OWNED BY public.place_properties.id;
 
 
 --
--- Name: places; Type: TABLE; Schema: public; Owner: -
+-- Name: places; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.places (
@@ -620,8 +748,10 @@ CREATE TABLE public.places (
 );
 
 
+ALTER TABLE public.places OWNER TO nova;
+
 --
--- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.places_id_seq
@@ -633,15 +763,17 @@ CREATE SEQUENCE public.places_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.places_id_seq OWNER TO nova;
+
 --
--- Name: places_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: places_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.places_id_seq OWNED BY public.places.id;
 
 
 --
--- Name: preferences; Type: TABLE; Schema: public; Owner: -
+-- Name: preferences; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.preferences (
@@ -654,8 +786,10 @@ CREATE TABLE public.preferences (
 );
 
 
+ALTER TABLE public.preferences OWNER TO nova;
+
 --
--- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.preferences_id_seq
@@ -667,15 +801,17 @@ CREATE SEQUENCE public.preferences_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.preferences_id_seq OWNER TO nova;
+
 --
--- Name: preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.preferences_id_seq OWNED BY public.preferences.id;
 
 
 --
--- Name: sops; Type: TABLE; Schema: public; Owner: -
+-- Name: sops; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.sops (
@@ -690,8 +826,10 @@ CREATE TABLE public.sops (
 );
 
 
+ALTER TABLE public.sops OWNER TO nova;
+
 --
--- Name: processes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: processes_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.processes_id_seq
@@ -703,15 +841,17 @@ CREATE SEQUENCE public.processes_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.processes_id_seq OWNER TO nova;
+
 --
--- Name: processes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: processes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.processes_id_seq OWNED BY public.sops.id;
 
 
 --
--- Name: project_entities; Type: TABLE; Schema: public; Owner: -
+-- Name: project_entities; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.project_entities (
@@ -721,8 +861,10 @@ CREATE TABLE public.project_entities (
 );
 
 
+ALTER TABLE public.project_entities OWNER TO nova;
+
 --
--- Name: project_sops; Type: TABLE; Schema: public; Owner: -
+-- Name: project_sops; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.project_sops (
@@ -731,8 +873,10 @@ CREATE TABLE public.project_sops (
 );
 
 
+ALTER TABLE public.project_sops OWNER TO nova;
+
 --
--- Name: project_tasks; Type: TABLE; Schema: public; Owner: -
+-- Name: project_tasks; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.project_tasks (
@@ -748,8 +892,10 @@ CREATE TABLE public.project_tasks (
 );
 
 
+ALTER TABLE public.project_tasks OWNER TO nova;
+
 --
--- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.project_tasks_id_seq
@@ -761,15 +907,17 @@ CREATE SEQUENCE public.project_tasks_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.project_tasks_id_seq OWNER TO nova;
+
 --
--- Name: project_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: project_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.project_tasks_id_seq OWNED BY public.project_tasks.id;
 
 
 --
--- Name: projects; Type: TABLE; Schema: public; Owner: -
+-- Name: projects; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.projects (
@@ -785,8 +933,10 @@ CREATE TABLE public.projects (
 );
 
 
+ALTER TABLE public.projects OWNER TO nova;
+
 --
--- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.projects_id_seq
@@ -798,15 +948,17 @@ CREATE SEQUENCE public.projects_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.projects_id_seq OWNER TO nova;
+
 --
--- Name: projects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: projects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.projects_id_seq OWNED BY public.projects.id;
 
 
 --
--- Name: tasks; Type: TABLE; Schema: public; Owner: -
+-- Name: tasks; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.tasks (
@@ -828,8 +980,10 @@ CREATE TABLE public.tasks (
 );
 
 
+ALTER TABLE public.tasks OWNER TO nova;
+
 --
--- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.tasks_id_seq
@@ -841,15 +995,17 @@ CREATE SEQUENCE public.tasks_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.tasks_id_seq OWNER TO nova;
+
 --
--- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
 
 
 --
--- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: -
+-- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_entity_facts AS
@@ -864,8 +1020,10 @@ CREATE VIEW public.v_entity_facts AS
      JOIN public.entity_facts ef ON ((e.id = ef.entity_id)));
 
 
+ALTER VIEW public.v_entity_facts OWNER TO nova;
+
 --
--- Name: v_event_timeline; Type: VIEW; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_event_timeline AS
@@ -883,8 +1041,10 @@ CREATE VIEW public.v_event_timeline AS
   ORDER BY ev.event_date DESC;
 
 
+ALTER VIEW public.v_event_timeline OWNER TO nova;
+
 --
--- Name: v_gambling_summary; Type: VIEW; Schema: public; Owner: -
+-- Name: v_gambling_summary; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_gambling_summary AS
@@ -908,8 +1068,10 @@ CREATE VIEW public.v_gambling_summary AS
   GROUP BY l.id, l.name, l.location;
 
 
+ALTER VIEW public.v_gambling_summary OWNER TO nova;
+
 --
--- Name: v_metamours; Type: VIEW; Schema: public; Owner: -
+-- Name: v_metamours; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_metamours AS
@@ -924,8 +1086,10 @@ CREATE VIEW public.v_metamours AS
   WHERE (((e1.name)::text = 'I)ruid'::text) AND ((r1.relationship)::text = ANY ((ARRAY['partner'::character varying, 'casual'::character varying])::text[])) AND (e3.id <> e1.id) AND (e3.id <> e2.id) AND ((e3.type)::text = 'person'::text));
 
 
+ALTER VIEW public.v_metamours OWNER TO nova;
+
 --
--- Name: v_pending_tasks; Type: VIEW; Schema: public; Owner: -
+-- Name: v_pending_tasks; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_pending_tasks AS
@@ -943,8 +1107,10 @@ CREATE VIEW public.v_pending_tasks AS
   ORDER BY t.priority, t.due_date;
 
 
+ALTER VIEW public.v_pending_tasks OWNER TO nova;
+
 --
--- Name: v_project_sops; Type: VIEW; Schema: public; Owner: -
+-- Name: v_project_sops; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_project_sops AS
@@ -956,8 +1122,10 @@ CREATE VIEW public.v_project_sops AS
      JOIN public.sops s ON ((ps.sop_id = s.id)));
 
 
+ALTER VIEW public.v_project_sops OWNER TO nova;
+
 --
--- Name: v_relationships; Type: VIEW; Schema: public; Owner: -
+-- Name: v_relationships; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_relationships AS
@@ -972,8 +1140,10 @@ CREATE VIEW public.v_relationships AS
      JOIN public.entities e2 ON ((r.entity_b = e2.id)));
 
 
+ALTER VIEW public.v_relationships OWNER TO nova;
+
 --
--- Name: v_task_tree; Type: VIEW; Schema: public; Owner: -
+-- Name: v_task_tree; Type: VIEW; Schema: public; Owner: nova
 --
 
 CREATE VIEW public.v_task_tree AS
@@ -1015,8 +1185,10 @@ CREATE VIEW public.v_task_tree AS
   ORDER BY path;
 
 
+ALTER VIEW public.v_task_tree OWNER TO nova;
+
 --
--- Name: vehicles; Type: TABLE; Schema: public; Owner: -
+-- Name: vehicles; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.vehicles (
@@ -1036,8 +1208,10 @@ CREATE TABLE public.vehicles (
 );
 
 
+ALTER TABLE public.vehicles OWNER TO nova;
+
 --
--- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.vehicles_id_seq
@@ -1049,15 +1223,17 @@ CREATE SEQUENCE public.vehicles_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.vehicles_id_seq OWNER TO nova;
+
 --
--- Name: vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.vehicles_id_seq OWNED BY public.vehicles.id;
 
 
 --
--- Name: vocabulary; Type: TABLE; Schema: public; Owner: -
+-- Name: vocabulary; Type: TABLE; Schema: public; Owner: nova
 --
 
 CREATE TABLE public.vocabulary (
@@ -1070,15 +1246,17 @@ CREATE TABLE public.vocabulary (
 );
 
 
+ALTER TABLE public.vocabulary OWNER TO nova;
+
 --
--- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: nova
 --
 
 COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition';
 
 
 --
--- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
 CREATE SEQUENCE public.vocabulary_id_seq
@@ -1090,148 +1268,157 @@ CREATE SEQUENCE public.vocabulary_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE public.vocabulary_id_seq OWNER TO nova;
+
 --
--- Name: vocabulary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: vocabulary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
 ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
 
 
 --
--- Name: artwork id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: artwork id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artwork_id_seq'::regclass);
 
 
 --
--- Name: conversations id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: certificates id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.certificates ALTER COLUMN id SET DEFAULT nextval('public.certificates_id_seq'::regclass);
+
+
+--
+-- Name: conversations id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.conversations ALTER COLUMN id SET DEFAULT nextval('public.conversations_id_seq'::regclass);
 
 
 --
--- Name: entities id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: entities id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entities ALTER COLUMN id SET DEFAULT nextval('public.entities_id_seq'::regclass);
 
 
 --
--- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_facts ALTER COLUMN id SET DEFAULT nextval('public.entity_facts_id_seq'::regclass);
 
 
 --
--- Name: entity_relationships id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: entity_relationships id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_relationships ALTER COLUMN id SET DEFAULT nextval('public.entity_relationships_id_seq'::regclass);
 
 
 --
--- Name: events id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: events id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.events_id_seq'::regclass);
 
 
 --
--- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.gambling_entries ALTER COLUMN id SET DEFAULT nextval('public.gambling_entries_id_seq'::regclass);
 
 
 --
--- Name: gambling_logs id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: gambling_logs id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.gambling_logs ALTER COLUMN id SET DEFAULT nextval('public.gambling_logs_id_seq'::regclass);
 
 
 --
--- Name: lessons id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: lessons id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.lessons ALTER COLUMN id SET DEFAULT nextval('public.lessons_id_seq'::regclass);
 
 
 --
--- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('public.memory_embeddings_id_seq'::regclass);
 
 
 --
--- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.place_properties ALTER COLUMN id SET DEFAULT nextval('public.place_properties_id_seq'::regclass);
 
 
 --
--- Name: places id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: places id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.places ALTER COLUMN id SET DEFAULT nextval('public.places_id_seq'::regclass);
 
 
 --
--- Name: preferences id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: preferences id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.preferences ALTER COLUMN id SET DEFAULT nextval('public.preferences_id_seq'::regclass);
 
 
 --
--- Name: project_tasks id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: project_tasks id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_tasks ALTER COLUMN id SET DEFAULT nextval('public.project_tasks_id_seq'::regclass);
 
 
 --
--- Name: projects id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: projects id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.projects_id_seq'::regclass);
 
 
 --
--- Name: sops id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: sops id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.sops ALTER COLUMN id SET DEFAULT nextval('public.processes_id_seq'::regclass);
 
 
 --
--- Name: tasks id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: tasks id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.tasks ALTER COLUMN id SET DEFAULT nextval('public.tasks_id_seq'::regclass);
 
 
 --
--- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.vehicles_id_seq'::regclass);
 
 
 --
--- Name: vocabulary id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: vocabulary id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
 
 
 --
--- Name: artwork artwork_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: artwork artwork_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.artwork
@@ -1239,7 +1426,31 @@ ALTER TABLE ONLY public.artwork
 
 
 --
--- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: certificates certificates_fingerprint_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.certificates
+    ADD CONSTRAINT certificates_fingerprint_key UNIQUE (fingerprint);
+
+
+--
+-- Name: certificates certificates_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.certificates
+    ADD CONSTRAINT certificates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: certificates certificates_serial_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.certificates
+    ADD CONSTRAINT certificates_serial_key UNIQUE (serial);
+
+
+--
+-- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.conversations
@@ -1247,7 +1458,7 @@ ALTER TABLE ONLY public.conversations
 
 
 --
--- Name: entities entities_name_type_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entities entities_name_type_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entities
@@ -1255,7 +1466,7 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entities
@@ -1263,7 +1474,7 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entities entities_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entities entities_user_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entities
@@ -1271,7 +1482,7 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_facts
@@ -1279,7 +1490,7 @@ ALTER TABLE ONLY public.entity_facts
 
 
 --
--- Name: entity_relationships entity_relationships_entity_a_entity_b_relationship_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_relationships entity_relationships_entity_a_entity_b_relationship_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -1287,7 +1498,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -1295,7 +1506,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: event_entities event_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: event_entities event_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_entities
@@ -1303,7 +1514,7 @@ ALTER TABLE ONLY public.event_entities
 
 
 --
--- Name: event_places event_places_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: event_places event_places_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_places
@@ -1311,7 +1522,7 @@ ALTER TABLE ONLY public.event_places
 
 
 --
--- Name: event_projects event_projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: event_projects event_projects_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_projects
@@ -1319,7 +1530,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.events
@@ -1327,7 +1538,7 @@ ALTER TABLE ONLY public.events
 
 
 --
--- Name: gambling_entries gambling_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: gambling_entries gambling_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.gambling_entries
@@ -1335,7 +1546,7 @@ ALTER TABLE ONLY public.gambling_entries
 
 
 --
--- Name: gambling_logs gambling_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: gambling_logs gambling_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.gambling_logs
@@ -1343,7 +1554,7 @@ ALTER TABLE ONLY public.gambling_logs
 
 
 --
--- Name: lessons lessons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: lessons lessons_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.lessons
@@ -1351,7 +1562,7 @@ ALTER TABLE ONLY public.lessons
 
 
 --
--- Name: memory_embeddings memory_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: memory_embeddings memory_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.memory_embeddings
@@ -1359,7 +1570,7 @@ ALTER TABLE ONLY public.memory_embeddings
 
 
 --
--- Name: place_properties place_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: place_properties place_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.place_properties
@@ -1367,7 +1578,7 @@ ALTER TABLE ONLY public.place_properties
 
 
 --
--- Name: places places_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: places places_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.places
@@ -1375,7 +1586,7 @@ ALTER TABLE ONLY public.places
 
 
 --
--- Name: places places_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: places places_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.places
@@ -1383,7 +1594,7 @@ ALTER TABLE ONLY public.places
 
 
 --
--- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.preferences
@@ -1391,7 +1602,7 @@ ALTER TABLE ONLY public.preferences
 
 
 --
--- Name: sops processes_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: sops processes_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.sops
@@ -1399,7 +1610,7 @@ ALTER TABLE ONLY public.sops
 
 
 --
--- Name: sops processes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: sops processes_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.sops
@@ -1407,7 +1618,7 @@ ALTER TABLE ONLY public.sops
 
 
 --
--- Name: project_entities project_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: project_entities project_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_entities
@@ -1415,7 +1626,7 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_sops project_sops_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: project_sops project_sops_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_sops
@@ -1423,7 +1634,7 @@ ALTER TABLE ONLY public.project_sops
 
 
 --
--- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_tasks
@@ -1431,7 +1642,7 @@ ALTER TABLE ONLY public.project_tasks
 
 
 --
--- Name: projects projects_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: projects projects_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.projects
@@ -1439,7 +1650,7 @@ ALTER TABLE ONLY public.projects
 
 
 --
--- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.projects
@@ -1447,7 +1658,7 @@ ALTER TABLE ONLY public.projects
 
 
 --
--- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.tasks
@@ -1455,7 +1666,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.vehicles
@@ -1463,7 +1674,7 @@ ALTER TABLE ONLY public.vehicles
 
 
 --
--- Name: vocabulary vocabulary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: vocabulary vocabulary_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.vocabulary
@@ -1471,7 +1682,7 @@ ALTER TABLE ONLY public.vocabulary
 
 
 --
--- Name: vocabulary vocabulary_word_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: vocabulary vocabulary_word_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.vocabulary
@@ -1479,252 +1690,281 @@ ALTER TABLE ONLY public.vocabulary
 
 
 --
--- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_certificates_entity_id; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_certificates_entity_id ON public.certificates USING btree (entity_id);
+
+
+--
+-- Name: idx_certificates_fingerprint; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_certificates_fingerprint ON public.certificates USING btree (fingerprint);
+
+
+--
+-- Name: idx_certificates_serial; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_certificates_serial ON public.certificates USING btree (serial);
+
+
+--
+-- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entities_name ON public.entities USING btree (name);
 
 
 --
--- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entities_type ON public.entities USING btree (type);
 
 
 --
--- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entities_user_id ON public.entities USING btree (user_id) WHERE (user_id IS NOT NULL);
 
 
 --
--- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_data ON public.entity_facts USING gin (data);
 
 
 --
--- Name: idx_entity_facts_entity; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_facts_entity; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_entity ON public.entity_facts USING btree (entity_id);
 
 
 --
--- Name: idx_entity_facts_key; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_facts_key; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_key ON public.entity_facts USING btree (key);
 
 
 --
--- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_privacy_scope ON public.entity_facts USING gin (privacy_scope);
 
 
 --
--- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_source_entity ON public.entity_facts USING btree (source_entity_id);
 
 
 --
--- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_visibility ON public.entity_facts USING btree (visibility);
 
 
 --
--- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_rel_a ON public.entity_relationships USING btree (entity_a);
 
 
 --
--- Name: idx_entity_rel_b; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_entity_rel_b; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_rel_b ON public.entity_relationships USING btree (entity_b);
 
 
 --
--- Name: idx_events_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_date; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_events_date ON public.events USING btree (event_date);
 
 
 --
--- Name: idx_events_search; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_events_search; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_events_search ON public.events USING gin (search_vector);
 
 
 --
--- Name: idx_gambling_entries_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_gambling_entries_date; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_gambling_entries_date ON public.gambling_entries USING btree (session_date);
 
 
 --
--- Name: idx_gambling_entries_log; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_gambling_entries_log; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_gambling_entries_log ON public.gambling_entries USING btree (log_id);
 
 
 --
--- Name: idx_gambling_logs_entity; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_gambling_logs_entity; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entity_id);
 
 
 --
--- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_memory_embeddings_source ON public.memory_embeddings USING btree (source_type);
 
 
 --
--- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --
--- Name: idx_place_props_place; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_place_props_place; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_place_props_place ON public.place_properties USING btree (place_id);
 
 
 --
--- Name: idx_places_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_places_type; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_places_type ON public.places USING btree (type);
 
 
 --
--- Name: idx_preferences_entity; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_preferences_entity; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_preferences_entity ON public.preferences USING btree (entity_id);
 
 
 --
--- Name: idx_preferences_key; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_preferences_key; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_preferences_key ON public.preferences USING btree (key);
 
 
 --
--- Name: idx_project_tasks_project; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_project_tasks_project; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_project_tasks_project ON public.project_tasks USING btree (project_id);
 
 
 --
--- Name: idx_project_tasks_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_project_tasks_status; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_project_tasks_status ON public.project_tasks USING btree (status);
 
 
 --
--- Name: idx_projects_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_projects_status; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_projects_status ON public.projects USING btree (status);
 
 
 --
--- Name: idx_sops_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_sops_name; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_sops_name ON public.sops USING btree (name);
 
 
 --
--- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_tasks_due ON public.tasks USING btree (due_date);
 
 
 --
--- Name: idx_tasks_parent; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_tasks_parent; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_tasks_parent ON public.tasks USING btree (parent_task_id);
 
 
 --
--- Name: idx_tasks_priority; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_tasks_priority; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_tasks_priority ON public.tasks USING btree (priority);
 
 
 --
--- Name: idx_tasks_project; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_tasks_project; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_tasks_project ON public.tasks USING btree (project_id);
 
 
 --
--- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
 
 
 --
--- Name: idx_vehicles_owner; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_vehicles_owner; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_vehicles_owner ON public.vehicles USING btree (owner_id);
 
 
 --
--- Name: idx_vehicles_vin; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_vehicles_vin; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
 
 
 --
--- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
 CREATE TRIGGER gambling_entries_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_entries FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
 
 
 --
--- Name: gambling_logs gambling_logs_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: gambling_logs gambling_logs_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
 CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_logs FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
 
 
 --
--- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.certificates
+    ADD CONSTRAINT certificates_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_facts
@@ -1732,7 +1972,7 @@ ALTER TABLE ONLY public.entity_facts
 
 
 --
--- Name: entity_facts entity_facts_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_facts entity_facts_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_facts
@@ -1740,7 +1980,7 @@ ALTER TABLE ONLY public.entity_facts
 
 
 --
--- Name: entity_relationships entity_relationships_entity_a_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_relationships entity_relationships_entity_a_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -1748,7 +1988,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: entity_relationships entity_relationships_entity_b_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: entity_relationships entity_relationships_entity_b_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -1756,7 +1996,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: event_entities event_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: event_entities event_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_entities
@@ -1764,7 +2004,7 @@ ALTER TABLE ONLY public.event_entities
 
 
 --
--- Name: event_entities event_entities_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: event_entities event_entities_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_entities
@@ -1772,7 +2012,7 @@ ALTER TABLE ONLY public.event_entities
 
 
 --
--- Name: event_places event_places_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: event_places event_places_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_places
@@ -1780,7 +2020,7 @@ ALTER TABLE ONLY public.event_places
 
 
 --
--- Name: event_places event_places_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: event_places event_places_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_places
@@ -1788,7 +2028,7 @@ ALTER TABLE ONLY public.event_places
 
 
 --
--- Name: event_projects event_projects_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: event_projects event_projects_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_projects
@@ -1796,7 +2036,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: event_projects event_projects_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: event_projects event_projects_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.event_projects
@@ -1804,7 +2044,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: gambling_entries gambling_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: gambling_entries gambling_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.gambling_entries
@@ -1812,7 +2052,7 @@ ALTER TABLE ONLY public.gambling_entries
 
 
 --
--- Name: gambling_logs gambling_logs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: gambling_logs gambling_logs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.gambling_logs
@@ -1820,7 +2060,7 @@ ALTER TABLE ONLY public.gambling_logs
 
 
 --
--- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.place_properties
@@ -1828,7 +2068,7 @@ ALTER TABLE ONLY public.place_properties
 
 
 --
--- Name: places places_parent_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: places places_parent_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.places
@@ -1836,7 +2076,7 @@ ALTER TABLE ONLY public.places
 
 
 --
--- Name: preferences preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: preferences preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.preferences
@@ -1844,7 +2084,7 @@ ALTER TABLE ONLY public.preferences
 
 
 --
--- Name: project_entities project_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: project_entities project_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_entities
@@ -1852,7 +2092,7 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_entities project_entities_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: project_entities project_entities_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_entities
@@ -1860,7 +2100,7 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_sops project_sops_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: project_sops project_sops_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_sops
@@ -1868,7 +2108,7 @@ ALTER TABLE ONLY public.project_sops
 
 
 --
--- Name: project_sops project_sops_sop_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: project_sops project_sops_sop_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_sops
@@ -1876,7 +2116,7 @@ ALTER TABLE ONLY public.project_sops
 
 
 --
--- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.project_tasks
@@ -1884,7 +2124,7 @@ ALTER TABLE ONLY public.project_tasks
 
 
 --
--- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.tasks
@@ -1892,7 +2132,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.tasks
@@ -1900,7 +2140,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_parent_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: tasks tasks_parent_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.tasks
@@ -1908,7 +2148,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: tasks tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.tasks
@@ -1916,7 +2156,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: vehicles vehicles_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: vehicles vehicles_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.vehicles
@@ -1924,16 +2164,18 @@ ALTER TABLE ONLY public.vehicles
 
 
 --
--- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: -
+-- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: postgres
 --
 
 CREATE EVENT TRIGGER schema_change_trigger ON ddl_command_end
    EXECUTE FUNCTION public.notify_schema_change();
 
 
+ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
+
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict shJUMAasVnD0O5PZ5ZPCH3dxPXCLtIUnshMowUAGyT0IUsQn7dKz1Vrmh9XAfqo
+\unrestrict dI0DtJ2mF5I2zhfdPydeF5W1K7MOgat6moh58OApiem64DbncJCBm07NZaI1wE7
 
