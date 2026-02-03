@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict dI0DtJ2mF5I2zhfdPydeF5W1K7MOgat6moh58OApiem64DbncJCBm07NZaI1wE7
+\restrict LGrU4FoONyh8bbQamRhwhFY4z4NlTdwEWu5ng3azVb12IDlrv8KiS4cESnmAztm
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -773,6 +773,47 @@ ALTER SEQUENCE public.places_id_seq OWNED BY public.places.id;
 
 
 --
+-- Name: portfolio_positions; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.portfolio_positions (
+    id integer NOT NULL,
+    symbol character varying(10) NOT NULL,
+    shares numeric(12,6) NOT NULL,
+    cost_basis numeric(12,2) NOT NULL,
+    purchased_at timestamp without time zone NOT NULL,
+    sold_at timestamp without time zone,
+    sale_proceeds numeric(12,2),
+    notes text,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.portfolio_positions OWNER TO nova;
+
+--
+-- Name: portfolio_positions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.portfolio_positions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.portfolio_positions_id_seq OWNER TO nova;
+
+--
+-- Name: portfolio_positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.portfolio_positions_id_seq OWNED BY public.portfolio_positions.id;
+
+
+--
 -- Name: preferences; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1369,6 +1410,13 @@ ALTER TABLE ONLY public.places ALTER COLUMN id SET DEFAULT nextval('public.place
 
 
 --
+-- Name: portfolio_positions id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.portfolio_positions ALTER COLUMN id SET DEFAULT nextval('public.portfolio_positions_id_seq'::regclass);
+
+
+--
 -- Name: preferences id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -1591,6 +1639,14 @@ ALTER TABLE ONLY public.places
 
 ALTER TABLE ONLY public.places
     ADD CONSTRAINT places_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: portfolio_positions portfolio_positions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.portfolio_positions
+    ADD CONSTRAINT portfolio_positions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1848,6 +1904,20 @@ CREATE INDEX idx_place_props_place ON public.place_properties USING btree (place
 --
 
 CREATE INDEX idx_places_type ON public.places USING btree (type);
+
+
+--
+-- Name: idx_positions_held; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_positions_held ON public.portfolio_positions USING btree (sold_at) WHERE (sold_at IS NULL);
+
+
+--
+-- Name: idx_positions_symbol; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_positions_symbol ON public.portfolio_positions USING btree (symbol);
 
 
 --
@@ -2177,5 +2247,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dI0DtJ2mF5I2zhfdPydeF5W1K7MOgat6moh58OApiem64DbncJCBm07NZaI1wE7
+\unrestrict LGrU4FoONyh8bbQamRhwhFY4z4NlTdwEWu5ng3azVb12IDlrv8KiS4cESnmAztm
 
