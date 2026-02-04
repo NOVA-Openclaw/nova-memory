@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict u5vTOUfYUB1mTJp0q4fTfTuLeM6IklqLrD2IMsef9PccWaa5sUW25Dub4J9jP7V
+\restrict GtRJZTy8TjjSCVc7XXZpy1YeT4OhKL5u7p0bZ7aU4xW5PXVTFChOejW9COhbS0A
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -631,6 +631,13 @@ ALTER TABLE public.lessons OWNER TO nova;
 --
 
 COMMENT ON TABLE public.lessons IS 'Lessons and insights learned by NOVA';
+
+
+--
+-- Name: COLUMN lessons.confidence; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.lessons.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
 
 
 --
@@ -2322,5 +2329,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict u5vTOUfYUB1mTJp0q4fTfTuLeM6IklqLrD2IMsef9PccWaa5sUW25Dub4J9jP7V
+\unrestrict GtRJZTy8TjjSCVc7XXZpy1YeT4OhKL5u7p0bZ7aU4xW5PXVTFChOejW9COhbS0A
 
