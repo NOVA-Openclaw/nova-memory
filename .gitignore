@@ -32,3 +32,12 @@ Thumbs.db
 # Logs
 *.log
 logs/
+# Security - never commit these
+.env.*
+.htpasswd
+.htaccess
+credentials.json
+secrets.json
+service-account*.json
+**/id_rsa
+**/id_ed25519
