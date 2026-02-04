@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Ro8YFmnB2NzNcqPcr4mdZo6KVM5scYmVHUtd0okWbrtZg1wWbZF7EYf3CkEHC2s
+\restrict u5vTOUfYUB1mTJp0q4fTfTuLeM6IklqLrD2IMsef9PccWaa5sUW25Dub4J9jP7V
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -615,7 +615,12 @@ CREATE TABLE public.lessons (
     lesson text NOT NULL,
     context text,
     source character varying(255),
-    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    original_behavior text,
+    correction_source text,
+    reinforced_at timestamp without time zone,
+    confidence double precision DEFAULT 1.0,
+    last_referenced timestamp without time zone
 );
 
 
@@ -2317,5 +2322,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Ro8YFmnB2NzNcqPcr4mdZo6KVM5scYmVHUtd0okWbrtZg1wWbZF7EYf3CkEHC2s
+\unrestrict u5vTOUfYUB1mTJp0q4fTfTuLeM6IklqLrD2IMsef9PccWaa5sUW25Dub4J9jP7V
 
