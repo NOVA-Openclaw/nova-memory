@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict LGrU4FoONyh8bbQamRhwhFY4z4NlTdwEWu5ng3azVb12IDlrv8KiS4cESnmAztm
+\restrict Ro8YFmnB2NzNcqPcr4mdZo6KVM5scYmVHUtd0okWbrtZg1wWbZF7EYf3CkEHC2s
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -122,7 +122,8 @@ CREATE TABLE public.artwork (
     posted_at timestamp with time zone DEFAULT now(),
     created_at timestamp with time zone DEFAULT now(),
     notes text,
-    inspiration_source text
+    inspiration_source text,
+    quality_score integer
 );
 
 
@@ -814,6 +815,46 @@ ALTER SEQUENCE public.portfolio_positions_id_seq OWNED BY public.portfolio_posit
 
 
 --
+-- Name: portfolio_snapshots; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.portfolio_snapshots (
+    id integer NOT NULL,
+    snapshot_at timestamp without time zone DEFAULT now() NOT NULL,
+    total_value numeric(12,2) NOT NULL,
+    total_cost_basis numeric(12,2) NOT NULL,
+    unrealized_pl numeric(12,2),
+    unrealized_pl_pct numeric(8,4),
+    positions jsonb,
+    benchmark_m2 numeric(8,4)
+);
+
+
+ALTER TABLE public.portfolio_snapshots OWNER TO nova;
+
+--
+-- Name: portfolio_snapshots_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.portfolio_snapshots_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.portfolio_snapshots_id_seq OWNER TO nova;
+
+--
+-- Name: portfolio_snapshots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.portfolio_snapshots_id_seq OWNED BY public.portfolio_snapshots.id;
+
+
+--
 -- Name: preferences; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1417,6 +1458,13 @@ ALTER TABLE ONLY public.portfolio_positions ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: portfolio_snapshots id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.portfolio_snapshots ALTER COLUMN id SET DEFAULT nextval('public.portfolio_snapshots_id_seq'::regclass);
+
+
+--
 -- Name: preferences id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -1647,6 +1695,14 @@ ALTER TABLE ONLY public.places
 
 ALTER TABLE ONLY public.portfolio_positions
     ADD CONSTRAINT portfolio_positions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: portfolio_snapshots portfolio_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.portfolio_snapshots
+    ADD CONSTRAINT portfolio_snapshots_pkey PRIMARY KEY (id);
 
 
 --
@@ -1956,6 +2012,20 @@ CREATE INDEX idx_projects_status ON public.projects USING btree (status);
 
 
 --
+-- Name: idx_snapshots_date; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_snapshots_date ON public.portfolio_snapshots USING btree (snapshot_at);
+
+
+--
+-- Name: idx_snapshots_day; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE UNIQUE INDEX idx_snapshots_day ON public.portfolio_snapshots USING btree (((snapshot_at)::date));
+
+
+--
 -- Name: idx_sops_name; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -2247,5 +2317,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict LGrU4FoONyh8bbQamRhwhFY4z4NlTdwEWu5ng3azVb12IDlrv8KiS4cESnmAztm
+\unrestrict Ro8YFmnB2NzNcqPcr4mdZo6KVM5scYmVHUtd0okWbrtZg1wWbZF7EYf3CkEHC2s
 
