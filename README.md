@@ -43,8 +43,46 @@ The schema (`schema.sql`) includes tables for:
 - **places** - Locations, restaurants, venues, networks
 - **projects** - Active projects with tasks and status
 - **events** - Timeline of what happened
-- **lessons** - Things learned from experience
+- **lessons** - Things learned from experience (with correction learning + confidence decay)
 - **preferences** - User/system preferences
+
+### Lessons Table (Correction Learning)
+
+The `lessons` table supports adaptive learning from corrections:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `lesson` | text | The lesson/insight learned |
+| `context` | text | Context where lesson applies |
+| `source` | varchar | Where it came from (conversation, observation, etc.) |
+| `learned_at` | timestamp | When first learned |
+| `original_behavior` | text | What I did wrong (for corrections) |
+| `correction_source` | text | Who corrected me ('druid', 'self', 'user', etc.) |
+| `reinforced_at` | timestamp | Last time this lesson was validated/used |
+| `confidence` | float | Confidence score (1.0 = high, decays over time) |
+| `last_referenced` | timestamp | When this lesson was last accessed |
+
+**Correction Learning Pattern:**
+```sql
+-- Log a correction
+INSERT INTO lessons (lesson, original_behavior, correction_source, confidence)
+VALUES (
+  'Use bcrypt for password hashing, not MD5',
+  'Suggested using MD5 for password storage',
+  'druid',
+  1.0
+);
+```
+
+**Confidence Decay Pattern:**
+```sql
+-- Decay unreferenced lessons (run periodically)
+UPDATE lessons 
+SET confidence = confidence * 0.95 
+WHERE last_referenced < NOW() - INTERVAL '30 days'
+  AND confidence > 0.1;
+```
 
 ### Setup
 
@@ -231,9 +269,10 @@ Start with MEMORY.md. If context bloat becomes an issue, move to REMINDERS.md.
 
 PRs welcome! Areas that need work:
 - [ ] Deduplication of extracted facts
-- [ ] Confidence decay over time
+- [x] Confidence decay over time (schema support added 2026-02-04)
 - [ ] Vector embeddings for semantic search
 - [ ] Contradiction detection
+- [ ] Automated confidence decay job (cron)
 
 ## License
 
