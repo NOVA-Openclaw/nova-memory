@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict RwewPlrGPIFtI9DhFyxtJXUZ7nAateD313RUE8xgGd50hh6FafkqigMbuaHEKE6
+\restrict OL2TXqxfO5Jv8CaBO6jOqfdcZyc9F4dcKFibbM69JOIte60ytkkZ08c7HXYRYA2
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -142,7 +142,9 @@ CREATE TABLE public.agents (
     persistent boolean DEFAULT true,
     seed_context jsonb,
     instantiation_sop character varying(100),
-    nickname character varying(50)
+    nickname character varying(50),
+    instance_type character varying(20) DEFAULT 'subagent'::character varying,
+    home_dir character varying(255)
 );
 
 
@@ -195,6 +197,20 @@ COMMENT ON COLUMN public.agents.instantiation_sop IS 'SOP name for how to instan
 --
 
 COMMENT ON COLUMN public.agents.nickname IS 'Short friendly name for easy reference';
+
+
+--
+-- Name: COLUMN agents.instance_type; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.instance_type IS 'subagent (spawned session) or peer (separate Clawdbot instance)';
+
+
+--
+-- Name: COLUMN agents.home_dir; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.home_dir IS 'Workspace path for peer agents';
 
 
 --
@@ -2525,5 +2541,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RwewPlrGPIFtI9DhFyxtJXUZ7nAateD313RUE8xgGd50hh6FafkqigMbuaHEKE6
+\unrestrict OL2TXqxfO5Jv8CaBO6jOqfdcZyc9F4dcKFibbM69JOIte60ytkkZ08c7HXYRYA2
 
