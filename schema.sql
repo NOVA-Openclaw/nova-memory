@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict MNeaKwZXArJlk7VEqiKSD0owPRJewxRmR1pcTOkIfos601dapJ4keVgG6h88Hgs
+\restrict drtuNa1JHsaQvOnWPKBzoiDcuX43DWLo7OHl0yhK6V9yVKWJAiOr7TdDDogYtyL
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -142,6 +142,53 @@ ALTER FUNCTION public.update_agents_timestamp() OWNER TO nova;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: agent_actions; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_actions (
+    id integer NOT NULL,
+    agent_id integer DEFAULT 1,
+    action_type character varying(100) NOT NULL,
+    description text NOT NULL,
+    related_media_id integer,
+    related_event_id integer,
+    metadata jsonb,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.agent_actions OWNER TO nova;
+
+--
+-- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agent_actions IS 'Log of NOVA actions for continuity and avoiding duplicate work';
+
+
+--
+-- Name: agent_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.agent_actions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agent_actions_id_seq OWNER TO nova;
+
+--
+-- Name: agent_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.agent_actions_id_seq OWNED BY public.agent_actions.id;
+
 
 --
 -- Name: agents; Type: TABLE; Schema: public; Owner: nova
@@ -1631,6 +1678,13 @@ ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
 
 
 --
+-- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_actions ALTER COLUMN id SET DEFAULT nextval('public.agent_actions_id_seq'::regclass);
+
+
+--
 -- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -1796,6 +1850,14 @@ ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.veh
 --
 
 ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
+
+
+--
+-- Name: agent_actions agent_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_actions
+    ADD CONSTRAINT agent_actions_pkey PRIMARY KEY (id);
 
 
 --
@@ -2108,6 +2170,27 @@ ALTER TABLE ONLY public.vocabulary
 
 ALTER TABLE ONLY public.vocabulary
     ADD CONSTRAINT vocabulary_word_key UNIQUE (word);
+
+
+--
+-- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_actions_agent ON public.agent_actions USING btree (agent_id);
+
+
+--
+-- Name: idx_agent_actions_time; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_actions_time ON public.agent_actions USING btree (created_at DESC);
+
+
+--
+-- Name: idx_agent_actions_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_actions_type ON public.agent_actions USING btree (action_type);
 
 
 --
@@ -2454,6 +2537,30 @@ CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.g
 
 
 --
+-- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_actions
+    ADD CONSTRAINT agent_actions_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: agent_actions agent_actions_related_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_actions
+    ADD CONSTRAINT agent_actions_related_event_id_fkey FOREIGN KEY (related_event_id) REFERENCES public.events(id);
+
+
+--
+-- Name: agent_actions agent_actions_related_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_actions
+    ADD CONSTRAINT agent_actions_related_media_id_fkey FOREIGN KEY (related_media_id) REFERENCES public.media_consumed(id);
+
+
+--
 -- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -2683,5 +2790,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict MNeaKwZXArJlk7VEqiKSD0owPRJewxRmR1pcTOkIfos601dapJ4keVgG6h88Hgs
+\unrestrict drtuNa1JHsaQvOnWPKBzoiDcuX43DWLo7OHl0yhK6V9yVKWJAiOr7TdDDogYtyL
 
