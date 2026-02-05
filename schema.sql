@@ -144,7 +144,8 @@ CREATE TABLE public.agents (
     instantiation_sop character varying(100),
     nickname character varying(50),
     instance_type character varying(20) DEFAULT 'subagent'::character varying,
-    home_dir character varying(255)
+    home_dir character varying(255),
+    unix_user character varying(50)
 );
 
 
@@ -211,6 +212,13 @@ COMMENT ON COLUMN public.agents.instance_type IS 'subagent (spawned session) or 
 --
 
 COMMENT ON COLUMN public.agents.home_dir IS 'Workspace path for peer agents';
+
+
+--
+-- Name: COLUMN agents.unix_user; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.unix_user IS 'Unix username for peer agents with own system resources';
 
 
 --
