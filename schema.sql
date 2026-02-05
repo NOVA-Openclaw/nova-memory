@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict l6iFMP5YfcGeph6BZmfNUl5h9dQELBQBDr2ZSYWUt4pkD0wcLLynocpOYF2njtq
+\restrict qdCHFYU7fNabuGvxT7CDCHIdKvd2v2yqKjP72vRYnEcbqbnN6SUTj9aKiDhZBg1
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -140,7 +140,8 @@ CREATE TABLE public.agents (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     persistent boolean DEFAULT true,
-    seed_context jsonb
+    seed_context jsonb,
+    instantiation_sop character varying(100)
 );
 
 
@@ -179,6 +180,13 @@ COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = in
 --
 
 COMMENT ON COLUMN public.agents.seed_context IS 'JSON: files, queries, SOPs to inject before tasking';
+
+
+--
+-- Name: COLUMN agents.instantiation_sop; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.instantiation_sop IS 'SOP name for how to instantiate this agent (for ephemeral agents)';
 
 
 --
@@ -1122,11 +1130,19 @@ CREATE TABLE public.projects (
     completed_at timestamp without time zone,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     notes text,
+    git_config jsonb,
     CONSTRAINT projects_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])))
 );
 
 
 ALTER TABLE public.projects OWNER TO nova;
+
+--
+-- Name: COLUMN projects.git_config; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.projects.git_config IS 'Per-project Git config: branch strategy, commit conventions, PR workflow, etc.';
+
 
 --
 -- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -1208,12 +1224,13 @@ CREATE VIEW public.v_agents AS
     provider,
     model,
     access_method,
+    persistent,
     array_to_string(skills, ', '::text) AS skills_list,
     status,
     credential_ref
    FROM public.agents
   WHERE ((status)::text = 'active'::text)
-  ORDER BY role, name;
+  ORDER BY persistent DESC, role, name;
 
 
 ALTER VIEW public.v_agents OWNER TO nova;
@@ -2500,5 +2517,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict l6iFMP5YfcGeph6BZmfNUl5h9dQELBQBDr2ZSYWUt4pkD0wcLLynocpOYF2njtq
+\unrestrict qdCHFYU7fNabuGvxT7CDCHIdKvd2v2yqKjP72vRYnEcbqbnN6SUTj9aKiDhZBg1
 
