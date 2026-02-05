@@ -41,11 +41,48 @@ The schema (`schema.sql`) includes tables for:
 - **entity_facts** - Key-value facts about entities
 - **entity_relationships** - Connections between entities
 - **places** - Locations, restaurants, venues, networks
-- **projects** - Active projects with tasks and status
+- **projects** - Active projects with tasks, status, and Git configuration
 - **events** - Timeline of what happened
 - **lessons** - Things learned from experience (with correction learning + confidence decay)
 - **preferences** - User/system preferences
 - **agents** - Registry of AI agent instances for delegation
+
+### Projects Table
+
+The `projects` table tracks active work with optional Git configuration:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `name` | varchar | Project name |
+| `status` | varchar | active, paused, completed, blocked |
+| `goal` | text | What we're trying to achieve |
+| `notes` | text | General notes |
+| `git_config` | jsonb | Per-project Git settings (see below) |
+
+**git_config Structure:**
+```json
+{
+  "repo": "owner/repo-name",
+  "default_branch": "main",
+  "branch_strategy": "feature-branches | direct-to-main | gitflow",
+  "branch_naming": "feature/{description}, fix/{description}",
+  "commit_style": "conventional-commits",
+  "pr_required": true,
+  "squash_merge": true,
+  "notes": "Project-specific Git notes"
+}
+```
+
+**Example Queries:**
+```sql
+-- Projects with Git config
+SELECT name, git_config->>'repo' as repo, git_config->>'branch_strategy' as strategy 
+FROM projects WHERE git_config IS NOT NULL;
+
+-- Update project Git config
+UPDATE projects SET git_config = '{"repo": "...", "branch_strategy": "..."}' WHERE name = 'my-project';
+```
 
 ### Agents Table (Delegation Registry)
 
@@ -67,6 +104,7 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `notes` | text | Usage notes, caveats |
 | `persistent` | boolean | true = always running, false = instantiated on-demand |
 | `seed_context` | jsonb | Files, SOPs, queries to inject before tasking ephemeral agents |
+| `instantiation_sop` | varchar(100) | SOP name with full procedure to spawn this agent |
 
 **Persistent vs Ephemeral Agents:**
 - **Persistent** (`persistent = true`): Always-running agents like main Clawdbot sessions
