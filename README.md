@@ -272,14 +272,59 @@ Tracks media (podcasts, videos, articles, books) that have been consumed:
 | `rating` | int | Rating 1-10 |
 | `notes` | text | Notes or key takeaways |
 | `transcript` | text | Full transcript if available |
+| `summary` | text | AI-generated or manual summary |
+| `metadata` | jsonb | Additional structured data (duration, chapters, etc.) |
+| `source_file` | text | Local file path if stored locally |
+| `status` | varchar(20) | Processing status: queued, processing, completed, failed |
+| `ingested_by` | int | Agent that processed/ingested this (FK to agents) |
+| `ingested_at` | timestamp | When ingestion completed |
+| `search_vector` | tsvector | Full-text search index (auto-updated) |
+
+**Full-text search:**
+```sql
+-- Search media by content
+SELECT title, ts_rank(search_vector, query) as rank
+FROM media_consumed, plainto_tsquery('bitcoin agents') query
+WHERE search_vector @@ query
+ORDER BY rank DESC;
+```
 
 **Example:**
 ```sql
--- Log a podcast
-INSERT INTO media_consumed (media_type, title, creator, url, consumed_date, consumed_by, notes)
+-- Log a podcast with metadata
+INSERT INTO media_consumed (media_type, title, creator, url, consumed_date, consumed_by, notes, source_file, metadata)
 VALUES ('podcast', 'TIP Infinite Tech - Clawdbot Episode', 'Preston Pysh', 
-        'https://example.com/podcast', '2026-02-05', 1, 'Discussion of AI agents, persistent memory, Bitcoin wallets');
+        'https://example.com/podcast', '2026-02-05', 1, 
+        'Discussion of AI agents, persistent memory, Bitcoin wallets',
+        '~/clawd/podcasts/tip-clawdbot.mp3',
+        '{"duration_minutes": 75, "guests": ["Pablo Fernandez", "Trey Sellers"]}');
 ```
+
+### Media Queue Table
+
+Processing queue for media ingestion:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `url` | text | URL to fetch (or null if local file) |
+| `file_path` | text | Local file path (or null if URL) |
+| `priority` | int | Processing priority (1=highest, default 5) |
+| `status` | varchar(20) | pending, processing, completed, failed |
+| `requested_by` | int | Who requested ingestion (FK to entities) |
+| `result_media_id` | int | Link to media_consumed when complete |
+| `error_message` | text | Error details if failed |
+
+### Media Tags Table
+
+Tags for categorizing media content:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `media_id` | int | FK to media_consumed |
+| `tag` | varchar(100) | Tag name |
+| `source` | varchar(20) | How tagged: auto, manual, ai |
+| `confidence` | decimal(3,2) | Confidence for auto-tags (0-1) |
 
 ### Agent Actions Table
 
