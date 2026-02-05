@@ -279,6 +279,7 @@ Tracks media (podcasts, videos, articles, books) that have been consumed:
 | `ingested_by` | int | Agent that processed/ingested this (FK to agents) |
 | `ingested_at` | timestamp | When ingestion completed |
 | `search_vector` | tsvector | Full-text search index (auto-updated) |
+| `insights` | text | Key insights, lessons, or actionable takeaways |
 
 **Full-text search:**
 ```sql
