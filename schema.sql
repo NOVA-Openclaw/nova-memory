@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict OL2TXqxfO5Jv8CaBO6jOqfdcZyc9F4dcKFibbM69JOIte60ytkkZ08c7HXYRYA2
+\restrict peyeifBJQxzF0wbRQijTRSJBflFxLBbbQgV4TEbQapaz01UtuGFNXEKei8eA5KU
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -74,6 +74,29 @@ $$;
 
 
 ALTER FUNCTION public.notify_schema_change() OWNER TO postgres;
+
+--
+-- Name: prevent_locked_project_update(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.prevent_locked_project_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- If record is locked and we're not just unlocking it
+  IF OLD.locked = TRUE THEN
+    -- Allow ONLY if we're explicitly unlocking (locked going from true to false)
+    IF NEW.locked = FALSE THEN
+      RETURN NEW;
+    END IF;
+    RAISE EXCEPTION 'Project % is locked. Set locked=FALSE first to modify.', OLD.name;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.prevent_locked_project_update() OWNER TO nova;
 
 --
 -- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: nova
@@ -1163,6 +1186,8 @@ CREATE TABLE public.projects (
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     notes text,
     git_config jsonb,
+    repo_url text,
+    locked boolean DEFAULT false,
     CONSTRAINT projects_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])))
 );
 
@@ -1174,6 +1199,20 @@ ALTER TABLE public.projects OWNER TO nova;
 --
 
 COMMENT ON COLUMN public.projects.git_config IS 'Per-project Git config: branch strategy, commit conventions, PR workflow, etc.';
+
+
+--
+-- Name: COLUMN projects.repo_url; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.projects.repo_url IS 'Canonical repo URL. When locked, this is the permanent pointer - track details in the repo itself.';
+
+
+--
+-- Name: COLUMN projects.locked; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.projects.locked IS 'When TRUE, prevents accidental updates. Must explicitly set locked=FALSE first.';
 
 
 --
@@ -2314,6 +2353,13 @@ CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXE
 
 
 --
+-- Name: projects enforce_project_lock; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER enforce_project_lock BEFORE UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION public.prevent_locked_project_update();
+
+
+--
 -- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -2549,5 +2595,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict OL2TXqxfO5Jv8CaBO6jOqfdcZyc9F4dcKFibbM69JOIte60ytkkZ08c7HXYRYA2
+\unrestrict peyeifBJQxzF0wbRQijTRSJBflFxLBbbQgV4TEbQapaz01UtuGFNXEKei8eA5KU
 
