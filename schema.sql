@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 2jJDFjQN4bom8vetcC18x9FpJVOP5l7HMU5vHYAcdO5WM00NVKcuepM1lI5fR5h
+\restrict e8aLo7cECzSdczKLvzlfgmQwuPP86eiNXgLLnmnFzxsPGKBAmNVbW4rMseZcMCW
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -31,6 +31,28 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
+
+--
+-- Name: expire_old_chat(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.expire_old_chat() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    DELETE FROM agent_chat 
+    WHERE created_at < now() - interval '30 days'
+    RETURNING id INTO v_count;
+    
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$;
+
+
+ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
 
 --
 -- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: nova
@@ -150,6 +172,40 @@ $$;
 ALTER FUNCTION public.search_memories(query_embedding public.vector, match_count integer, similarity_threshold double precision) OWNER TO nova;
 
 --
+-- Name: send_agent_message(character varying, text, character varying, text[]); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying DEFAULT 'system'::character varying, p_mentions text[] DEFAULT NULL::text[]) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_id INTEGER;
+    v_payload TEXT;
+BEGIN
+    INSERT INTO agent_chat (channel, sender, message, mentions)
+    VALUES (p_channel, p_sender, p_message, p_mentions)
+    RETURNING id INTO v_id;
+    
+    -- Notify listeners
+    v_payload := json_build_object(
+        'id', v_id,
+        'channel', p_channel,
+        'sender', p_sender,
+        'message', substring(p_message, 1, 200),
+        'mentions', p_mentions
+    )::text;
+    
+    PERFORM pg_notify('agent_chat', v_payload);
+    PERFORM pg_notify('agent_chat_' || p_channel, v_payload);
+    
+    RETURN v_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) OWNER TO nova;
+
+--
 -- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -235,6 +291,45 @@ ALTER SEQUENCE public.agent_actions_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.agent_actions_id_seq OWNED BY public.agent_actions.id;
+
+
+--
+-- Name: agent_chat; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_chat (
+    id integer NOT NULL,
+    channel character varying(50) DEFAULT 'system'::character varying,
+    sender character varying(50) NOT NULL,
+    message text NOT NULL,
+    mentions text[],
+    reply_to integer,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.agent_chat OWNER TO nova;
+
+--
+-- Name: agent_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.agent_chat_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agent_chat_id_seq OWNER TO nova;
+
+--
+-- Name: agent_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.agent_chat_id_seq OWNED BY public.agent_chat.id;
 
 
 --
@@ -1745,6 +1840,43 @@ ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
 
 
 --
+-- Name: v_agent_chat_recent; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_agent_chat_recent AS
+ SELECT id,
+    channel,
+    sender,
+    message,
+    mentions,
+    reply_to,
+    created_at
+   FROM public.agent_chat
+  WHERE (created_at > (now() - '30 days'::interval))
+  ORDER BY created_at DESC;
+
+
+ALTER VIEW public.v_agent_chat_recent OWNER TO nova;
+
+--
+-- Name: v_agent_chat_stats; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_agent_chat_stats AS
+ SELECT count(*) AS total_messages,
+    count(*) FILTER (WHERE (created_at > (now() - '24:00:00'::interval))) AS messages_24h,
+    count(*) FILTER (WHERE (created_at > (now() - '7 days'::interval))) AS messages_7d,
+    count(DISTINCT sender) AS unique_senders,
+    count(DISTINCT channel) AS active_channels,
+    pg_size_pretty(pg_total_relation_size('public.agent_chat'::regclass)) AS table_size,
+    min(created_at) AS oldest_message,
+    max(created_at) AS newest_message
+   FROM public.agent_chat;
+
+
+ALTER VIEW public.v_agent_chat_stats OWNER TO nova;
+
+--
 -- Name: v_agents; Type: VIEW; Schema: public; Owner: nova
 --
 
@@ -2177,6 +2309,13 @@ ALTER TABLE ONLY public.agent_actions ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: agent_chat id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_chat ALTER COLUMN id SET DEFAULT nextval('public.agent_chat_id_seq'::regclass);
+
+
+--
 -- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2371,6 +2510,14 @@ ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.v
 
 ALTER TABLE ONLY public.agent_actions
     ADD CONSTRAINT agent_actions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_chat agent_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_chat
+    ADD CONSTRAINT agent_chat_pkey PRIMARY KEY (id);
 
 
 --
@@ -2752,6 +2899,27 @@ CREATE INDEX idx_agent_actions_time ON public.agent_actions USING btree (created
 --
 
 CREATE INDEX idx_agent_actions_type ON public.agent_actions USING btree (action_type);
+
+
+--
+-- Name: idx_agent_chat_channel; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_channel ON public.agent_chat USING btree (channel, created_at DESC);
+
+
+--
+-- Name: idx_agent_chat_mentions; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_mentions ON public.agent_chat USING gin (mentions);
+
+
+--
+-- Name: idx_agent_chat_sender; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_sender ON public.agent_chat USING btree (sender, created_at DESC);
 
 
 --
@@ -3228,6 +3396,14 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
+-- Name: agent_chat agent_chat_reply_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_chat
+    ADD CONSTRAINT agent_chat_reply_to_fkey FOREIGN KEY (reply_to) REFERENCES public.agent_chat(id);
+
+
+--
 -- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3476,6 +3652,409 @@ ALTER TABLE ONLY public.vehicles
 
 
 --
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
+--
+
+GRANT USAGE ON SCHEMA public TO newhart;
+
+
+--
+-- Name: FUNCTION send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) TO newhart;
+
+
+--
+-- Name: TABLE agent_actions; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.agent_actions TO newhart;
+
+
+--
+-- Name: TABLE agent_chat; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO newhart;
+
+
+--
+-- Name: SEQUENCE agent_chat_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO newhart;
+
+
+--
+-- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
+--
+
+REVOKE ALL ON TABLE public.agents FROM nova;
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agents TO newhart;
+
+
+--
+-- Name: SEQUENCE agents_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
+
+
+--
+-- Name: TABLE artwork; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.artwork TO newhart;
+
+
+--
+-- Name: TABLE asset_classes; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.asset_classes TO newhart;
+
+
+--
+-- Name: TABLE certificates; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.certificates TO newhart;
+
+
+--
+-- Name: TABLE conversations; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.conversations TO newhart;
+
+
+--
+-- Name: TABLE entities; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.entities TO newhart;
+
+
+--
+-- Name: TABLE entity_facts; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.entity_facts TO newhart;
+
+
+--
+-- Name: TABLE entity_relationships; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.entity_relationships TO newhart;
+
+
+--
+-- Name: TABLE event_entities; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.event_entities TO newhart;
+
+
+--
+-- Name: TABLE event_places; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.event_places TO newhart;
+
+
+--
+-- Name: TABLE event_projects; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.event_projects TO newhart;
+
+
+--
+-- Name: TABLE events; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.events TO newhart;
+
+
+--
+-- Name: TABLE gambling_entries; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.gambling_entries TO newhart;
+
+
+--
+-- Name: TABLE gambling_logs; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.gambling_logs TO newhart;
+
+
+--
+-- Name: TABLE lessons; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.lessons TO newhart;
+
+
+--
+-- Name: TABLE media_consumed; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.media_consumed TO newhart;
+
+
+--
+-- Name: TABLE media_queue; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.media_queue TO newhart;
+
+
+--
+-- Name: TABLE media_tags; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.media_tags TO newhart;
+
+
+--
+-- Name: TABLE memory_embeddings; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.memory_embeddings TO newhart;
+
+
+--
+-- Name: TABLE place_properties; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.place_properties TO newhart;
+
+
+--
+-- Name: TABLE places; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.places TO newhart;
+
+
+--
+-- Name: TABLE portfolio_positions; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.portfolio_positions TO newhart;
+
+
+--
+-- Name: TABLE portfolio_snapshots; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.portfolio_snapshots TO newhart;
+
+
+--
+-- Name: TABLE positions; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.positions TO newhart;
+
+
+--
+-- Name: TABLE preferences; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.preferences TO newhart;
+
+
+--
+-- Name: TABLE price_cache_v2; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.price_cache_v2 TO newhart;
+
+
+--
+-- Name: TABLE sops; Type: ACL; Schema: public; Owner: nova
+--
+
+REVOKE ALL ON TABLE public.sops FROM nova;
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.sops TO nova;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sops TO newhart;
+
+
+--
+-- Name: SEQUENCE processes_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.processes_id_seq TO newhart;
+
+
+--
+-- Name: TABLE project_entities; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.project_entities TO newhart;
+
+
+--
+-- Name: TABLE project_sops; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.project_sops TO newhart;
+
+
+--
+-- Name: TABLE project_tasks; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.project_tasks TO newhart;
+
+
+--
+-- Name: TABLE projects; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.projects TO newhart;
+
+
+--
+-- Name: TABLE tasks; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.tasks TO newhart;
+
+
+--
+-- Name: TABLE v_agent_chat_recent; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO newhart;
+
+
+--
+-- Name: TABLE v_agent_chat_stats; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO newhart;
+
+
+--
+-- Name: TABLE v_agents; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_agents TO newhart;
+
+
+--
+-- Name: TABLE v_entity_facts; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_entity_facts TO newhart;
+
+
+--
+-- Name: TABLE v_event_timeline; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_event_timeline TO newhart;
+
+
+--
+-- Name: TABLE v_gambling_summary; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_gambling_summary TO newhart;
+
+
+--
+-- Name: TABLE v_media_queue_pending; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_media_queue_pending TO newhart;
+
+
+--
+-- Name: TABLE v_media_with_tags; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_media_with_tags TO newhart;
+
+
+--
+-- Name: TABLE v_metamours; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_metamours TO newhart;
+
+
+--
+-- Name: TABLE v_pending_tasks; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_pending_tasks TO newhart;
+
+
+--
+-- Name: TABLE v_portfolio_allocation; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO newhart;
+
+
+--
+-- Name: TABLE v_project_sops; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_project_sops TO newhart;
+
+
+--
+-- Name: TABLE v_relationships; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_relationships TO newhart;
+
+
+--
+-- Name: TABLE v_task_tree; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_task_tree TO newhart;
+
+
+--
+-- Name: TABLE v_users; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.v_users TO newhart;
+
+
+--
+-- Name: TABLE vehicles; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.vehicles TO newhart;
+
+
+--
+-- Name: TABLE vocabulary; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.vocabulary TO newhart;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO newhart;
+
+
+--
 -- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: postgres
 --
 
@@ -3489,5 +4068,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2jJDFjQN4bom8vetcC18x9FpJVOP5l7HMU5vHYAcdO5WM00NVKcuepM1lI5fR5h
+\unrestrict e8aLo7cECzSdczKLvzlfgmQwuPP86eiNXgLLnmnFzxsPGKBAmNVbW4rMseZcMCW
 
