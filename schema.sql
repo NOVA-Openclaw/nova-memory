@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict tSXq3ziJx3hpajyrLnmVIvCHJU6fNd8KRnI8MiLusHkCzoedob7x4s2AVKbaABJ
+\restrict Vech1QviESvlMaoIYwvUzgFBKJwhrJRmULuZfWAxxPM2ut2eYvqOw6MrkdMXRRH
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2605,7 +2605,7 @@ ALTER TABLE ONLY public.agent_chat
 --
 
 ALTER TABLE ONLY public.agent_chat_processed
-    ADD CONSTRAINT agent_chat_processed_pkey PRIMARY KEY (chat_id);
+    ADD CONSTRAINT agent_chat_processed_pkey PRIMARY KEY (chat_id, agent);
 
 
 --
@@ -3001,6 +3001,13 @@ CREATE INDEX idx_agent_chat_channel ON public.agent_chat USING btree (channel, c
 --
 
 CREATE INDEX idx_agent_chat_mentions ON public.agent_chat USING gin (mentions);
+
+
+--
+-- Name: idx_agent_chat_processed_unique; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE UNIQUE INDEX idx_agent_chat_processed_unique ON public.agent_chat_processed USING btree (chat_id, agent);
 
 
 --
@@ -4584,5 +4591,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict tSXq3ziJx3hpajyrLnmVIvCHJU6fNd8KRnI8MiLusHkCzoedob7x4s2AVKbaABJ
+\unrestrict Vech1QviESvlMaoIYwvUzgFBKJwhrJRmULuZfWAxxPM2ut2eYvqOw6MrkdMXRRH
 
