@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict drtuNa1JHsaQvOnWPKBzoiDcuX43DWLo7OHl0yhK6V9yVKWJAiOr7TdDDogYtyL
+\restrict hJBeZrgIEXGZBlDjQBzmh9qd6VrGZsjRhWcFGbRPX0yhZ4jhToGjBWnCTD2mVhW
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -138,6 +138,27 @@ $$;
 
 
 ALTER FUNCTION public.update_agents_timestamp() OWNER TO nova;
+
+--
+-- Name: update_media_search_vector(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.update_media_search_vector() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.search_vector := 
+        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.creator, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.summary, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.notes, '')), 'C') ||
+        setweight(to_tsvector('english', COALESCE(LEFT(NEW.transcript, 50000), '')), 'D');
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_media_search_vector() OWNER TO nova;
 
 SET default_tablespace = '';
 
@@ -887,6 +908,13 @@ CREATE TABLE public.media_consumed (
     notes text,
     transcript text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    summary text,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    source_file text,
+    status character varying(20) DEFAULT 'completed'::character varying,
+    ingested_by integer,
+    ingested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector,
     CONSTRAINT media_consumed_rating_check CHECK (((rating >= 1) AND (rating <= 10)))
 );
 
@@ -898,6 +926,55 @@ ALTER TABLE public.media_consumed OWNER TO nova;
 --
 
 COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts, articles consumed by entities';
+
+
+--
+-- Name: COLUMN media_consumed.summary; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.summary IS 'AI-generated summary (multi-tier: one-liner, key points, full)';
+
+
+--
+-- Name: COLUMN media_consumed.metadata; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.metadata IS 'Flexible metadata: duration, language, format, topics, word_count, etc.';
+
+
+--
+-- Name: COLUMN media_consumed.source_file; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.source_file IS 'Local file path if media was downloaded';
+
+
+--
+-- Name: COLUMN media_consumed.status; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.status IS 'Processing status: pending, processing, completed, failed, queued';
+
+
+--
+-- Name: COLUMN media_consumed.ingested_by; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.ingested_by IS 'Agent ID that processed this media';
+
+
+--
+-- Name: COLUMN media_consumed.ingested_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.ingested_at IS 'Timestamp when media was ingested/processed';
+
+
+--
+-- Name: COLUMN media_consumed.search_vector; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.search_vector IS 'Full-text search vector (title + notes + transcript + summary)';
 
 
 --
@@ -920,6 +997,82 @@ ALTER SEQUENCE public.media_consumed_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.media_consumed_id_seq OWNED BY public.media_consumed.id;
+
+
+--
+-- Name: media_queue; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.media_queue (
+    id integer NOT NULL,
+    url text,
+    file_path text,
+    media_type character varying(50),
+    title character varying(500),
+    creator character varying(255),
+    priority integer DEFAULT 5,
+    status character varying(20) DEFAULT 'pending'::character varying,
+    requested_by integer,
+    requested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    processing_started_at timestamp without time zone,
+    completed_at timestamp without time zone,
+    result_media_id integer,
+    error_message text,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    CONSTRAINT media_queue_has_source CHECK (((url IS NOT NULL) OR (file_path IS NOT NULL)))
+);
+
+
+ALTER TABLE public.media_queue OWNER TO nova;
+
+--
+-- Name: TABLE media_queue; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.media_queue IS 'Queue for media ingestion requests awaiting processing by Librarian Agent';
+
+
+--
+-- Name: COLUMN media_queue.priority; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_queue.priority IS '1=urgent, 5=normal, 10=low priority';
+
+
+--
+-- Name: COLUMN media_queue.status; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_queue.status IS 'pending, processing, completed, failed, duplicate';
+
+
+--
+-- Name: COLUMN media_queue.result_media_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_queue.result_media_id IS 'Foreign key to resulting media_consumed record';
+
+
+--
+-- Name: media_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.media_queue_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.media_queue_id_seq OWNER TO nova;
+
+--
+-- Name: media_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.media_queue_id_seq OWNED BY public.media_queue.id;
 
 
 --
@@ -1769,6 +1922,13 @@ ALTER TABLE ONLY public.media_consumed ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: media_queue id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_queue ALTER COLUMN id SET DEFAULT nextval('public.media_queue_id_seq'::regclass);
+
+
+--
 -- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2026,6 +2186,14 @@ ALTER TABLE ONLY public.lessons
 
 ALTER TABLE ONLY public.media_consumed
     ADD CONSTRAINT media_consumed_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: media_queue media_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_queue
+    ADD CONSTRAINT media_queue_pkey PRIMARY KEY (id);
 
 
 --
@@ -2355,6 +2523,20 @@ CREATE INDEX idx_media_consumed_by ON public.media_consumed USING btree (consume
 
 
 --
+-- Name: idx_media_search; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_search ON public.media_consumed USING gin (search_vector);
+
+
+--
+-- Name: idx_media_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_status ON public.media_consumed USING btree (status);
+
+
+--
 -- Name: idx_media_type; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -2537,6 +2719,13 @@ CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.g
 
 
 --
+-- Name: media_consumed media_search_vector_update; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER media_search_vector_update BEFORE INSERT OR UPDATE ON public.media_consumed FOR EACH ROW EXECUTE FUNCTION public.update_media_search_vector();
+
+
+--
 -- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -2673,6 +2862,30 @@ ALTER TABLE ONLY public.media_consumed
 
 
 --
+-- Name: media_consumed media_consumed_ingested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_consumed
+    ADD CONSTRAINT media_consumed_ingested_by_fkey FOREIGN KEY (ingested_by) REFERENCES public.agents(id);
+
+
+--
+-- Name: media_queue media_queue_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_queue
+    ADD CONSTRAINT media_queue_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.entities(id);
+
+
+--
+-- Name: media_queue media_queue_result_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_queue
+    ADD CONSTRAINT media_queue_result_media_id_fkey FOREIGN KEY (result_media_id) REFERENCES public.media_consumed(id);
+
+
+--
 -- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -2790,5 +3003,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict drtuNa1JHsaQvOnWPKBzoiDcuX43DWLo7OHl0yhK6V9yVKWJAiOr7TdDDogYtyL
+\unrestrict hJBeZrgIEXGZBlDjQBzmh9qd6VrGZsjRhWcFGbRPX0yhZ4jhToGjBWnCTD2mVhW
 
