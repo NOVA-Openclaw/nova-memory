@@ -348,6 +348,38 @@ INSERT INTO agent_actions (action_type, description, related_media_id)
 VALUES ('listened', 'Listened to TIP podcast about Clawdbot', 1);
 ```
 
+### Artwork Table
+
+Stores generated artwork with platform posting tracking:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `title` | text | Artwork title |
+| `caption` | text | Full caption/description |
+| `theme` | text | Inspirational theme |
+| `original_prompt` | text | Original generation prompt |
+| `revised_prompt` | text | Model's revised prompt (DALL-E) |
+| `image_data` | bytea | Raw image binary |
+| `image_filename` | text | Original filename |
+| `inspiration_source` | text | What inspired this piece |
+| `quality_score` | int | AI-evaluated quality (1-10) |
+| `instagram_url` | text | Instagram post URL if posted |
+| `instagram_media_id` | text | Instagram media ID |
+| `nostr_event_id` | text | Nostr event ID if posted |
+| `nostr_image_url` | text | Image URL on Nostr (catbox.moe) |
+| `posted_at` | timestamp | When posted to platforms |
+| `notes` | text | Additional notes |
+
+**Example:**
+```sql
+-- Query recent artwork
+SELECT title, theme, quality_score, 
+       CASE WHEN nostr_event_id IS NOT NULL THEN '✅' ELSE '❌' END as nostr,
+       CASE WHEN instagram_url IS NOT NULL THEN '✅' ELSE '❌' END as instagram
+FROM artwork ORDER BY created_at DESC LIMIT 5;
+```
+
 ### Setup
 
 ```bash
