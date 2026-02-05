@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict QmZ7AKd9shRWbnOstXhNtfi5pW0tyPFHTcSKYe4vW9JdE78mIOsGiIKg7YtTP3Y
+\restrict ArRxt1pUmECZJ7nLTE0Os2I6eAsY2sfFVuebxaujzXryOis69tMPqOluByadz4A
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -262,7 +262,8 @@ CREATE TABLE public.agents (
     nickname character varying(50),
     instance_type character varying(20) DEFAULT 'subagent'::character varying,
     home_dir character varying(255),
-    unix_user character varying(50)
+    unix_user character varying(50),
+    collaborative boolean DEFAULT false
 );
 
 
@@ -336,6 +337,13 @@ COMMENT ON COLUMN public.agents.home_dir IS 'Workspace path for peer agents';
 --
 
 COMMENT ON COLUMN public.agents.unix_user IS 'Unix username for peer agents';
+
+
+--
+-- Name: COLUMN agents.collaborative; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.collaborative IS 'TRUE = work WITH NOVA in dialogue, FALSE = work FOR NOVA on tasks';
 
 
 --
@@ -3251,5 +3259,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict QmZ7AKd9shRWbnOstXhNtfi5pW0tyPFHTcSKYe4vW9JdE78mIOsGiIKg7YtTP3Y
+\unrestrict ArRxt1pUmECZJ7nLTE0Os2I6eAsY2sfFVuebxaujzXryOis69tMPqOluByadz4A
 
