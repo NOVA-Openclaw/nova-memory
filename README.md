@@ -105,6 +105,7 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `persistent` | boolean | true = always running, false = instantiated on-demand |
 | `seed_context` | jsonb | Files, SOPs, queries to inject before tasking ephemeral agents |
 | `instantiation_sop` | varchar(100) | SOP name with full procedure to spawn this agent |
+| `nickname` | varchar(50) | Short friendly name for easy reference (e.g., "Nova", "Coder") |
 
 **Persistent vs Ephemeral Agents:**
 - **Persistent** (`persistent = true`): Always-running agents like main Clawdbot sessions
