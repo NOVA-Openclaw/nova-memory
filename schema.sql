@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ArRxt1pUmECZJ7nLTE0Os2I6eAsY2sfFVuebxaujzXryOis69tMPqOluByadz4A
+\restrict p5ori9R8SdiB7byrOacaqh0BK0tjgAMFeD0EyK9oab2g08VctegIlC3OL8WkATP
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -263,7 +263,8 @@ CREATE TABLE public.agents (
     instance_type character varying(20) DEFAULT 'subagent'::character varying,
     home_dir character varying(255),
     unix_user character varying(50),
-    collaborative boolean DEFAULT false
+    collaborative boolean DEFAULT false,
+    config_reasoning text
 );
 
 
@@ -344,6 +345,13 @@ COMMENT ON COLUMN public.agents.unix_user IS 'Unix username for peer agents';
 --
 
 COMMENT ON COLUMN public.agents.collaborative IS 'TRUE = work WITH NOVA in dialogue, FALSE = work FOR NOVA on tasks';
+
+
+--
+-- Name: COLUMN agents.config_reasoning; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.config_reasoning IS 'Newhart-maintained notes explaining why this agent is configured as it is (model, persistent, collaborative, etc.)';
 
 
 --
@@ -3259,5 +3267,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ArRxt1pUmECZJ7nLTE0Os2I6eAsY2sfFVuebxaujzXryOis69tMPqOluByadz4A
+\unrestrict p5ori9R8SdiB7byrOacaqh0BK0tjgAMFeD0EyK9oab2g08VctegIlC3OL8WkATP
 
