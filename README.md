@@ -256,6 +256,52 @@ WHERE last_referenced < NOW() - INTERVAL '30 days'
   AND confidence > 0.1;
 ```
 
+### Media Consumed Table
+
+Tracks media (podcasts, videos, articles, books) that have been consumed:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `media_type` | varchar(50) | Type: podcast, video, article, book, etc. |
+| `title` | varchar(500) | Title of the media |
+| `creator` | varchar(255) | Author, host, or creator |
+| `url` | text | Link to the media |
+| `consumed_date` | date | When it was consumed |
+| `consumed_by` | int | Entity who consumed it (FK to entities) |
+| `rating` | int | Rating 1-10 |
+| `notes` | text | Notes or key takeaways |
+| `transcript` | text | Full transcript if available |
+
+**Example:**
+```sql
+-- Log a podcast
+INSERT INTO media_consumed (media_type, title, creator, url, consumed_date, consumed_by, notes)
+VALUES ('podcast', 'TIP Infinite Tech - Clawdbot Episode', 'Preston Pysh', 
+        'https://example.com/podcast', '2026-02-05', 1, 'Discussion of AI agents, persistent memory, Bitcoin wallets');
+```
+
+### Agent Actions Table
+
+Tracks actions taken by agents for audit trail and learning:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `agent_id` | int | Which agent took action (FK to entities, default 1=NOVA) |
+| `action_type` | varchar(100) | Type: listened, researched, created, modified, sent, etc. |
+| `description` | text | What was done |
+| `related_media_id` | int | Optional link to media_consumed |
+| `related_event_id` | int | Optional link to events |
+| `metadata` | jsonb | Additional structured data |
+
+**Example:**
+```sql
+-- Log listening to a podcast
+INSERT INTO agent_actions (action_type, description, related_media_id)
+VALUES ('listened', 'Listened to TIP podcast about Clawdbot', 1);
+```
+
 ### Setup
 
 ```bash
