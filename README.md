@@ -45,7 +45,36 @@ The schema (`schema.sql`) includes tables for:
 - **events** - Timeline of what happened
 - **lessons** - Things learned from experience (with correction learning + confidence decay)
 - **preferences** - User/system preferences
+- **sops** - Standard Operating Procedures for various tasks and workflows  
 - **agents** - Registry of AI agent instances for delegation
+
+### SOPs Table (Standard Operating Procedures)
+
+The `sops` table stores procedural knowledge and workflows:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `name` | varchar(255) | Unique SOP identifier |
+| `description` | text | What this SOP accomplishes |
+| `steps` | jsonb | Ordered list of steps to execute |
+| `tools` | text[] | Required tools/dependencies |
+| `notes` | text | Implementation notes and caveats |
+
+**Current Research SOPs:**
+- `research-agent-instantiation` - How to instantiate and task the research agent
+- `research-methodology` - Systematic research methodology for information gathering
+- `source-reliability-assessment` - Framework for evaluating source credibility
+- `research-citation-standards` - Standards for documenting sources and traceability
+
+**Example Queries:**
+```sql
+-- List all research-related SOPs
+SELECT name, description FROM sops WHERE name LIKE 'research%';
+
+-- Get full SOP with steps
+SELECT name, steps, tools FROM sops WHERE name = 'research-methodology';
+```
 
 ### Projects Table
 
