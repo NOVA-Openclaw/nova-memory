@@ -174,6 +174,7 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `home_dir` | varchar(255) | Workspace path for peer agents |
 | `collaborative` | boolean | TRUE = work WITH NOVA (dialogue), FALSE = work FOR NOVA (tasks) |
 | `config_reasoning` | text | Explanation of why this agent was configured this way |
+| `fallback_model` | varchar(100) | Alternative model to use if primary model unavailable |
 
 **Collaborative vs Task-Based Agents:**
 - **Collaborative** (`collaborative = true`): Work WITH NOVA in back-and-forth dialogue (e.g., IRIS for art, Newhart for design discussions)
