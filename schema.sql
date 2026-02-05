@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict p5ori9R8SdiB7byrOacaqh0BK0tjgAMFeD0EyK9oab2g08VctegIlC3OL8WkATP
+\restrict 2K95rfzud3qn74cUhD8n8EC0SF95zk7mcusjrcUY6gFaGoWlPGddIngwqHiaGK7
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -264,7 +264,8 @@ CREATE TABLE public.agents (
     home_dir character varying(255),
     unix_user character varying(50),
     collaborative boolean DEFAULT false,
-    config_reasoning text
+    config_reasoning text,
+    fallback_model character varying(100)
 );
 
 
@@ -352,6 +353,13 @@ COMMENT ON COLUMN public.agents.collaborative IS 'TRUE = work WITH NOVA in dialo
 --
 
 COMMENT ON COLUMN public.agents.config_reasoning IS 'Newhart-maintained notes explaining why this agent is configured as it is (model, persistent, collaborative, etc.)';
+
+
+--
+-- Name: COLUMN agents.fallback_model; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.fallback_model IS 'Fallback model if primary fails (auth issues, rate limits, etc.)';
 
 
 --
@@ -3267,5 +3275,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict p5ori9R8SdiB7byrOacaqh0BK0tjgAMFeD0EyK9oab2g08VctegIlC3OL8WkATP
+\unrestrict 2K95rfzud3qn74cUhD8n8EC0SF95zk7mcusjrcUY6gFaGoWlPGddIngwqHiaGK7
 
