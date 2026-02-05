@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict hJBeZrgIEXGZBlDjQBzmh9qd6VrGZsjRhWcFGbRPX0yhZ4jhToGjBWnCTD2mVhW
+\restrict pPeKR5Odj54BMslBYJK4W2WWfh2G2xmBey0vUMrVf0e4CqNIvQCg94IYOSur9sY
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -99,6 +99,32 @@ $$;
 ALTER FUNCTION public.prevent_locked_project_update() OWNER TO nova;
 
 --
+-- Name: search_media(text, integer); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.search_media(query_text text, result_limit integer DEFAULT 20) RETURNS TABLE(id integer, media_type character varying, title character varying, creator character varying, summary text, rank real)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        mc.id,
+        mc.media_type,
+        mc.title,
+        mc.creator,
+        mc.summary,
+        ts_rank(mc.search_vector, plainto_tsquery('english', query_text)) as rank
+    FROM media_consumed mc
+    WHERE mc.search_vector @@ plainto_tsquery('english', query_text)
+    ORDER BY rank DESC
+    LIMIT result_limit;
+END;
+$$;
+
+
+ALTER FUNCTION public.search_media(query_text text, result_limit integer) OWNER TO nova;
+
+--
 -- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -147,13 +173,13 @@ CREATE FUNCTION public.update_media_search_vector() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    NEW.search_vector := 
-        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
-        setweight(to_tsvector('english', COALESCE(NEW.creator, '')), 'B') ||
-        setweight(to_tsvector('english', COALESCE(NEW.summary, '')), 'B') ||
-        setweight(to_tsvector('english', COALESCE(NEW.notes, '')), 'C') ||
-        setweight(to_tsvector('english', COALESCE(LEFT(NEW.transcript, 50000), '')), 'D');
-    RETURN NEW;
+  NEW.search_vector := 
+    setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(NEW.creator, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(NEW.notes, '')), 'C') ||
+    setweight(to_tsvector('english', coalesce(NEW.summary, '')), 'C') ||
+    setweight(to_tsvector('english', coalesce(NEW.insights, '')), 'C');
+  RETURN NEW;
 END;
 $$;
 
@@ -915,6 +941,7 @@ CREATE TABLE public.media_consumed (
     ingested_by integer,
     ingested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     search_vector tsvector,
+    insights text,
     CONSTRAINT media_consumed_rating_check CHECK (((rating >= 1) AND (rating <= 10)))
 );
 
@@ -932,7 +959,7 @@ COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts, articles con
 -- Name: COLUMN media_consumed.summary; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.media_consumed.summary IS 'AI-generated summary (multi-tier: one-liner, key points, full)';
+COMMENT ON COLUMN public.media_consumed.summary IS 'Athena (librarian-agent) generated summary - objective, factual';
 
 
 --
@@ -975,6 +1002,13 @@ COMMENT ON COLUMN public.media_consumed.ingested_at IS 'Timestamp when media was
 --
 
 COMMENT ON COLUMN public.media_consumed.search_vector IS 'Full-text search vector (title + notes + transcript + summary)';
+
+
+--
+-- Name: COLUMN media_consumed.insights; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_consumed.insights IS 'NOVA personal insights - analysis, connections, opinions';
 
 
 --
@@ -1073,6 +1107,65 @@ ALTER SEQUENCE public.media_queue_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.media_queue_id_seq OWNED BY public.media_queue.id;
+
+
+--
+-- Name: media_tags; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.media_tags (
+    id integer NOT NULL,
+    media_id integer NOT NULL,
+    tag character varying(100) NOT NULL,
+    source character varying(20) DEFAULT 'auto'::character varying,
+    confidence numeric(3,2),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.media_tags OWNER TO nova;
+
+--
+-- Name: TABLE media_tags; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.media_tags IS 'Tags/topics associated with media items';
+
+
+--
+-- Name: COLUMN media_tags.source; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_tags.source IS 'auto=AI-generated, manual=user-added';
+
+
+--
+-- Name: COLUMN media_tags.confidence; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.media_tags.confidence IS 'AI confidence score for auto-generated tags';
+
+
+--
+-- Name: media_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.media_tags_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.media_tags_id_seq OWNER TO nova;
+
+--
+-- Name: media_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.media_tags_id_seq OWNED BY public.media_tags.id;
 
 
 --
@@ -1624,6 +1717,64 @@ CREATE VIEW public.v_gambling_summary AS
 ALTER VIEW public.v_gambling_summary OWNER TO nova;
 
 --
+-- Name: v_media_queue_pending; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_media_queue_pending AS
+ SELECT mq.id,
+    mq.url,
+    mq.file_path,
+    mq.media_type,
+    mq.title,
+    mq.creator,
+    mq.priority,
+    mq.status,
+    mq.requested_by,
+    mq.requested_at,
+    mq.processing_started_at,
+    mq.completed_at,
+    mq.result_media_id,
+    mq.error_message,
+    mq.metadata,
+    e.name AS requested_by_name
+   FROM (public.media_queue mq
+     LEFT JOIN public.entities e ON ((mq.requested_by = e.id)))
+  WHERE ((mq.status)::text = 'pending'::text)
+  ORDER BY mq.priority, mq.requested_at;
+
+
+ALTER VIEW public.v_media_queue_pending OWNER TO nova;
+
+--
+-- Name: v_media_with_tags; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_media_with_tags AS
+SELECT
+    NULL::integer AS id,
+    NULL::character varying(50) AS media_type,
+    NULL::character varying(500) AS title,
+    NULL::character varying(255) AS creator,
+    NULL::text AS url,
+    NULL::date AS consumed_date,
+    NULL::integer AS consumed_by,
+    NULL::integer AS rating,
+    NULL::text AS notes,
+    NULL::text AS transcript,
+    NULL::timestamp without time zone AS created_at,
+    NULL::text AS summary,
+    NULL::jsonb AS metadata,
+    NULL::text AS source_file,
+    NULL::character varying(20) AS status,
+    NULL::integer AS ingested_by,
+    NULL::timestamp without time zone AS ingested_at,
+    NULL::tsvector AS search_vector,
+    NULL::character varying[] AS tags;
+
+
+ALTER VIEW public.v_media_with_tags OWNER TO nova;
+
+--
 -- Name: v_metamours; Type: VIEW; Schema: public; Owner: nova
 --
 
@@ -1929,6 +2080,13 @@ ALTER TABLE ONLY public.media_queue ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: media_tags id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_tags ALTER COLUMN id SET DEFAULT nextval('public.media_tags_id_seq'::regclass);
+
+
+--
 -- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2194,6 +2352,22 @@ ALTER TABLE ONLY public.media_consumed
 
 ALTER TABLE ONLY public.media_queue
     ADD CONSTRAINT media_queue_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: media_tags media_tags_media_id_tag_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_tags
+    ADD CONSTRAINT media_tags_media_id_tag_key UNIQUE (media_id, tag);
+
+
+--
+-- Name: media_tags media_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_tags
+    ADD CONSTRAINT media_tags_pkey PRIMARY KEY (id);
 
 
 --
@@ -2523,6 +2697,20 @@ CREATE INDEX idx_media_consumed_by ON public.media_consumed USING btree (consume
 
 
 --
+-- Name: idx_media_queue_priority; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_queue_priority ON public.media_queue USING btree (priority, requested_at);
+
+
+--
+-- Name: idx_media_queue_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_queue_status ON public.media_queue USING btree (status);
+
+
+--
 -- Name: idx_media_search; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -2534,6 +2722,20 @@ CREATE INDEX idx_media_search ON public.media_consumed USING gin (search_vector)
 --
 
 CREATE INDEX idx_media_status ON public.media_consumed USING btree (status);
+
+
+--
+-- Name: idx_media_tags_media; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_tags_media ON public.media_tags USING btree (media_id);
+
+
+--
+-- Name: idx_media_tags_tag; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_tags_tag ON public.media_tags USING btree (tag);
 
 
 --
@@ -2691,6 +2893,35 @@ CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
 
 
 --
+-- Name: v_media_with_tags _RETURN; Type: RULE; Schema: public; Owner: nova
+--
+
+CREATE OR REPLACE VIEW public.v_media_with_tags AS
+ SELECT mc.id,
+    mc.media_type,
+    mc.title,
+    mc.creator,
+    mc.url,
+    mc.consumed_date,
+    mc.consumed_by,
+    mc.rating,
+    mc.notes,
+    mc.transcript,
+    mc.created_at,
+    mc.summary,
+    mc.metadata,
+    mc.source_file,
+    mc.status,
+    mc.ingested_by,
+    mc.ingested_at,
+    mc.search_vector,
+    array_agg(mt.tag) FILTER (WHERE (mt.tag IS NOT NULL)) AS tags
+   FROM (public.media_consumed mc
+     LEFT JOIN public.media_tags mt ON ((mc.id = mt.media_id)))
+  GROUP BY mc.id;
+
+
+--
 -- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -2716,6 +2947,13 @@ CREATE TRIGGER gambling_entries_notify AFTER INSERT OR DELETE OR UPDATE ON publi
 --
 
 CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_logs FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
+
+
+--
+-- Name: media_consumed media_search_update; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER media_search_update BEFORE INSERT OR UPDATE ON public.media_consumed FOR EACH ROW EXECUTE FUNCTION public.update_media_search_vector();
 
 
 --
@@ -2886,6 +3124,14 @@ ALTER TABLE ONLY public.media_queue
 
 
 --
+-- Name: media_tags media_tags_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_tags
+    ADD CONSTRAINT media_tags_media_id_fkey FOREIGN KEY (media_id) REFERENCES public.media_consumed(id) ON DELETE CASCADE;
+
+
+--
 -- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3003,5 +3249,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict hJBeZrgIEXGZBlDjQBzmh9qd6VrGZsjRhWcFGbRPX0yhZ4jhToGjBWnCTD2mVhW
+\unrestrict pPeKR5Odj54BMslBYJK4W2WWfh2G2xmBey0vUMrVf0e4CqNIvQCg94IYOSur9sY
 
