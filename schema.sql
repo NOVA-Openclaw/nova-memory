@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict peyeifBJQxzF0wbRQijTRSJBflFxLBbbQgV4TEbQapaz01UtuGFNXEKei8eA5KU
+\restrict MNeaKwZXArJlk7VEqiKSD0owPRJewxRmR1pcTOkIfos601dapJ4keVgG6h88Hgs
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -822,6 +822,57 @@ ALTER SEQUENCE public.lessons_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.lessons_id_seq OWNED BY public.lessons.id;
+
+
+--
+-- Name: media_consumed; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.media_consumed (
+    id integer NOT NULL,
+    media_type character varying(50) NOT NULL,
+    title character varying(500) NOT NULL,
+    creator character varying(255),
+    url text,
+    consumed_date date,
+    consumed_by integer,
+    rating integer,
+    notes text,
+    transcript text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT media_consumed_rating_check CHECK (((rating >= 1) AND (rating <= 10)))
+);
+
+
+ALTER TABLE public.media_consumed OWNER TO nova;
+
+--
+-- Name: TABLE media_consumed; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts, articles consumed by entities';
+
+
+--
+-- Name: media_consumed_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.media_consumed_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.media_consumed_id_seq OWNER TO nova;
+
+--
+-- Name: media_consumed_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.media_consumed_id_seq OWNED BY public.media_consumed.id;
 
 
 --
@@ -1657,6 +1708,13 @@ ALTER TABLE ONLY public.lessons ALTER COLUMN id SET DEFAULT nextval('public.less
 
 
 --
+-- Name: media_consumed id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_consumed ALTER COLUMN id SET DEFAULT nextval('public.media_consumed_id_seq'::regclass);
+
+
+--
 -- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -1898,6 +1956,14 @@ ALTER TABLE ONLY public.gambling_logs
 
 ALTER TABLE ONLY public.lessons
     ADD CONSTRAINT lessons_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: media_consumed media_consumed_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_consumed
+    ADD CONSTRAINT media_consumed_pkey PRIMARY KEY (id);
 
 
 --
@@ -2199,6 +2265,20 @@ CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entit
 
 
 --
+-- Name: idx_media_consumed_by; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_consumed_by ON public.media_consumed USING btree (consumed_by);
+
+
+--
+-- Name: idx_media_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_media_type ON public.media_consumed USING btree (media_type);
+
+
+--
 -- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -2478,6 +2558,14 @@ ALTER TABLE ONLY public.gambling_logs
 
 
 --
+-- Name: media_consumed media_consumed_consumed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.media_consumed
+    ADD CONSTRAINT media_consumed_consumed_by_fkey FOREIGN KEY (consumed_by) REFERENCES public.entities(id);
+
+
+--
 -- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -2595,5 +2683,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict peyeifBJQxzF0wbRQijTRSJBflFxLBbbQgV4TEbQapaz01UtuGFNXEKei8eA5KU
+\unrestrict MNeaKwZXArJlk7VEqiKSD0owPRJewxRmR1pcTOkIfos601dapJ4keVgG6h88Hgs
 
