@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Vr2TFl52qO0LNMtyGUrrLsiIud8osqq3DVnjwPxa54auSSINFcmw2M4Fd1769ou
+\restrict 2jJDFjQN4bom8vetcC18x9FpJVOP5l7HMU5vHYAcdO5WM00NVKcuepM1lI5fR5h
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2026,6 +2026,60 @@ CREATE VIEW public.v_task_tree AS
 ALTER VIEW public.v_task_tree OWNER TO nova;
 
 --
+-- Name: v_users; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_users AS
+ SELECT e.id,
+    e.name,
+    e.full_name,
+    e.type,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'phone'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS phone,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'email'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS email,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'current_timezone'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS current_timezone,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'home_timezone'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS home_timezone,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'onboarded'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS onboarded_date,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'owner_number'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS owner_number,
+    max(
+        CASE
+            WHEN ((ef.key)::text = 'signal_uuid'::text) THEN ef.value
+            ELSE NULL::text
+        END) AS signal_uuid
+   FROM (public.entities e
+     JOIN public.entity_facts ef ON ((e.id = ef.entity_id)))
+  WHERE (EXISTS ( SELECT 1
+           FROM public.entity_facts ef2
+          WHERE ((ef2.entity_id = e.id) AND ((ef2.key)::text = ANY ((ARRAY['is_user'::character varying, 'onboarded'::character varying])::text[])))))
+  GROUP BY e.id, e.name, e.full_name, e.type;
+
+
+ALTER VIEW public.v_users OWNER TO nova;
+
+--
 -- Name: vehicles; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -3435,5 +3489,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Vr2TFl52qO0LNMtyGUrrLsiIud8osqq3DVnjwPxa54auSSINFcmw2M4Fd1769ou
+\unrestrict 2jJDFjQN4bom8vetcC18x9FpJVOP5l7HMU5vHYAcdO5WM00NVKcuepM1lI5fR5h
 
