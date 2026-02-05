@@ -106,6 +106,9 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `seed_context` | jsonb | Files, SOPs, queries to inject before tasking ephemeral agents |
 | `instantiation_sop` | varchar(100) | SOP name with full procedure to spawn this agent |
 | `nickname` | varchar(50) | Short friendly name for easy reference (e.g., "Nova", "Coder") |
+| `instance_type` | varchar(20) | 'primary' (main instance), 'subagent' (spawned session), or 'peer' (separate Clawdbot) |
+| `unix_user` | varchar(50) | Unix username for peer agents with own system resources |
+| `home_dir` | varchar(255) | Workspace path for peer agents |
 
 **Persistent vs Ephemeral Agents:**
 - **Persistent** (`persistent = true`): Always-running agents like main Clawdbot sessions
