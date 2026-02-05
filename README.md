@@ -45,6 +45,57 @@ The schema (`schema.sql`) includes tables for:
 - **events** - Timeline of what happened
 - **lessons** - Things learned from experience (with correction learning + confidence decay)
 - **preferences** - User/system preferences
+- **agents** - Registry of AI agent instances for delegation
+
+### Agents Table (Delegation Registry)
+
+The `agents` table tracks AI agent instances you can delegate tasks to:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `name` | varchar(100) | Unique identifier (e.g., 'nova-main', 'gemini-cli') |
+| `description` | text | What this agent does |
+| `role` | varchar(100) | Primary function: general, coding, research, quick-qa, monitoring |
+| `provider` | varchar(50) | anthropic, google, openai, local |
+| `model` | varchar(100) | Specific model (e.g., 'claude-opus-4', 'gemini-2.0-flash') |
+| `access_method` | varchar(50) | How to reach it: clawdbot_session, cli, api, browser |
+| `access_details` | jsonb | Connection info: session_key, cli command, endpoint, flags |
+| `skills` | text[] | Array of capabilities this agent has |
+| `credential_ref` | varchar(200) | 1Password item name or config path for auth |
+| `status` | varchar(20) | active, inactive, deprecated |
+| `notes` | text | Usage notes, caveats |
+
+**Use Cases:**
+- Track which agents exist and what they're good at
+- Store connection details for spawning/delegation
+- Link credentials to agents for auth
+
+**Example Queries:**
+```sql
+-- List active agents
+SELECT * FROM v_agents;
+
+-- Find coding agents
+SELECT name, model, access_details FROM agents WHERE role = 'coding';
+
+-- Find agents with a specific skill
+SELECT name, skills FROM agents WHERE 'research' = ANY(skills);
+
+-- Register a new agent
+INSERT INTO agents (name, description, role, provider, model, access_method, access_details, skills, credential_ref)
+VALUES (
+  'research-bot',
+  'Dedicated research agent',
+  'research',
+  'anthropic',
+  'claude-sonnet-4',
+  'clawdbot_session',
+  '{"session_key": "agent:research:main"}',
+  ARRAY['web-search', 'summarization', 'fact-checking'],
+  'Anthropic API'
+);
+```
 
 ### Lessons Table (Correction Learning)
 
