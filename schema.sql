@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 8W63uYNMUSTFHe12fStmHmzfHudBC3qJVJGu3bjYr9JcbtycGPCFzija3Xn2AwV
+\restrict l6iFMP5YfcGeph6BZmfNUl5h9dQELBQBDr2ZSYWUt4pkD0wcLLynocpOYF2njtq
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -138,7 +138,9 @@ CREATE TABLE public.agents (
     status character varying(20) DEFAULT 'active'::character varying,
     notes text,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    persistent boolean DEFAULT true,
+    seed_context jsonb
 );
 
 
@@ -163,6 +165,20 @@ COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_comman
 --
 
 COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
+
+
+--
+-- Name: COLUMN agents.persistent; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = instantiated on-demand';
+
+
+--
+-- Name: COLUMN agents.seed_context; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.seed_context IS 'JSON: files, queries, SOPs to inject before tasking';
 
 
 --
@@ -2484,5 +2500,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 8W63uYNMUSTFHe12fStmHmzfHudBC3qJVJGu3bjYr9JcbtycGPCFzija3Xn2AwV
+\unrestrict l6iFMP5YfcGeph6BZmfNUl5h9dQELBQBDr2ZSYWUt4pkD0wcLLynocpOYF2njtq
 
