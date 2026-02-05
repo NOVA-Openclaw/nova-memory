@@ -172,6 +172,11 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `instance_type` | varchar(20) | 'primary' (main instance), 'subagent' (spawned session), or 'peer' (separate Clawdbot) |
 | `unix_user` | varchar(50) | Unix username for peer agents with own system resources |
 | `home_dir` | varchar(255) | Workspace path for peer agents |
+| `collaborative` | boolean | TRUE = work WITH NOVA (dialogue), FALSE = work FOR NOVA (tasks) |
+
+**Collaborative vs Task-Based Agents:**
+- **Collaborative** (`collaborative = true`): Work WITH NOVA in back-and-forth dialogue (e.g., IRIS for art, Newhart for design discussions)
+- **Task-Based** (`collaborative = false`): Work FOR NOVA - spawn with a task, return results (e.g., research agent, git agent)
 
 **Persistent vs Ephemeral Agents:**
 - **Persistent** (`persistent = true`): Always-running agents like main Clawdbot sessions
