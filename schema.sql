@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict QZREbcfeF0Iq6wvDRbbw6tWiJ8KgN0wjENVZ6LR3rjLF0pTST2cGVCDrLAhXCHn
+\restrict tSXq3ziJx3hpajyrLnmVIvCHJU6fNd8KRnI8MiLusHkCzoedob7x4s2AVKbaABJ
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -91,6 +91,35 @@ $$;
 
 
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
+
+--
+-- Name: notify_agent_chat(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.notify_agent_chat() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    payload TEXT;
+BEGIN
+    -- Build JSON payload with message info
+    payload := json_build_object(
+        'id', NEW.id,
+        'channel', NEW.channel,
+        'sender', NEW.sender,
+        'mentions', NEW.mentions,
+        'created_at', NEW.created_at
+    )::text;
+    
+    -- Notify all listeners on 'agent_chat' channel
+    PERFORM pg_notify('agent_chat', payload);
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.notify_agent_chat() OWNER TO postgres;
 
 --
 -- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: nova
@@ -3445,6 +3474,13 @@ CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH
 
 
 --
+-- Name: agent_chat trg_notify_agent_chat; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+
+
+--
 -- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3737,6 +3773,13 @@ ALTER TABLE ONLY public.vehicles
 --
 
 GRANT USAGE ON SCHEMA public TO newhart;
+GRANT USAGE ON SCHEMA public TO gem;
+GRANT USAGE ON SCHEMA public TO coder;
+GRANT USAGE ON SCHEMA public TO scout;
+GRANT USAGE ON SCHEMA public TO iris;
+GRANT USAGE ON SCHEMA public TO gidget;
+GRANT USAGE ON SCHEMA public TO ticker;
+GRANT USAGE ON SCHEMA public TO athena;
 
 
 --
@@ -3758,6 +3801,13 @@ GRANT ALL ON FUNCTION public.send_agent_message(p_sender character varying, p_me
 --
 
 GRANT SELECT ON TABLE public.agent_actions TO newhart;
+GRANT SELECT ON TABLE public.agent_actions TO gem;
+GRANT SELECT ON TABLE public.agent_actions TO coder;
+GRANT SELECT ON TABLE public.agent_actions TO scout;
+GRANT SELECT ON TABLE public.agent_actions TO iris;
+GRANT SELECT ON TABLE public.agent_actions TO gidget;
+GRANT SELECT ON TABLE public.agent_actions TO ticker;
+GRANT SELECT ON TABLE public.agent_actions TO athena;
 
 
 --
@@ -3765,6 +3815,13 @@ GRANT SELECT ON TABLE public.agent_actions TO newhart;
 --
 
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO newhart;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO gem;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO coder;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO scout;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO iris;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO gidget;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO ticker;
+GRANT SELECT,INSERT ON TABLE public.agent_chat TO athena;
 
 
 --
@@ -3772,6 +3829,13 @@ GRANT SELECT,INSERT ON TABLE public.agent_chat TO newhart;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO newhart;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gem;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO coder;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO scout;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO iris;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gidget;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO ticker;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO athena;
 
 
 --
@@ -3779,6 +3843,13 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO newhart;
 --
 
 GRANT SELECT,INSERT ON TABLE public.agent_chat_processed TO newhart;
+GRANT SELECT ON TABLE public.agent_chat_processed TO gem;
+GRANT SELECT ON TABLE public.agent_chat_processed TO coder;
+GRANT SELECT ON TABLE public.agent_chat_processed TO scout;
+GRANT SELECT ON TABLE public.agent_chat_processed TO iris;
+GRANT SELECT ON TABLE public.agent_chat_processed TO gidget;
+GRANT SELECT ON TABLE public.agent_chat_processed TO ticker;
+GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
 
 
 --
@@ -3788,6 +3859,13 @@ GRANT SELECT,INSERT ON TABLE public.agent_chat_processed TO newhart;
 REVOKE ALL ON TABLE public.agents FROM nova;
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agents TO newhart;
+GRANT SELECT ON TABLE public.agents TO gem;
+GRANT SELECT ON TABLE public.agents TO coder;
+GRANT SELECT ON TABLE public.agents TO scout;
+GRANT SELECT ON TABLE public.agents TO iris;
+GRANT SELECT ON TABLE public.agents TO gidget;
+GRANT SELECT ON TABLE public.agents TO ticker;
+GRANT SELECT ON TABLE public.agents TO athena;
 
 
 --
@@ -3802,6 +3880,13 @@ GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
 --
 
 GRANT SELECT ON TABLE public.artwork TO newhart;
+GRANT SELECT ON TABLE public.artwork TO gem;
+GRANT SELECT ON TABLE public.artwork TO coder;
+GRANT SELECT ON TABLE public.artwork TO scout;
+GRANT SELECT ON TABLE public.artwork TO iris;
+GRANT SELECT ON TABLE public.artwork TO gidget;
+GRANT SELECT ON TABLE public.artwork TO ticker;
+GRANT SELECT ON TABLE public.artwork TO athena;
 
 
 --
@@ -3809,6 +3894,13 @@ GRANT SELECT ON TABLE public.artwork TO newhart;
 --
 
 GRANT SELECT ON TABLE public.asset_classes TO newhart;
+GRANT SELECT ON TABLE public.asset_classes TO gem;
+GRANT SELECT ON TABLE public.asset_classes TO coder;
+GRANT SELECT ON TABLE public.asset_classes TO scout;
+GRANT SELECT ON TABLE public.asset_classes TO iris;
+GRANT SELECT ON TABLE public.asset_classes TO gidget;
+GRANT SELECT ON TABLE public.asset_classes TO ticker;
+GRANT SELECT ON TABLE public.asset_classes TO athena;
 
 
 --
@@ -3816,6 +3908,13 @@ GRANT SELECT ON TABLE public.asset_classes TO newhart;
 --
 
 GRANT SELECT ON TABLE public.certificates TO newhart;
+GRANT SELECT ON TABLE public.certificates TO gem;
+GRANT SELECT ON TABLE public.certificates TO coder;
+GRANT SELECT ON TABLE public.certificates TO scout;
+GRANT SELECT ON TABLE public.certificates TO iris;
+GRANT SELECT ON TABLE public.certificates TO gidget;
+GRANT SELECT ON TABLE public.certificates TO ticker;
+GRANT SELECT ON TABLE public.certificates TO athena;
 
 
 --
@@ -3823,6 +3922,13 @@ GRANT SELECT ON TABLE public.certificates TO newhart;
 --
 
 GRANT SELECT ON TABLE public.conversations TO newhart;
+GRANT SELECT ON TABLE public.conversations TO gem;
+GRANT SELECT ON TABLE public.conversations TO coder;
+GRANT SELECT ON TABLE public.conversations TO scout;
+GRANT SELECT ON TABLE public.conversations TO iris;
+GRANT SELECT ON TABLE public.conversations TO gidget;
+GRANT SELECT ON TABLE public.conversations TO ticker;
+GRANT SELECT ON TABLE public.conversations TO athena;
 
 
 --
@@ -3830,6 +3936,13 @@ GRANT SELECT ON TABLE public.conversations TO newhart;
 --
 
 GRANT SELECT ON TABLE public.entities TO newhart;
+GRANT SELECT ON TABLE public.entities TO gem;
+GRANT SELECT ON TABLE public.entities TO coder;
+GRANT SELECT ON TABLE public.entities TO scout;
+GRANT SELECT ON TABLE public.entities TO iris;
+GRANT SELECT ON TABLE public.entities TO gidget;
+GRANT SELECT ON TABLE public.entities TO ticker;
+GRANT SELECT ON TABLE public.entities TO athena;
 
 
 --
@@ -3837,6 +3950,13 @@ GRANT SELECT ON TABLE public.entities TO newhart;
 --
 
 GRANT SELECT ON TABLE public.entity_facts TO newhart;
+GRANT SELECT ON TABLE public.entity_facts TO gem;
+GRANT SELECT ON TABLE public.entity_facts TO coder;
+GRANT SELECT ON TABLE public.entity_facts TO scout;
+GRANT SELECT ON TABLE public.entity_facts TO iris;
+GRANT SELECT ON TABLE public.entity_facts TO gidget;
+GRANT SELECT ON TABLE public.entity_facts TO ticker;
+GRANT SELECT ON TABLE public.entity_facts TO athena;
 
 
 --
@@ -3844,6 +3964,13 @@ GRANT SELECT ON TABLE public.entity_facts TO newhart;
 --
 
 GRANT SELECT ON TABLE public.entity_relationships TO newhart;
+GRANT SELECT ON TABLE public.entity_relationships TO gem;
+GRANT SELECT ON TABLE public.entity_relationships TO coder;
+GRANT SELECT ON TABLE public.entity_relationships TO scout;
+GRANT SELECT ON TABLE public.entity_relationships TO iris;
+GRANT SELECT ON TABLE public.entity_relationships TO gidget;
+GRANT SELECT ON TABLE public.entity_relationships TO ticker;
+GRANT SELECT ON TABLE public.entity_relationships TO athena;
 
 
 --
@@ -3851,6 +3978,13 @@ GRANT SELECT ON TABLE public.entity_relationships TO newhart;
 --
 
 GRANT SELECT ON TABLE public.event_entities TO newhart;
+GRANT SELECT ON TABLE public.event_entities TO gem;
+GRANT SELECT ON TABLE public.event_entities TO coder;
+GRANT SELECT ON TABLE public.event_entities TO scout;
+GRANT SELECT ON TABLE public.event_entities TO iris;
+GRANT SELECT ON TABLE public.event_entities TO gidget;
+GRANT SELECT ON TABLE public.event_entities TO ticker;
+GRANT SELECT ON TABLE public.event_entities TO athena;
 
 
 --
@@ -3858,6 +3992,13 @@ GRANT SELECT ON TABLE public.event_entities TO newhart;
 --
 
 GRANT SELECT ON TABLE public.event_places TO newhart;
+GRANT SELECT ON TABLE public.event_places TO gem;
+GRANT SELECT ON TABLE public.event_places TO coder;
+GRANT SELECT ON TABLE public.event_places TO scout;
+GRANT SELECT ON TABLE public.event_places TO iris;
+GRANT SELECT ON TABLE public.event_places TO gidget;
+GRANT SELECT ON TABLE public.event_places TO ticker;
+GRANT SELECT ON TABLE public.event_places TO athena;
 
 
 --
@@ -3865,6 +4006,13 @@ GRANT SELECT ON TABLE public.event_places TO newhart;
 --
 
 GRANT SELECT ON TABLE public.event_projects TO newhart;
+GRANT SELECT ON TABLE public.event_projects TO gem;
+GRANT SELECT ON TABLE public.event_projects TO coder;
+GRANT SELECT ON TABLE public.event_projects TO scout;
+GRANT SELECT ON TABLE public.event_projects TO iris;
+GRANT SELECT ON TABLE public.event_projects TO gidget;
+GRANT SELECT ON TABLE public.event_projects TO ticker;
+GRANT SELECT ON TABLE public.event_projects TO athena;
 
 
 --
@@ -3872,6 +4020,13 @@ GRANT SELECT ON TABLE public.event_projects TO newhart;
 --
 
 GRANT SELECT ON TABLE public.events TO newhart;
+GRANT SELECT ON TABLE public.events TO gem;
+GRANT SELECT ON TABLE public.events TO coder;
+GRANT SELECT ON TABLE public.events TO scout;
+GRANT SELECT ON TABLE public.events TO iris;
+GRANT SELECT ON TABLE public.events TO gidget;
+GRANT SELECT ON TABLE public.events TO ticker;
+GRANT SELECT ON TABLE public.events TO athena;
 
 
 --
@@ -3879,6 +4034,13 @@ GRANT SELECT ON TABLE public.events TO newhart;
 --
 
 GRANT SELECT ON TABLE public.gambling_entries TO newhart;
+GRANT SELECT ON TABLE public.gambling_entries TO gem;
+GRANT SELECT ON TABLE public.gambling_entries TO coder;
+GRANT SELECT ON TABLE public.gambling_entries TO scout;
+GRANT SELECT ON TABLE public.gambling_entries TO iris;
+GRANT SELECT ON TABLE public.gambling_entries TO gidget;
+GRANT SELECT ON TABLE public.gambling_entries TO ticker;
+GRANT SELECT ON TABLE public.gambling_entries TO athena;
 
 
 --
@@ -3886,6 +4048,13 @@ GRANT SELECT ON TABLE public.gambling_entries TO newhart;
 --
 
 GRANT SELECT ON TABLE public.gambling_logs TO newhart;
+GRANT SELECT ON TABLE public.gambling_logs TO gem;
+GRANT SELECT ON TABLE public.gambling_logs TO coder;
+GRANT SELECT ON TABLE public.gambling_logs TO scout;
+GRANT SELECT ON TABLE public.gambling_logs TO iris;
+GRANT SELECT ON TABLE public.gambling_logs TO gidget;
+GRANT SELECT ON TABLE public.gambling_logs TO ticker;
+GRANT SELECT ON TABLE public.gambling_logs TO athena;
 
 
 --
@@ -3893,6 +4062,13 @@ GRANT SELECT ON TABLE public.gambling_logs TO newhart;
 --
 
 GRANT SELECT ON TABLE public.lessons TO newhart;
+GRANT SELECT ON TABLE public.lessons TO gem;
+GRANT SELECT ON TABLE public.lessons TO coder;
+GRANT SELECT ON TABLE public.lessons TO scout;
+GRANT SELECT ON TABLE public.lessons TO iris;
+GRANT SELECT ON TABLE public.lessons TO gidget;
+GRANT SELECT ON TABLE public.lessons TO ticker;
+GRANT SELECT ON TABLE public.lessons TO athena;
 
 
 --
@@ -3900,6 +4076,13 @@ GRANT SELECT ON TABLE public.lessons TO newhart;
 --
 
 GRANT SELECT ON TABLE public.media_consumed TO newhart;
+GRANT SELECT ON TABLE public.media_consumed TO gem;
+GRANT SELECT ON TABLE public.media_consumed TO coder;
+GRANT SELECT ON TABLE public.media_consumed TO scout;
+GRANT SELECT ON TABLE public.media_consumed TO iris;
+GRANT SELECT ON TABLE public.media_consumed TO gidget;
+GRANT SELECT ON TABLE public.media_consumed TO ticker;
+GRANT SELECT ON TABLE public.media_consumed TO athena;
 
 
 --
@@ -3907,6 +4090,13 @@ GRANT SELECT ON TABLE public.media_consumed TO newhart;
 --
 
 GRANT SELECT ON TABLE public.media_queue TO newhart;
+GRANT SELECT ON TABLE public.media_queue TO gem;
+GRANT SELECT ON TABLE public.media_queue TO coder;
+GRANT SELECT ON TABLE public.media_queue TO scout;
+GRANT SELECT ON TABLE public.media_queue TO iris;
+GRANT SELECT ON TABLE public.media_queue TO gidget;
+GRANT SELECT ON TABLE public.media_queue TO ticker;
+GRANT SELECT ON TABLE public.media_queue TO athena;
 
 
 --
@@ -3914,13 +4104,34 @@ GRANT SELECT ON TABLE public.media_queue TO newhart;
 --
 
 GRANT SELECT ON TABLE public.media_tags TO newhart;
+GRANT SELECT ON TABLE public.media_tags TO gem;
+GRANT SELECT ON TABLE public.media_tags TO coder;
+GRANT SELECT ON TABLE public.media_tags TO scout;
+GRANT SELECT ON TABLE public.media_tags TO iris;
+GRANT SELECT ON TABLE public.media_tags TO gidget;
+GRANT SELECT ON TABLE public.media_tags TO ticker;
+GRANT SELECT ON TABLE public.media_tags TO athena;
 
 
 --
 -- Name: TABLE memory_embeddings; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.memory_embeddings TO newhart;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO newhart;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gem;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO coder;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO scout;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO iris;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gidget;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO ticker;
+GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO athena;
+
+
+--
+-- Name: SEQUENCE memory_embeddings_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
 
 
 --
@@ -3928,6 +4139,13 @@ GRANT SELECT ON TABLE public.memory_embeddings TO newhart;
 --
 
 GRANT SELECT ON TABLE public.place_properties TO newhart;
+GRANT SELECT ON TABLE public.place_properties TO gem;
+GRANT SELECT ON TABLE public.place_properties TO coder;
+GRANT SELECT ON TABLE public.place_properties TO scout;
+GRANT SELECT ON TABLE public.place_properties TO iris;
+GRANT SELECT ON TABLE public.place_properties TO gidget;
+GRANT SELECT ON TABLE public.place_properties TO ticker;
+GRANT SELECT ON TABLE public.place_properties TO athena;
 
 
 --
@@ -3935,6 +4153,13 @@ GRANT SELECT ON TABLE public.place_properties TO newhart;
 --
 
 GRANT SELECT ON TABLE public.places TO newhart;
+GRANT SELECT ON TABLE public.places TO gem;
+GRANT SELECT ON TABLE public.places TO coder;
+GRANT SELECT ON TABLE public.places TO scout;
+GRANT SELECT ON TABLE public.places TO iris;
+GRANT SELECT ON TABLE public.places TO gidget;
+GRANT SELECT ON TABLE public.places TO ticker;
+GRANT SELECT ON TABLE public.places TO athena;
 
 
 --
@@ -3942,6 +4167,13 @@ GRANT SELECT ON TABLE public.places TO newhart;
 --
 
 GRANT SELECT ON TABLE public.portfolio_positions TO newhart;
+GRANT SELECT ON TABLE public.portfolio_positions TO gem;
+GRANT SELECT ON TABLE public.portfolio_positions TO coder;
+GRANT SELECT ON TABLE public.portfolio_positions TO scout;
+GRANT SELECT ON TABLE public.portfolio_positions TO iris;
+GRANT SELECT ON TABLE public.portfolio_positions TO gidget;
+GRANT SELECT ON TABLE public.portfolio_positions TO ticker;
+GRANT SELECT ON TABLE public.portfolio_positions TO athena;
 
 
 --
@@ -3949,6 +4181,13 @@ GRANT SELECT ON TABLE public.portfolio_positions TO newhart;
 --
 
 GRANT SELECT ON TABLE public.portfolio_snapshots TO newhart;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO gem;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO coder;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO scout;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO iris;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO gidget;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO ticker;
+GRANT SELECT ON TABLE public.portfolio_snapshots TO athena;
 
 
 --
@@ -3956,6 +4195,13 @@ GRANT SELECT ON TABLE public.portfolio_snapshots TO newhart;
 --
 
 GRANT SELECT ON TABLE public.positions TO newhart;
+GRANT SELECT ON TABLE public.positions TO gem;
+GRANT SELECT ON TABLE public.positions TO coder;
+GRANT SELECT ON TABLE public.positions TO scout;
+GRANT SELECT ON TABLE public.positions TO iris;
+GRANT SELECT ON TABLE public.positions TO gidget;
+GRANT SELECT ON TABLE public.positions TO ticker;
+GRANT SELECT ON TABLE public.positions TO athena;
 
 
 --
@@ -3963,6 +4209,13 @@ GRANT SELECT ON TABLE public.positions TO newhart;
 --
 
 GRANT SELECT ON TABLE public.preferences TO newhart;
+GRANT SELECT ON TABLE public.preferences TO gem;
+GRANT SELECT ON TABLE public.preferences TO coder;
+GRANT SELECT ON TABLE public.preferences TO scout;
+GRANT SELECT ON TABLE public.preferences TO iris;
+GRANT SELECT ON TABLE public.preferences TO gidget;
+GRANT SELECT ON TABLE public.preferences TO ticker;
+GRANT SELECT ON TABLE public.preferences TO athena;
 
 
 --
@@ -3970,6 +4223,13 @@ GRANT SELECT ON TABLE public.preferences TO newhart;
 --
 
 GRANT SELECT ON TABLE public.price_cache_v2 TO newhart;
+GRANT SELECT ON TABLE public.price_cache_v2 TO gem;
+GRANT SELECT ON TABLE public.price_cache_v2 TO coder;
+GRANT SELECT ON TABLE public.price_cache_v2 TO scout;
+GRANT SELECT ON TABLE public.price_cache_v2 TO iris;
+GRANT SELECT ON TABLE public.price_cache_v2 TO gidget;
+GRANT SELECT ON TABLE public.price_cache_v2 TO ticker;
+GRANT SELECT ON TABLE public.price_cache_v2 TO athena;
 
 
 --
@@ -3979,6 +4239,13 @@ GRANT SELECT ON TABLE public.price_cache_v2 TO newhart;
 REVOKE ALL ON TABLE public.sops FROM nova;
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.sops TO nova;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sops TO newhart;
+GRANT SELECT ON TABLE public.sops TO gem;
+GRANT SELECT ON TABLE public.sops TO coder;
+GRANT SELECT ON TABLE public.sops TO scout;
+GRANT SELECT ON TABLE public.sops TO iris;
+GRANT SELECT ON TABLE public.sops TO gidget;
+GRANT SELECT ON TABLE public.sops TO ticker;
+GRANT SELECT ON TABLE public.sops TO athena;
 
 
 --
@@ -3993,6 +4260,13 @@ GRANT SELECT,USAGE ON SEQUENCE public.processes_id_seq TO newhart;
 --
 
 GRANT SELECT ON TABLE public.project_entities TO newhart;
+GRANT SELECT ON TABLE public.project_entities TO gem;
+GRANT SELECT ON TABLE public.project_entities TO coder;
+GRANT SELECT ON TABLE public.project_entities TO scout;
+GRANT SELECT ON TABLE public.project_entities TO iris;
+GRANT SELECT ON TABLE public.project_entities TO gidget;
+GRANT SELECT ON TABLE public.project_entities TO ticker;
+GRANT SELECT ON TABLE public.project_entities TO athena;
 
 
 --
@@ -4000,6 +4274,13 @@ GRANT SELECT ON TABLE public.project_entities TO newhart;
 --
 
 GRANT SELECT ON TABLE public.project_sops TO newhart;
+GRANT SELECT ON TABLE public.project_sops TO gem;
+GRANT SELECT ON TABLE public.project_sops TO coder;
+GRANT SELECT ON TABLE public.project_sops TO scout;
+GRANT SELECT ON TABLE public.project_sops TO iris;
+GRANT SELECT ON TABLE public.project_sops TO gidget;
+GRANT SELECT ON TABLE public.project_sops TO ticker;
+GRANT SELECT ON TABLE public.project_sops TO athena;
 
 
 --
@@ -4007,6 +4288,13 @@ GRANT SELECT ON TABLE public.project_sops TO newhart;
 --
 
 GRANT SELECT ON TABLE public.project_tasks TO newhart;
+GRANT SELECT ON TABLE public.project_tasks TO gem;
+GRANT SELECT ON TABLE public.project_tasks TO coder;
+GRANT SELECT ON TABLE public.project_tasks TO scout;
+GRANT SELECT ON TABLE public.project_tasks TO iris;
+GRANT SELECT ON TABLE public.project_tasks TO gidget;
+GRANT SELECT ON TABLE public.project_tasks TO ticker;
+GRANT SELECT ON TABLE public.project_tasks TO athena;
 
 
 --
@@ -4014,6 +4302,13 @@ GRANT SELECT ON TABLE public.project_tasks TO newhart;
 --
 
 GRANT SELECT ON TABLE public.projects TO newhart;
+GRANT SELECT ON TABLE public.projects TO gem;
+GRANT SELECT ON TABLE public.projects TO coder;
+GRANT SELECT ON TABLE public.projects TO scout;
+GRANT SELECT ON TABLE public.projects TO iris;
+GRANT SELECT ON TABLE public.projects TO gidget;
+GRANT SELECT ON TABLE public.projects TO ticker;
+GRANT SELECT ON TABLE public.projects TO athena;
 
 
 --
@@ -4021,6 +4316,13 @@ GRANT SELECT ON TABLE public.projects TO newhart;
 --
 
 GRANT SELECT ON TABLE public.tasks TO newhart;
+GRANT SELECT ON TABLE public.tasks TO gem;
+GRANT SELECT ON TABLE public.tasks TO coder;
+GRANT SELECT ON TABLE public.tasks TO scout;
+GRANT SELECT ON TABLE public.tasks TO iris;
+GRANT SELECT ON TABLE public.tasks TO gidget;
+GRANT SELECT ON TABLE public.tasks TO ticker;
+GRANT SELECT ON TABLE public.tasks TO athena;
 
 
 --
@@ -4028,6 +4330,13 @@ GRANT SELECT ON TABLE public.tasks TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO newhart;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO gem;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO coder;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO scout;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO iris;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO gidget;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO ticker;
+GRANT SELECT ON TABLE public.v_agent_chat_recent TO athena;
 
 
 --
@@ -4035,6 +4344,13 @@ GRANT SELECT ON TABLE public.v_agent_chat_recent TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO newhart;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO gem;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO coder;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO scout;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO iris;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO gidget;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO ticker;
+GRANT SELECT ON TABLE public.v_agent_chat_stats TO athena;
 
 
 --
@@ -4042,6 +4358,13 @@ GRANT SELECT ON TABLE public.v_agent_chat_stats TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_agents TO newhart;
+GRANT SELECT ON TABLE public.v_agents TO gem;
+GRANT SELECT ON TABLE public.v_agents TO coder;
+GRANT SELECT ON TABLE public.v_agents TO scout;
+GRANT SELECT ON TABLE public.v_agents TO iris;
+GRANT SELECT ON TABLE public.v_agents TO gidget;
+GRANT SELECT ON TABLE public.v_agents TO ticker;
+GRANT SELECT ON TABLE public.v_agents TO athena;
 
 
 --
@@ -4049,6 +4372,13 @@ GRANT SELECT ON TABLE public.v_agents TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_entity_facts TO newhart;
+GRANT SELECT ON TABLE public.v_entity_facts TO gem;
+GRANT SELECT ON TABLE public.v_entity_facts TO coder;
+GRANT SELECT ON TABLE public.v_entity_facts TO scout;
+GRANT SELECT ON TABLE public.v_entity_facts TO iris;
+GRANT SELECT ON TABLE public.v_entity_facts TO gidget;
+GRANT SELECT ON TABLE public.v_entity_facts TO ticker;
+GRANT SELECT ON TABLE public.v_entity_facts TO athena;
 
 
 --
@@ -4056,6 +4386,13 @@ GRANT SELECT ON TABLE public.v_entity_facts TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_event_timeline TO newhart;
+GRANT SELECT ON TABLE public.v_event_timeline TO gem;
+GRANT SELECT ON TABLE public.v_event_timeline TO coder;
+GRANT SELECT ON TABLE public.v_event_timeline TO scout;
+GRANT SELECT ON TABLE public.v_event_timeline TO iris;
+GRANT SELECT ON TABLE public.v_event_timeline TO gidget;
+GRANT SELECT ON TABLE public.v_event_timeline TO ticker;
+GRANT SELECT ON TABLE public.v_event_timeline TO athena;
 
 
 --
@@ -4063,6 +4400,13 @@ GRANT SELECT ON TABLE public.v_event_timeline TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_gambling_summary TO newhart;
+GRANT SELECT ON TABLE public.v_gambling_summary TO gem;
+GRANT SELECT ON TABLE public.v_gambling_summary TO coder;
+GRANT SELECT ON TABLE public.v_gambling_summary TO scout;
+GRANT SELECT ON TABLE public.v_gambling_summary TO iris;
+GRANT SELECT ON TABLE public.v_gambling_summary TO gidget;
+GRANT SELECT ON TABLE public.v_gambling_summary TO ticker;
+GRANT SELECT ON TABLE public.v_gambling_summary TO athena;
 
 
 --
@@ -4070,6 +4414,13 @@ GRANT SELECT ON TABLE public.v_gambling_summary TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_media_queue_pending TO newhart;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO gem;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO coder;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO scout;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO iris;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO gidget;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO ticker;
+GRANT SELECT ON TABLE public.v_media_queue_pending TO athena;
 
 
 --
@@ -4077,6 +4428,13 @@ GRANT SELECT ON TABLE public.v_media_queue_pending TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_media_with_tags TO newhart;
+GRANT SELECT ON TABLE public.v_media_with_tags TO gem;
+GRANT SELECT ON TABLE public.v_media_with_tags TO coder;
+GRANT SELECT ON TABLE public.v_media_with_tags TO scout;
+GRANT SELECT ON TABLE public.v_media_with_tags TO iris;
+GRANT SELECT ON TABLE public.v_media_with_tags TO gidget;
+GRANT SELECT ON TABLE public.v_media_with_tags TO ticker;
+GRANT SELECT ON TABLE public.v_media_with_tags TO athena;
 
 
 --
@@ -4084,6 +4442,13 @@ GRANT SELECT ON TABLE public.v_media_with_tags TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_metamours TO newhart;
+GRANT SELECT ON TABLE public.v_metamours TO gem;
+GRANT SELECT ON TABLE public.v_metamours TO coder;
+GRANT SELECT ON TABLE public.v_metamours TO scout;
+GRANT SELECT ON TABLE public.v_metamours TO iris;
+GRANT SELECT ON TABLE public.v_metamours TO gidget;
+GRANT SELECT ON TABLE public.v_metamours TO ticker;
+GRANT SELECT ON TABLE public.v_metamours TO athena;
 
 
 --
@@ -4091,6 +4456,13 @@ GRANT SELECT ON TABLE public.v_metamours TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_pending_tasks TO newhart;
+GRANT SELECT ON TABLE public.v_pending_tasks TO gem;
+GRANT SELECT ON TABLE public.v_pending_tasks TO coder;
+GRANT SELECT ON TABLE public.v_pending_tasks TO scout;
+GRANT SELECT ON TABLE public.v_pending_tasks TO iris;
+GRANT SELECT ON TABLE public.v_pending_tasks TO gidget;
+GRANT SELECT ON TABLE public.v_pending_tasks TO ticker;
+GRANT SELECT ON TABLE public.v_pending_tasks TO athena;
 
 
 --
@@ -4098,6 +4470,13 @@ GRANT SELECT ON TABLE public.v_pending_tasks TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO newhart;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO gem;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO coder;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO scout;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO iris;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO gidget;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO ticker;
+GRANT SELECT ON TABLE public.v_portfolio_allocation TO athena;
 
 
 --
@@ -4105,6 +4484,13 @@ GRANT SELECT ON TABLE public.v_portfolio_allocation TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_project_sops TO newhart;
+GRANT SELECT ON TABLE public.v_project_sops TO gem;
+GRANT SELECT ON TABLE public.v_project_sops TO coder;
+GRANT SELECT ON TABLE public.v_project_sops TO scout;
+GRANT SELECT ON TABLE public.v_project_sops TO iris;
+GRANT SELECT ON TABLE public.v_project_sops TO gidget;
+GRANT SELECT ON TABLE public.v_project_sops TO ticker;
+GRANT SELECT ON TABLE public.v_project_sops TO athena;
 
 
 --
@@ -4112,6 +4498,13 @@ GRANT SELECT ON TABLE public.v_project_sops TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_relationships TO newhart;
+GRANT SELECT ON TABLE public.v_relationships TO gem;
+GRANT SELECT ON TABLE public.v_relationships TO coder;
+GRANT SELECT ON TABLE public.v_relationships TO scout;
+GRANT SELECT ON TABLE public.v_relationships TO iris;
+GRANT SELECT ON TABLE public.v_relationships TO gidget;
+GRANT SELECT ON TABLE public.v_relationships TO ticker;
+GRANT SELECT ON TABLE public.v_relationships TO athena;
 
 
 --
@@ -4119,6 +4512,13 @@ GRANT SELECT ON TABLE public.v_relationships TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_task_tree TO newhart;
+GRANT SELECT ON TABLE public.v_task_tree TO gem;
+GRANT SELECT ON TABLE public.v_task_tree TO coder;
+GRANT SELECT ON TABLE public.v_task_tree TO scout;
+GRANT SELECT ON TABLE public.v_task_tree TO iris;
+GRANT SELECT ON TABLE public.v_task_tree TO gidget;
+GRANT SELECT ON TABLE public.v_task_tree TO ticker;
+GRANT SELECT ON TABLE public.v_task_tree TO athena;
 
 
 --
@@ -4126,6 +4526,13 @@ GRANT SELECT ON TABLE public.v_task_tree TO newhart;
 --
 
 GRANT SELECT ON TABLE public.v_users TO newhart;
+GRANT SELECT ON TABLE public.v_users TO gem;
+GRANT SELECT ON TABLE public.v_users TO coder;
+GRANT SELECT ON TABLE public.v_users TO scout;
+GRANT SELECT ON TABLE public.v_users TO iris;
+GRANT SELECT ON TABLE public.v_users TO gidget;
+GRANT SELECT ON TABLE public.v_users TO ticker;
+GRANT SELECT ON TABLE public.v_users TO athena;
 
 
 --
@@ -4133,6 +4540,13 @@ GRANT SELECT ON TABLE public.v_users TO newhart;
 --
 
 GRANT SELECT ON TABLE public.vehicles TO newhart;
+GRANT SELECT ON TABLE public.vehicles TO gem;
+GRANT SELECT ON TABLE public.vehicles TO coder;
+GRANT SELECT ON TABLE public.vehicles TO scout;
+GRANT SELECT ON TABLE public.vehicles TO iris;
+GRANT SELECT ON TABLE public.vehicles TO gidget;
+GRANT SELECT ON TABLE public.vehicles TO ticker;
+GRANT SELECT ON TABLE public.vehicles TO athena;
 
 
 --
@@ -4140,6 +4554,13 @@ GRANT SELECT ON TABLE public.vehicles TO newhart;
 --
 
 GRANT SELECT ON TABLE public.vocabulary TO newhart;
+GRANT SELECT ON TABLE public.vocabulary TO gem;
+GRANT SELECT ON TABLE public.vocabulary TO coder;
+GRANT SELECT ON TABLE public.vocabulary TO scout;
+GRANT SELECT ON TABLE public.vocabulary TO iris;
+GRANT SELECT ON TABLE public.vocabulary TO gidget;
+GRANT SELECT ON TABLE public.vocabulary TO ticker;
+GRANT SELECT ON TABLE public.vocabulary TO athena;
 
 
 --
@@ -4163,5 +4584,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict QZREbcfeF0Iq6wvDRbbw6tWiJ8KgN0wjENVZ6LR3rjLF0pTST2cGVCDrLAhXCHn
+\unrestrict tSXq3ziJx3hpajyrLnmVIvCHJU6fNd8KRnI8MiLusHkCzoedob7x4s2AVKbaABJ
 
