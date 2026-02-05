@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict qdCHFYU7fNabuGvxT7CDCHIdKvd2v2yqKjP72vRYnEcbqbnN6SUTj9aKiDhZBg1
+\restrict RwewPlrGPIFtI9DhFyxtJXUZ7nAateD313RUE8xgGd50hh6FafkqigMbuaHEKE6
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -141,7 +141,8 @@ CREATE TABLE public.agents (
     updated_at timestamp with time zone DEFAULT now(),
     persistent boolean DEFAULT true,
     seed_context jsonb,
-    instantiation_sop character varying(100)
+    instantiation_sop character varying(100),
+    nickname character varying(50)
 );
 
 
@@ -187,6 +188,13 @@ COMMENT ON COLUMN public.agents.seed_context IS 'JSON: files, queries, SOPs to i
 --
 
 COMMENT ON COLUMN public.agents.instantiation_sop IS 'SOP name for how to instantiate this agent (for ephemeral agents)';
+
+
+--
+-- Name: COLUMN agents.nickname; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.nickname IS 'Short friendly name for easy reference';
 
 
 --
@@ -2517,5 +2525,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict qdCHFYU7fNabuGvxT7CDCHIdKvd2v2yqKjP72vRYnEcbqbnN6SUTj9aKiDhZBg1
+\unrestrict RwewPlrGPIFtI9DhFyxtJXUZ7nAateD313RUE8xgGd50hh6FafkqigMbuaHEKE6
 
