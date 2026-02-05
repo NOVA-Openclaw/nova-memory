@@ -65,6 +65,22 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `credential_ref` | varchar(200) | 1Password item name or config path for auth |
 | `status` | varchar(20) | active, inactive, deprecated |
 | `notes` | text | Usage notes, caveats |
+| `persistent` | boolean | true = always running, false = instantiated on-demand |
+| `seed_context` | jsonb | Files, SOPs, queries to inject before tasking ephemeral agents |
+
+**Persistent vs Ephemeral Agents:**
+- **Persistent** (`persistent = true`): Always-running agents like main Clawdbot sessions
+- **Ephemeral** (`persistent = false`): Spawned on-demand with seeded context, then cleaned up
+
+**seed_context Structure (for ephemeral agents):**
+```json
+{
+  "files": ["~/clawd/AGENTS.md", "{project_dir}/README.md"],
+  "sops": ["git-commit", "pr-workflow"],
+  "db_queries": ["SELECT steps FROM sops WHERE name LIKE 'git-%'"],
+  "context_template": "You are a Git agent for {project_name}. Follow SOPs strictly."
+}
+```
 
 **Use Cases:**
 - Track which agents exist and what they're good at
