@@ -107,6 +107,19 @@ UPDATE projects SET locked = TRUE WHERE name = 'My Project';
 
 Track detailed project info (tasks, milestones, decisions) in the repo itself. Database just holds the permanent pointer.
 
+**Project Tracking Philosophy:**
+
+| Project Type | Task Tracking | Where Details Live |
+|--------------|---------------|-------------------|
+| **Repo-backed** | GitHub Issues | In the repository |
+| **Database-only** | `tasks` table | In nova_memory |
+
+**Rules:**
+1. **Single source of truth** - Never duplicate task tracking. Pick repo OR database, not both.
+2. **Repo-backed projects** - Use GitHub Issues for tasks/features/milestones. Database holds only: `repo_url` (permanent pointer), `git_config` (agent metadata), basic `status`.
+3. **Database-only projects** - Track everything in nova_memory: `tasks` table, project `notes`, etc.
+4. **Lock repo-backed projects** - Set `locked=TRUE` to prevent accidental changes to the pointer.
+
 **git_config Structure:**
 ```json
 {
