@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 2K95rfzud3qn74cUhD8n8EC0SF95zk7mcusjrcUY6gFaGoWlPGddIngwqHiaGK7
+\restrict Vr2TFl52qO0LNMtyGUrrLsiIud8osqq3DVnjwPxa54auSSINFcmw2M4Fd1769ou
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -453,6 +453,22 @@ ALTER SEQUENCE public.artwork_id_seq OWNER TO nova;
 
 ALTER SEQUENCE public.artwork_id_seq OWNED BY public.artwork.id;
 
+
+--
+-- Name: asset_classes; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.asset_classes (
+    code character varying(20) NOT NULL,
+    name character varying(100) NOT NULL,
+    description text,
+    price_source character varying(50),
+    trading_hours character varying(100),
+    typical_unit character varying(20)
+);
+
+
+ALTER TABLE public.asset_classes OWNER TO nova;
 
 --
 -- Name: certificates; Type: TABLE; Schema: public; Owner: nova
@@ -1399,6 +1415,58 @@ ALTER SEQUENCE public.portfolio_snapshots_id_seq OWNED BY public.portfolio_snaps
 
 
 --
+-- Name: positions; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.positions (
+    id integer NOT NULL,
+    symbol character varying(20) NOT NULL,
+    asset_class character varying(20) NOT NULL,
+    asset_subclass character varying(50),
+    quantity numeric(18,8) NOT NULL,
+    unit character varying(20) DEFAULT 'shares'::character varying,
+    cost_basis numeric(14,4) NOT NULL,
+    avg_price numeric(14,4),
+    purchased_at timestamp without time zone NOT NULL,
+    sold_at timestamp without time zone,
+    sale_proceeds numeric(14,4),
+    platform character varying(50),
+    account_id character varying(50) DEFAULT 'main'::character varying,
+    notes text,
+    maturity_date date,
+    coupon_rate numeric(6,4),
+    strike_price numeric(14,4),
+    expiration_date date,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.positions OWNER TO nova;
+
+--
+-- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.positions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.positions_id_seq OWNER TO nova;
+
+--
+-- Name: positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.positions_id_seq OWNED BY public.positions.id;
+
+
+--
 -- Name: preferences; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1435,6 +1503,28 @@ ALTER SEQUENCE public.preferences_id_seq OWNER TO nova;
 
 ALTER SEQUENCE public.preferences_id_seq OWNED BY public.preferences.id;
 
+
+--
+-- Name: price_cache_v2; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.price_cache_v2 (
+    symbol character varying(20) NOT NULL,
+    asset_class character varying(20) NOT NULL,
+    price numeric(14,4) NOT NULL,
+    price_currency character varying(3) DEFAULT 'USD'::character varying,
+    bid numeric(14,4),
+    ask numeric(14,4),
+    volume numeric(20,0),
+    market_cap numeric(20,0),
+    day_change numeric(10,4),
+    day_change_pct numeric(8,4),
+    cached_at timestamp without time zone DEFAULT now(),
+    source character varying(50)
+);
+
+
+ALTER TABLE public.price_cache_v2 OWNER TO nova;
 
 --
 -- Name: sops; Type: TABLE; Schema: public; Owner: nova
@@ -1840,6 +1930,24 @@ CREATE VIEW public.v_pending_tasks AS
 ALTER VIEW public.v_pending_tasks OWNER TO nova;
 
 --
+-- Name: v_portfolio_allocation; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_portfolio_allocation AS
+ SELECT p.asset_class,
+    count(*) AS num_positions,
+    sum((p.quantity * COALESCE(pc.price, p.avg_price))) AS market_value,
+    sum(p.cost_basis) AS total_cost_basis,
+    (sum((p.quantity * COALESCE(pc.price, p.avg_price))) - sum(p.cost_basis)) AS unrealized_pl
+   FROM (public.positions p
+     LEFT JOIN public.price_cache_v2 pc ON ((((p.symbol)::text = (pc.symbol)::text) AND ((p.asset_class)::text = (pc.asset_class)::text))))
+  WHERE (p.sold_at IS NULL)
+  GROUP BY p.asset_class;
+
+
+ALTER VIEW public.v_portfolio_allocation OWNER TO nova;
+
+--
 -- Name: v_project_sops; Type: VIEW; Schema: public; Owner: nova
 --
 
@@ -2148,6 +2256,13 @@ ALTER TABLE ONLY public.portfolio_snapshots ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: positions id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.positions ALTER COLUMN id SET DEFAULT nextval('public.positions_id_seq'::regclass);
+
+
+--
 -- Name: preferences id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2226,6 +2341,14 @@ ALTER TABLE ONLY public.agents
 
 ALTER TABLE ONLY public.artwork
     ADD CONSTRAINT artwork_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asset_classes asset_classes_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.asset_classes
+    ADD CONSTRAINT asset_classes_pkey PRIMARY KEY (code);
 
 
 --
@@ -2445,11 +2568,27 @@ ALTER TABLE ONLY public.portfolio_snapshots
 
 
 --
+-- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.preferences
     ADD CONSTRAINT preferences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: price_cache_v2 price_cache_v2_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.price_cache_v2
+    ADD CONSTRAINT price_cache_v2_pkey PRIMARY KEY (symbol, asset_class);
 
 
 --
@@ -2800,6 +2939,20 @@ CREATE INDEX idx_places_type ON public.places USING btree (type);
 
 
 --
+-- Name: idx_positions_account; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_positions_account ON public.positions USING btree (account_id) WHERE (sold_at IS NULL);
+
+
+--
+-- Name: idx_positions_asset_class; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_positions_asset_class ON public.positions USING btree (asset_class) WHERE (sold_at IS NULL);
+
+
+--
 -- Name: idx_positions_held; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -2825,6 +2978,13 @@ CREATE INDEX idx_preferences_entity ON public.preferences USING btree (entity_id
 --
 
 CREATE INDEX idx_preferences_key ON public.preferences USING btree (key);
+
+
+--
+-- Name: idx_price_cache_v2_lookup; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_price_cache_v2_lookup ON public.price_cache_v2 USING btree (symbol, asset_class, cached_at DESC);
 
 
 --
@@ -3275,5 +3435,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2K95rfzud3qn74cUhD8n8EC0SF95zk7mcusjrcUY6gFaGoWlPGddIngwqHiaGK7
+\unrestrict Vr2TFl52qO0LNMtyGUrrLsiIud8osqq3DVnjwPxa54auSSINFcmw2M4Fd1769ou
 
