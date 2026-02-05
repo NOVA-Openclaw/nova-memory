@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict e8aLo7cECzSdczKLvzlfgmQwuPP86eiNXgLLnmnFzxsPGKBAmNVbW4rMseZcMCW
+\restrict QZREbcfeF0Iq6wvDRbbw6tWiJ8KgN0wjENVZ6LR3rjLF0pTST2cGVCDrLAhXCHn
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -31,6 +31,44 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
+
+--
+-- Name: chat(text, character varying); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.chat(p_message text, p_sender character varying DEFAULT 'nova'::character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    PERFORM send_agent_message(p_sender, p_message, 'system', NULL);
+END;
+$$;
+
+
+ALTER FUNCTION public.chat(p_message text, p_sender character varying) OWNER TO nova;
+
+--
+-- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.embed_chat_message() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Insert into memory_embeddings for semantic search
+    -- (embedding will be null until batch embedding runs)
+    INSERT INTO memory_embeddings (source_type, source_id, content)
+    VALUES (
+        'agent_chat',
+        NEW.id::text,
+        NEW.sender || ' in #' || NEW.channel || ': ' || NEW.message
+    );
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.embed_chat_message() OWNER TO nova;
 
 --
 -- Name: expire_old_chat(); Type: FUNCTION; Schema: public; Owner: nova
@@ -331,6 +369,19 @@ ALTER SEQUENCE public.agent_chat_id_seq OWNER TO nova;
 
 ALTER SEQUENCE public.agent_chat_id_seq OWNED BY public.agent_chat.id;
 
+
+--
+-- Name: agent_chat_processed; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_chat_processed (
+    chat_id integer NOT NULL,
+    agent character varying(50) NOT NULL,
+    processed_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.agent_chat_processed OWNER TO nova;
 
 --
 -- Name: agents; Type: TABLE; Schema: public; Owner: nova
@@ -2521,6 +2572,14 @@ ALTER TABLE ONLY public.agent_chat
 
 
 --
+-- Name: agent_chat_processed agent_chat_processed_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_chat_processed
+    ADD CONSTRAINT agent_chat_processed_pkey PRIMARY KEY (chat_id);
+
+
+--
 -- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -2965,6 +3024,13 @@ CREATE INDEX idx_certificates_serial ON public.certificates USING btree (serial)
 
 
 --
+-- Name: idx_chat_processed_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
+
+
+--
 -- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -3372,6 +3438,13 @@ CREATE TRIGGER media_search_vector_update BEFORE INSERT OR UPDATE ON public.medi
 
 
 --
+-- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.embed_chat_message();
+
+
+--
 -- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3393,6 +3466,14 @@ ALTER TABLE ONLY public.agent_actions
 
 ALTER TABLE ONLY public.agent_actions
     ADD CONSTRAINT agent_actions_related_media_id_fkey FOREIGN KEY (related_media_id) REFERENCES public.media_consumed(id);
+
+
+--
+-- Name: agent_chat_processed agent_chat_processed_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_chat_processed
+    ADD CONSTRAINT agent_chat_processed_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chat(id);
 
 
 --
@@ -3659,6 +3740,13 @@ GRANT USAGE ON SCHEMA public TO newhart;
 
 
 --
+-- Name: FUNCTION chat(p_message text, p_sender character varying); Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON FUNCTION public.chat(p_message text, p_sender character varying) TO newhart;
+
+
+--
 -- Name: FUNCTION send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: ACL; Schema: public; Owner: nova
 --
 
@@ -3684,6 +3772,13 @@ GRANT SELECT,INSERT ON TABLE public.agent_chat TO newhart;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO newhart;
+
+
+--
+-- Name: TABLE agent_chat_processed; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT ON TABLE public.agent_chat_processed TO newhart;
 
 
 --
@@ -4068,5 +4163,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict e8aLo7cECzSdczKLvzlfgmQwuPP86eiNXgLLnmnFzxsPGKBAmNVbW4rMseZcMCW
+\unrestrict QZREbcfeF0Iq6wvDRbbw6tWiJ8KgN0wjENVZ6LR3rjLF0pTST2cGVCDrLAhXCHn
 
