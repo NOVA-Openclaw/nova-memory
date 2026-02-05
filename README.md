@@ -88,6 +88,24 @@ The `projects` table tracks active work with optional Git configuration:
 | `goal` | text | What we're trying to achieve |
 | `notes` | text | General notes |
 | `git_config` | jsonb | Per-project Git settings (see below) |
+| `repo_url` | text | Canonical repo URL (permanent pointer when locked) |
+| `locked` | boolean | When TRUE, prevents accidental updates to this record |
+
+**Repo-Backed Projects:**
+
+For projects with repositories, use `repo_url` as the single source of truth pointer and `locked=TRUE` to prevent accidental changes:
+
+```sql
+-- Lock a repo-backed project
+UPDATE projects SET repo_url = 'https://github.com/owner/repo', locked = TRUE WHERE name = 'My Project';
+
+-- To modify a locked project, must explicitly unlock first
+UPDATE projects SET locked = FALSE WHERE name = 'My Project';
+UPDATE projects SET goal = 'new goal' WHERE name = 'My Project';
+UPDATE projects SET locked = TRUE WHERE name = 'My Project';
+```
+
+Track detailed project info (tasks, milestones, decisions) in the repo itself. Database just holds the permanent pointer.
 
 **git_config Structure:**
 ```json
@@ -109,7 +127,10 @@ The `projects` table tracks active work with optional Git configuration:
 SELECT name, git_config->>'repo' as repo, git_config->>'branch_strategy' as strategy 
 FROM projects WHERE git_config IS NOT NULL;
 
--- Update project Git config
+-- Locked repo-backed projects
+SELECT name, repo_url, locked FROM projects WHERE locked = TRUE;
+
+-- Update project Git config (must unlock first if locked)
 UPDATE projects SET git_config = '{"repo": "...", "branch_strategy": "..."}' WHERE name = 'my-project';
 ```
 
