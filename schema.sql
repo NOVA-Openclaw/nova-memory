@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict GtRJZTy8TjjSCVc7XXZpy1YeT4OhKL5u7p0bZ7aU4xW5PXVTFChOejW9COhbS0A
+\restrict 8W63uYNMUSTFHe12fStmHmzfHudBC3qJVJGu3bjYr9JcbtycGPCFzija3Xn2AwV
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -100,9 +100,92 @@ $$;
 
 ALTER FUNCTION public.search_memories(query_embedding public.vector, match_count integer, similarity_threshold double precision) OWNER TO nova;
 
+--
+-- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.update_agents_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_agents_timestamp() OWNER TO nova;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: agents; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agents (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    description text,
+    role character varying(100),
+    provider character varying(50),
+    model character varying(100),
+    access_method character varying(50) NOT NULL,
+    access_details jsonb,
+    skills text[],
+    credential_ref character varying(200),
+    status character varying(20) DEFAULT 'active'::character varying,
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.agents OWNER TO nova;
+
+--
+-- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agents IS 'Registry of persistent AI agent instances for delegation';
+
+
+--
+-- Name: COLUMN agents.access_details; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_command, endpoint URL, etc.';
+
+
+--
+-- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
+
+
+--
+-- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.agents_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agents_id_seq OWNER TO nova;
+
+--
+-- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
+
 
 --
 -- Name: artwork; Type: TABLE; Schema: public; Owner: nova
@@ -1099,6 +1182,27 @@ ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
 
 
 --
+-- Name: v_agents; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_agents AS
+ SELECT id,
+    name,
+    role,
+    provider,
+    model,
+    access_method,
+    array_to_string(skills, ', '::text) AS skills_list,
+    status,
+    credential_ref
+   FROM public.agents
+  WHERE ((status)::text = 'active'::text)
+  ORDER BY role, name;
+
+
+ALTER VIEW public.v_agents OWNER TO nova;
+
+--
 -- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: nova
 --
 
@@ -1372,6 +1476,13 @@ ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
 
 
 --
+-- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agents_id_seq'::regclass);
+
+
+--
 -- Name: artwork id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -1523,6 +1634,22 @@ ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.veh
 --
 
 ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
+
+
+--
+-- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agents
+    ADD CONSTRAINT agents_name_key UNIQUE (name);
+
+
+--
+-- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agents
+    ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
 
 
 --
@@ -1814,6 +1941,27 @@ ALTER TABLE ONLY public.vocabulary
 
 
 --
+-- Name: idx_agents_provider; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agents_provider ON public.agents USING btree (provider);
+
+
+--
+-- Name: idx_agents_role; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agents_role ON public.agents USING btree (role);
+
+
+--
+-- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agents_status ON public.agents USING btree (status);
+
+
+--
 -- Name: idx_certificates_entity_id; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -2094,6 +2242,13 @@ CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
 
 
 --
+-- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.update_agents_timestamp();
+
+
+--
 -- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -2329,5 +2484,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict GtRJZTy8TjjSCVc7XXZpy1YeT4OhKL5u7p0bZ7aU4xW5PXVTFChOejW9COhbS0A
+\unrestrict 8W63uYNMUSTFHe12fStmHmzfHudBC3qJVJGu3bjYr9JcbtycGPCFzija3Xn2AwV
 
