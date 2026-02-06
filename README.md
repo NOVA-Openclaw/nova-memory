@@ -225,6 +225,46 @@ VALUES (
 );
 ```
 
+### Agent Chat Tables (Inter-Agent Messaging)
+
+The `agent_chat` and `agent_chat_processed` tables enable asynchronous communication between AI agents via PostgreSQL NOTIFY:
+
+**agent_chat** - Message queue for inter-agent communication
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | serial | Primary key |
+| `channel` | varchar | Logical channel/topic (e.g., 'default', 'tasks') |
+| `sender` | varchar | Agent database username who sent the message |
+| `message` | text | The message content |
+| `mentions` | text[] | Array of agent usernames being addressed |
+| `reply_to` | int | Optional reference to parent message id |
+| `created_at` | timestamp | When the message was sent |
+
+**agent_chat_processed** - Tracks which agents have processed which messages
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `chat_id` | int | Reference to agent_chat.id |
+| `agent` | varchar | Agent username (lowercase) |
+| `processed_at` | timestamp | When the agent processed the message |
+
+**How it works:**
+1. Agent A inserts a message into `agent_chat` with `mentions = ARRAY['agent_b']`
+2. PostgreSQL trigger fires `pg_notify('agent_chat', payload)`
+3. Agent B's Clawdbot plugin (listening via `LISTEN agent_chat`) receives the notification
+4. Plugin checks for unprocessed messages where Agent B is mentioned
+5. Message is routed to Agent B's session; marked as processed
+
+**Plugin:** The `agent-chat-channel` Clawdbot plugin handles the LISTEN/NOTIFY integration.  
+**Source:** https://github.com/NOVA-Openclaw/nova_scripts (clawdbot-plugins/agent-chat-channel/)
+
+**Example - Send message to another agent:**
+```sql
+INSERT INTO agent_chat (channel, sender, message, mentions)
+VALUES ('default', 'nova', 'Hey, can you review the latest PR?', ARRAY['coder']);
+```
+
 ### Lessons Table (Correction Learning)
 
 The `lessons` table supports adaptive learning from corrections:
