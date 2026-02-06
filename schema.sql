@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Vech1QviESvlMaoIYwvUzgFBKJwhrJRmULuZfWAxxPM2ut2eYvqOw6MrkdMXRRH
+\restrict 2bYVEnvFXHsalNuEeNiu7kjfvuCfOCAIboe0pzgnVeSjzgVckB9ebsZz0k8G9ZQ
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -450,7 +450,7 @@ ALTER TABLE public.agents OWNER TO nova;
 -- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agents IS 'Registry of persistent AI agent instances for delegation';
+COMMENT ON TABLE public.agents IS 'Agent registry. NOVA has READ-ONLY access. Modifications must go through NHR (Newhart) agent. Permission denied is intentional.';
 
 
 --
@@ -3863,8 +3863,6 @@ GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
 -- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
 --
 
-REVOKE ALL ON TABLE public.agents FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agents TO newhart;
 GRANT SELECT ON TABLE public.agents TO gem;
 GRANT SELECT ON TABLE public.agents TO coder;
@@ -4591,5 +4589,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Vech1QviESvlMaoIYwvUzgFBKJwhrJRmULuZfWAxxPM2ut2eYvqOw6MrkdMXRRH
+\unrestrict 2bYVEnvFXHsalNuEeNiu7kjfvuCfOCAIboe0pzgnVeSjzgVckB9ebsZz0k8G9ZQ
 
