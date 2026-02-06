@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5O4kTrQNecgYcdFufKgoHpCosQyUjrPoq8ihmbWZZRRflpLdY9ktKPvJM5K0Yuy
+\restrict fUTMvlbFxGWLZ1qpbiGWzIieN4iyJna1wANLTDdMWgfiqgjBvyouwm0djuBYZKp
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -599,7 +599,7 @@ CREATE TABLE public.ai_models (
     cost_tier character varying(20),
     strengths text[],
     weaknesses text[],
-    verified_access boolean DEFAULT false,
+    available boolean DEFAULT false,
     last_verified_at timestamp with time zone,
     credential_ref character varying(200),
     notes text,
@@ -4771,5 +4771,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5O4kTrQNecgYcdFufKgoHpCosQyUjrPoq8ihmbWZZRRflpLdY9ktKPvJM5K0Yuy
+\unrestrict fUTMvlbFxGWLZ1qpbiGWzIieN4iyJna1wANLTDdMWgfiqgjBvyouwm0djuBYZKp
 
