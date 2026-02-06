@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict oY46Vu1igCNmA4C6HI4ThkOhD8Jbh9jetnLuc0ihiAnB2jLzY6aWtbBQNqThBQQ
+\restrict KKvvcppQC3RU1E4oXpBm9Pr6buny1c0D5pbfghO6dSAKyhxJfeDTNvABY4BMeX5
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1480,6 +1480,59 @@ ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings
 
 
 --
+-- Name: models; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.models (
+    id integer NOT NULL,
+    model_id character varying(100) NOT NULL,
+    provider character varying(50) NOT NULL,
+    display_name character varying(100),
+    context_window integer,
+    cost_tier character varying(20),
+    strengths text[],
+    weaknesses text[],
+    verified_access boolean DEFAULT false,
+    last_verified_at timestamp with time zone,
+    credential_ref character varying(200),
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.models OWNER TO nova;
+
+--
+-- Name: TABLE models; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.models IS 'Available AI models. NOVA maintains this; Newhart reads it for agent model assignments.';
+
+
+--
+-- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.models_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.models_id_seq OWNER TO nova;
+
+--
+-- Name: models_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.models_id_seq OWNED BY public.models.id;
+
+
+--
 -- Name: place_properties; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2598,6 +2651,13 @@ ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
+-- Name: models id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.models ALTER COLUMN id SET DEFAULT nextval('public.models_id_seq'::regclass);
+
+
+--
 -- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2911,6 +2971,22 @@ ALTER TABLE ONLY public.media_tags
 
 ALTER TABLE ONLY public.memory_embeddings
     ADD CONSTRAINT memory_embeddings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: models models_model_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.models
+    ADD CONSTRAINT models_model_id_key UNIQUE (model_id);
+
+
+--
+-- Name: models models_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.models
+    ADD CONSTRAINT models_pkey PRIMARY KEY (id);
 
 
 --
@@ -4239,6 +4315,13 @@ GRANT SELECT,USAGE ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
 
 
 --
+-- Name: TABLE models; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.models TO newhart;
+
+
+--
 -- Name: TABLE place_properties; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4688,5 +4771,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict oY46Vu1igCNmA4C6HI4ThkOhD8Jbh9jetnLuc0ihiAnB2jLzY6aWtbBQNqThBQQ
+\unrestrict KKvvcppQC3RU1E4oXpBm9Pr6buny1c0D5pbfghO6dSAKyhxJfeDTNvABY4BMeX5
 
