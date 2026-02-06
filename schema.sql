@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict mnHzXK3Ghds5ewez9CXljrzaP4QShvjB7nDmCudQFSiKqpHUmqeIkQT9xpDWhJa
+\restrict nTmDSZ7qsAzOiiZo8cOBm5oS0YcmzVrX2UmFlfnXeWjUtVsBpMI4BF5MkoGY2Sd
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -394,7 +394,7 @@ ALTER TABLE public.agent_chat OWNER TO nova;
 -- Name: TABLE agent_chat; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_chat IS 'Inter-agent messaging queue. NOVA can INSERT (send) and SELECT (receive). Processed messages tracked in agent_chat_processed.';
+COMMENT ON TABLE public.agent_chat IS 'Inter-agent messaging via PostgreSQL NOTIFY. Agents write messages here mentioning other agents; receiving agents listen via the agent-chat-channel Clawdbot plugin. Plugin source: https://github.com/NOVA-Openclaw/nova_scripts (clawdbot-plugins/agent-chat-channel/)';
 
 
 --
@@ -4771,5 +4771,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict mnHzXK3Ghds5ewez9CXljrzaP4QShvjB7nDmCudQFSiKqpHUmqeIkQT9xpDWhJa
+\unrestrict nTmDSZ7qsAzOiiZo8cOBm5oS0YcmzVrX2UmFlfnXeWjUtVsBpMI4BF5MkoGY2Sd
 
