@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 2bYVEnvFXHsalNuEeNiu7kjfvuCfOCAIboe0pzgnVeSjzgVckB9ebsZz0k8G9ZQ
+\restrict oY46Vu1igCNmA4C6HI4ThkOhD8Jbh9jetnLuc0ihiAnB2jLzY6aWtbBQNqThBQQ
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -273,6 +273,19 @@ $$;
 ALTER FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) OWNER TO nova;
 
 --
+-- Name: table_comment(text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.table_comment(tbl text) RETURNS text
+    LANGUAGE sql
+    AS $$
+  SELECT obj_description(tbl::regclass, 'pg_class');
+$$;
+
+
+ALTER FUNCTION public.table_comment(tbl text) OWNER TO nova;
+
+--
 -- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -335,7 +348,7 @@ ALTER TABLE public.agent_actions OWNER TO nova;
 -- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_actions IS 'Log of NOVA actions for continuity and avoiding duplicate work';
+COMMENT ON TABLE public.agent_actions IS 'Log of NOVA actions for continuity. Write freely to track work and avoid duplicates.';
 
 
 --
@@ -378,6 +391,13 @@ CREATE TABLE public.agent_chat (
 ALTER TABLE public.agent_chat OWNER TO nova;
 
 --
+-- Name: TABLE agent_chat; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agent_chat IS 'Inter-agent messaging queue. NOVA can INSERT (send) and SELECT (receive). Processed messages tracked in agent_chat_processed.';
+
+
+--
 -- Name: agent_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -411,6 +431,13 @@ CREATE TABLE public.agent_chat_processed (
 
 
 ALTER TABLE public.agent_chat_processed OWNER TO nova;
+
+--
+-- Name: TABLE agent_chat_processed; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agent_chat_processed IS 'Tracks which messages each agent has processed. Prevents duplicate handling.';
+
 
 --
 -- Name: agents; Type: TABLE; Schema: public; Owner: nova
@@ -590,7 +617,7 @@ ALTER TABLE public.artwork OWNER TO nova;
 -- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.artwork IS 'Archive of NOVA''s Instagram artwork for future compilation';
+COMMENT ON TABLE public.artwork IS 'Archive of NOVAs Instagram artwork. Reference for future compilation.';
 
 
 --
@@ -671,7 +698,7 @@ ALTER TABLE public.certificates OWNER TO nova;
 -- Name: TABLE certificates; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.certificates IS 'Client certificates issued by NOVA CA for mTLS authentication';
+COMMENT ON TABLE public.certificates IS 'Client certificates issued by NOVA CA. Security-sensitive. Verify before modifications.';
 
 
 --
@@ -783,7 +810,7 @@ ALTER TABLE public.entities OWNER TO nova;
 -- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.entities IS 'People, AIs, organizations, and other entities';
+COMMENT ON TABLE public.entities IS 'People, AIs, organizations. NOVA has full access. Use entity_facts for attributes.';
 
 
 --
@@ -830,6 +857,13 @@ CREATE TABLE public.entity_facts (
 
 
 ALTER TABLE public.entity_facts OWNER TO nova;
+
+--
+-- Name: TABLE entity_facts; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entity_facts IS 'Key-value facts about entities. Check current_timezone for I)ruid before time-based actions.';
+
 
 --
 -- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: nova
@@ -898,6 +932,13 @@ CREATE TABLE public.entity_relationships (
 
 
 ALTER TABLE public.entity_relationships OWNER TO nova;
+
+--
+-- Name: TABLE entity_relationships; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entity_relationships IS 'Relationships between entities (family, work, friendship, etc).';
+
 
 --
 -- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -974,6 +1015,13 @@ CREATE TABLE public.events (
 
 
 ALTER TABLE public.events OWNER TO nova;
+
+--
+-- Name: TABLE events; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.events IS 'Historical events, milestones, activities. Log significant occurrences.';
+
 
 --
 -- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -1103,7 +1151,7 @@ ALTER TABLE public.lessons OWNER TO nova;
 -- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.lessons IS 'Lessons and insights learned by NOVA';
+COMMENT ON TABLE public.lessons IS 'Lessons and insights learned. Update when learning something worth remembering.';
 
 
 --
@@ -1169,7 +1217,7 @@ ALTER TABLE public.media_consumed OWNER TO nova;
 -- Name: TABLE media_consumed; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts, articles consumed by entities';
+COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts consumed by entities. Log completions here.';
 
 
 --
@@ -1280,7 +1328,7 @@ ALTER TABLE public.media_queue OWNER TO nova;
 -- Name: TABLE media_queue; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.media_queue IS 'Queue for media ingestion requests awaiting processing by Librarian Agent';
+COMMENT ON TABLE public.media_queue IS 'Queue for media ingestion. Librarian agent processes these.';
 
 
 --
@@ -1346,7 +1394,7 @@ ALTER TABLE public.media_tags OWNER TO nova;
 -- Name: TABLE media_tags; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.media_tags IS 'Tags/topics associated with media items';
+COMMENT ON TABLE public.media_tags IS 'Tags/topics for media items. Helps with recommendations and search.';
 
 
 --
@@ -1401,6 +1449,13 @@ CREATE TABLE public.memory_embeddings (
 
 
 ALTER TABLE public.memory_embeddings OWNER TO nova;
+
+--
+-- Name: TABLE memory_embeddings; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.memory_embeddings IS 'Vector embeddings for semantic memory search. Used by proactive-recall.py.';
+
 
 --
 -- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -1485,6 +1540,13 @@ CREATE TABLE public.places (
 
 
 ALTER TABLE public.places OWNER TO nova;
+
+--
+-- Name: TABLE places; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.places IS 'Locations (houses, venues, cities). Reference I)ruid houses in USER.md.';
+
 
 --
 -- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -1658,6 +1720,13 @@ CREATE TABLE public.preferences (
 ALTER TABLE public.preferences OWNER TO nova;
 
 --
+-- Name: TABLE preferences; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.preferences IS 'User preferences by entity_id. Check before making assumptions.';
+
+
+--
 -- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -1720,6 +1789,13 @@ CREATE TABLE public.sops (
 ALTER TABLE public.sops OWNER TO nova;
 
 --
+-- Name: TABLE sops; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.sops IS 'Global standard operating procedures. Reference for common workflows.';
+
+
+--
 -- Name: processes_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -1765,6 +1841,13 @@ CREATE TABLE public.project_sops (
 
 
 ALTER TABLE public.project_sops OWNER TO nova;
+
+--
+-- Name: TABLE project_sops; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.project_sops IS 'Project-specific standard operating procedures. Read before working on a project.';
+
 
 --
 -- Name: project_tasks; Type: TABLE; Schema: public; Owner: nova
@@ -1828,6 +1911,13 @@ CREATE TABLE public.projects (
 
 
 ALTER TABLE public.projects OWNER TO nova;
+
+--
+-- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.projects IS 'Project registry. Check for existing projects before creating new ones.';
+
 
 --
 -- Name: COLUMN projects.git_config; Type: COMMENT; Schema: public; Owner: nova
@@ -1896,6 +1986,13 @@ CREATE TABLE public.tasks (
 
 
 ALTER TABLE public.tasks OWNER TO nova;
+
+--
+-- Name: TABLE tasks; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.tasks IS 'Task tracking. NOVA can create, update status, assign. Check before starting work.';
+
 
 --
 -- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -2356,7 +2453,7 @@ ALTER TABLE public.vocabulary OWNER TO nova;
 -- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition';
+COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition. Add names, terms, jargon as encountered.';
 
 
 --
@@ -3863,6 +3960,8 @@ GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
 -- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
 --
 
+REVOKE ALL ON TABLE public.agents FROM nova;
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agents TO newhart;
 GRANT SELECT ON TABLE public.agents TO gem;
 GRANT SELECT ON TABLE public.agents TO coder;
@@ -4589,5 +4688,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2bYVEnvFXHsalNuEeNiu7kjfvuCfOCAIboe0pzgnVeSjzgVckB9ebsZz0k8G9ZQ
+\unrestrict oY46Vu1igCNmA4C6HI4ThkOhD8Jbh9jetnLuc0ihiAnB2jLzY6aWtbBQNqThBQQ
 
