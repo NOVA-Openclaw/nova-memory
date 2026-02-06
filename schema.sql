@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict KKvvcppQC3RU1E4oXpBm9Pr6buny1c0D5pbfghO6dSAKyhxJfeDTNvABY4BMeX5
+\restrict 5O4kTrQNecgYcdFufKgoHpCosQyUjrPoq8ihmbWZZRRflpLdY9ktKPvJM5K0Yuy
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -584,6 +584,37 @@ ALTER SEQUENCE public.agents_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
+
+
+--
+-- Name: ai_models; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.ai_models (
+    id integer NOT NULL,
+    model_id character varying(100) NOT NULL,
+    provider character varying(50) NOT NULL,
+    display_name character varying(100),
+    context_window integer,
+    cost_tier character varying(20),
+    strengths text[],
+    weaknesses text[],
+    verified_access boolean DEFAULT false,
+    last_verified_at timestamp with time zone,
+    credential_ref character varying(200),
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.ai_models OWNER TO nova;
+
+--
+-- Name: TABLE ai_models; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.ai_models IS 'Available AI models. NOVA maintains this; Newhart reads it for agent model assignments.';
 
 
 --
@@ -1480,37 +1511,6 @@ ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings
 
 
 --
--- Name: models; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.models (
-    id integer NOT NULL,
-    model_id character varying(100) NOT NULL,
-    provider character varying(50) NOT NULL,
-    display_name character varying(100),
-    context_window integer,
-    cost_tier character varying(20),
-    strengths text[],
-    weaknesses text[],
-    verified_access boolean DEFAULT false,
-    last_verified_at timestamp with time zone,
-    credential_ref character varying(200),
-    notes text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
-ALTER TABLE public.models OWNER TO nova;
-
---
--- Name: TABLE models; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.models IS 'Available AI models. NOVA maintains this; Newhart reads it for agent model assignments.';
-
-
---
 -- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -1529,7 +1529,7 @@ ALTER SEQUENCE public.models_id_seq OWNER TO nova;
 -- Name: models_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
 --
 
-ALTER SEQUENCE public.models_id_seq OWNED BY public.models.id;
+ALTER SEQUENCE public.models_id_seq OWNED BY public.ai_models.id;
 
 
 --
@@ -2553,6 +2553,13 @@ ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agent
 
 
 --
+-- Name: ai_models id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.ai_models ALTER COLUMN id SET DEFAULT nextval('public.models_id_seq'::regclass);
+
+
+--
 -- Name: artwork id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2648,13 +2655,6 @@ ALTER TABLE ONLY public.media_tags ALTER COLUMN id SET DEFAULT nextval('public.m
 --
 
 ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('public.memory_embeddings_id_seq'::regclass);
-
-
---
--- Name: models id; Type: DEFAULT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.models ALTER COLUMN id SET DEFAULT nextval('public.models_id_seq'::regclass);
 
 
 --
@@ -2974,18 +2974,18 @@ ALTER TABLE ONLY public.memory_embeddings
 
 
 --
--- Name: models models_model_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: ai_models models_model_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
-ALTER TABLE ONLY public.models
+ALTER TABLE ONLY public.ai_models
     ADD CONSTRAINT models_model_id_key UNIQUE (model_id);
 
 
 --
--- Name: models models_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: ai_models models_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
-ALTER TABLE ONLY public.models
+ALTER TABLE ONLY public.ai_models
     ADD CONSTRAINT models_pkey PRIMARY KEY (id);
 
 
@@ -4056,6 +4056,13 @@ GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
 
 
 --
+-- Name: TABLE ai_models; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.ai_models TO newhart;
+
+
+--
 -- Name: TABLE artwork; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4312,13 +4319,6 @@ GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO athena;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
-
-
---
--- Name: TABLE models; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.models TO newhart;
 
 
 --
@@ -4771,5 +4771,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict KKvvcppQC3RU1E4oXpBm9Pr6buny1c0D5pbfghO6dSAKyhxJfeDTNvABY4BMeX5
+\unrestrict 5O4kTrQNecgYcdFufKgoHpCosQyUjrPoq8ihmbWZZRRflpLdY9ktKPvJM5K0Yuy
 
