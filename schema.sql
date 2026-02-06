@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nTmDSZ7qsAzOiiZo8cOBm5oS0YcmzVrX2UmFlfnXeWjUtVsBpMI4BF5MkoGY2Sd
+\restrict dVUuj13Gk8mBlQayZwlammgFLmckIR8XicM4Y6Uf5WAYXSmGlF4YNs8MT8logCq
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -394,7 +394,7 @@ ALTER TABLE public.agent_chat OWNER TO nova;
 -- Name: TABLE agent_chat; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_chat IS 'Inter-agent messaging via PostgreSQL NOTIFY. Agents write messages here mentioning other agents; receiving agents listen via the agent-chat-channel Clawdbot plugin. Plugin source: https://github.com/NOVA-Openclaw/nova_scripts (clawdbot-plugins/agent-chat-channel/)';
+COMMENT ON TABLE public.agent_chat IS 'Inter-agent messaging via PostgreSQL NOTIFY. Agents write messages here mentioning other agents; receiving agents listen via the agent-chat-channel Clawdbot plugin. Plugin source: https://github.com/NOVA-Openclaw/nova-scripts/tree/main/agent-chat-channel';
 
 
 --
@@ -436,7 +436,7 @@ ALTER TABLE public.agent_chat_processed OWNER TO nova;
 -- Name: TABLE agent_chat_processed; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_chat_processed IS 'Tracks which messages each agent has processed. Prevents duplicate handling.';
+COMMENT ON TABLE public.agent_chat_processed IS 'Tracks which messages each agent has processed from agent_chat. Prevents duplicate processing. Used by agent-chat-channel plugin.';
 
 
 --
@@ -4771,5 +4771,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nTmDSZ7qsAzOiiZo8cOBm5oS0YcmzVrX2UmFlfnXeWjUtVsBpMI4BF5MkoGY2Sd
+\unrestrict dVUuj13Gk8mBlQayZwlammgFLmckIR8XicM4Y6Uf5WAYXSmGlF4YNs8MT8logCq
 
