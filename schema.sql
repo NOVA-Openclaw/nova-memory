@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fUTMvlbFxGWLZ1qpbiGWzIieN4iyJna1wANLTDdMWgfiqgjBvyouwm0djuBYZKp
+\restrict mnHzXK3Ghds5ewez9CXljrzaP4QShvjB7nDmCudQFSiKqpHUmqeIkQT9xpDWhJa
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -614,7 +614,7 @@ ALTER TABLE public.ai_models OWNER TO nova;
 -- Name: TABLE ai_models; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.ai_models IS 'Available AI models. NOVA maintains this; Newhart reads it for agent model assignments.';
+COMMENT ON TABLE public.ai_models IS 'Available AI models. NOVA maintains this; Newhart reads for agent assignments. Credentials and endpoints stored in 1Password (see credential_ref column).';
 
 
 --
@@ -4771,5 +4771,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fUTMvlbFxGWLZ1qpbiGWzIieN4iyJna1wANLTDdMWgfiqgjBvyouwm0djuBYZKp
+\unrestrict mnHzXK3Ghds5ewez9CXljrzaP4QShvjB7nDmCudQFSiKqpHUmqeIkQT9xpDWhJa
 
