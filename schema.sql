@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 9jA7l2ZnIeXHlIYYo6Kt9gARbOegS5h5vMr5waM11BWpCT0Ca8WTXYwo2DUDRl6
+\restrict szObQ5wjmeW40NUPkNFePcuohqrLtuA2kfEP0KZQKLa8tXRMOtWphiAlnlG1bB3
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -426,7 +426,10 @@ ALTER SEQUENCE public.agent_chat_id_seq OWNED BY public.agent_chat.id;
 CREATE TABLE public.agent_chat_processed (
     chat_id integer NOT NULL,
     agent character varying(50) NOT NULL,
-    processed_at timestamp with time zone DEFAULT now()
+    received_at timestamp without time zone,
+    routed_at timestamp without time zone,
+    responded_at timestamp without time zone,
+    error_message text
 );
 
 
@@ -1837,25 +1840,6 @@ CREATE TABLE public.project_entities (
 ALTER TABLE public.project_entities OWNER TO nova;
 
 --
--- Name: project_sops; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.project_sops (
-    project_id integer NOT NULL,
-    sop_id integer NOT NULL
-);
-
-
-ALTER TABLE public.project_sops OWNER TO nova;
-
---
--- Name: TABLE project_sops; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.project_sops IS 'Project-specific standard operating procedures. Read before working on a project.';
-
-
---
 -- Name: project_tasks; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1945,6 +1929,13 @@ COMMENT ON COLUMN public.projects.repo_url IS 'Canonical repo URL. When locked, 
 --
 
 COMMENT ON COLUMN public.projects.locked IS 'When TRUE, prevents accidental updates. Must explicitly set locked=FALSE first.';
+
+
+--
+-- Name: COLUMN projects.skills; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/clawd/skills/) relevant to this project';
 
 
 --
@@ -2994,14 +2985,6 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_sops project_sops_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.project_sops
-    ADD CONSTRAINT project_sops_pkey PRIMARY KEY (project_id, sop_id);
-
-
---
 -- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3794,14 +3777,6 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_sops project_sops_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.project_sops
-    ADD CONSTRAINT project_sops_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
-
-
---
 -- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -4335,20 +4310,6 @@ GRANT SELECT ON TABLE public.project_entities TO athena;
 
 
 --
--- Name: TABLE project_sops; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.project_sops TO newhart;
-GRANT SELECT ON TABLE public.project_sops TO gem;
-GRANT SELECT ON TABLE public.project_sops TO coder;
-GRANT SELECT ON TABLE public.project_sops TO scout;
-GRANT SELECT ON TABLE public.project_sops TO iris;
-GRANT SELECT ON TABLE public.project_sops TO gidget;
-GRANT SELECT ON TABLE public.project_sops TO ticker;
-GRANT SELECT ON TABLE public.project_sops TO athena;
-
-
---
 -- Name: TABLE project_tasks; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4635,5 +4596,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9jA7l2ZnIeXHlIYYo6Kt9gARbOegS5h5vMr5waM11BWpCT0Ca8WTXYwo2DUDRl6
+\unrestrict szObQ5wjmeW40NUPkNFePcuohqrLtuA2kfEP0KZQKLa8tXRMOtWphiAlnlG1bB3
 
