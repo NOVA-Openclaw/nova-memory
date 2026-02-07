@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict szObQ5wjmeW40NUPkNFePcuohqrLtuA2kfEP0KZQKLa8tXRMOtWphiAlnlG1bB3
+\restrict iW4Z8taTCmhA2Mjz9WmNAfEeXIiDP7zDjhL2O0beot4dDaZ7gZJAT5dW5edoYmO
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -31,6 +31,20 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
+
+--
+-- Name: agent_chat_status; Type: TYPE; Schema: public; Owner: nova
+--
+
+CREATE TYPE public.agent_chat_status AS ENUM (
+    'received',
+    'routed',
+    'responded',
+    'failed'
+);
+
+
+ALTER TYPE public.agent_chat_status OWNER TO nova;
 
 --
 -- Name: chat(text, character varying); Type: FUNCTION; Schema: public; Owner: nova
@@ -429,7 +443,8 @@ CREATE TABLE public.agent_chat_processed (
     received_at timestamp without time zone,
     routed_at timestamp without time zone,
     responded_at timestamp without time zone,
-    error_message text
+    error_message text,
+    status public.agent_chat_status DEFAULT 'responded'::public.agent_chat_status
 );
 
 
@@ -3497,6 +3512,13 @@ CREATE OR REPLACE VIEW public.v_media_with_tags AS
 
 
 --
+-- Name: agent_chat agent_chat_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER agent_chat_notify AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+
+
+--
 -- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -4596,5 +4618,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict szObQ5wjmeW40NUPkNFePcuohqrLtuA2kfEP0KZQKLa8tXRMOtWphiAlnlG1bB3
+\unrestrict iW4Z8taTCmhA2Mjz9WmNAfEeXIiDP7zDjhL2O0beot4dDaZ7gZJAT5dW5edoYmO
 
