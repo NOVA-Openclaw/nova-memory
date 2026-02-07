@@ -15,30 +15,56 @@ IS_GROUP="${IS_GROUP:-false}"
 # Look up user's default visibility preference
 DEFAULT_VIS="public"
 if [ -n "$SENDER_ID" ]; then
-    # Try to find default_visibility by phone number match
     DEFAULT_VIS=$(psql -h localhost -U nova -d nova_memory -t -A -c "
         SELECT ef2.value FROM entity_facts ef1
         JOIN entity_facts ef2 ON ef1.entity_id = ef2.entity_id
         WHERE ef1.key IN ('phone', 'has_phone_number', 'signal')
-          AND REPLACE(REPLACE(ef1.value, '-', ''), ' ', '') LIKE '%$(echo "$SENDER_ID" | tr -d '+- ')%'
+          AND REPLACE(REPLACE(ef1.value, '-', ''), ' ', '') LIKE '%$(echo "$SENDER_ID" | sed 's/[+ -]//g')%'
           AND ef2.key = 'default_visibility'
         LIMIT 1;
     " 2>/dev/null || echo "public")
     [ -z "$DEFAULT_VIS" ] && DEFAULT_VIS="public"
 fi
 
-# Build prompt with sender attribution
-PROMPT="Extract memory data as JSON from this message.
+# Get existing facts for deduplication check
+EXISTING_FACTS=$(psql -h localhost -U nova -d nova_memory -t -A -c "
+    SELECT DISTINCT CONCAT(e.name, '.', ef.key, '=', LEFT(ef.value, 100)) 
+    FROM entity_facts ef 
+    JOIN entities e ON e.id = ef.entity_id 
+    ORDER BY 1 
+    LIMIT 200;
+" 2>/dev/null | tr '\n' '; ' | head -c 2000)
+
+EXISTING_VOCAB=$(psql -h localhost -U nova -d nova_memory -t -A -c "
+    SELECT word FROM vocabulary ORDER BY word LIMIT 200;
+" 2>/dev/null | tr '\n' ', ' | head -c 1000)
+
+# Build prompt with sender attribution and context awareness
+PROMPT="Extract memory data as JSON from a CONVERSATION with context.
 
 SENDER: ${SENDER}
 IS_GROUP_CHAT: ${IS_GROUP}
 USER_DEFAULT_VISIBILITY: ${DEFAULT_VIS}
-MESSAGE: ${INPUT_TEXT}
 
-IMPORTANT: For EVERY extracted item, include:
-- source_person: \"${SENDER}\" (who said this)
-- visibility: privacy level (see below)
-- visibility_reason: ONLY if visibility differs from user default
+CONVERSATION (oldest to newest, with speaker labels [USER] and [NOVA]):
+${INPUT_TEXT}
+
+IMPORTANT INSTRUCTIONS:
+
+1. EXTRACT FROM THE CURRENT MESSAGE (marked [CURRENT USER MESSAGE] or [CURRENT NOVA MESSAGE]): The conversation includes both [USER] and [NOVA] (the AI assistant) messages for context. Use the full conversation to understand references like \"that\", \"he\", \"it\", etc. Extract facts, opinions, events, and actions from the CURRENT MESSAGE only.
+
+2. USE CONTEXT TO RESOLVE REFERENCES: If current message says \"Yes, I love that\" and context shows they were discussing pizza, extract \"preference: pizza\".
+
+3. FOR EVERY EXTRACTED ITEM, include:
+   - source_person: \"${SENDER}\" (who said this)
+   - visibility: privacy level (see below)
+   - visibility_reason: ONLY if visibility differs from user default
+
+4. DEDUPLICATION - DO NOT EXTRACT if we already have this info:
+   Existing facts (sample): ${EXISTING_FACTS:-none}
+   Existing vocabulary: ${EXISTING_VOCAB:-none}
+   
+   Skip any fact that duplicates existing data. Only extract NEW information.
 
 PRIVACY DETECTION:
 The user's default visibility is \"${DEFAULT_VIS}\". 
@@ -46,13 +72,10 @@ The user's default visibility is \"${DEFAULT_VIS}\".
 - If default is \"public\": everything is public UNLESS they say otherwise
 
 Look for privacy cues that OVERRIDE the default:
-- Make PUBLIC (override private default): \"feel free to share\", \"this is public\", \"you can tell others\", \"not a secret\"
-- Make PRIVATE (override public default): \"just between us\", \"don't tell anyone\", \"keep this secret\", \"confidential\", \"private\"
+- Make PUBLIC: \"feel free to share\", \"this is public\", \"you can tell others\"
+- Make PRIVATE: \"just between us\", \"don't tell anyone\", \"keep this secret\", \"confidential\"
 
-If a cue overrides the default, set visibility_reason to quote the relevant phrase.
-If no cue found, use the default and omit visibility_reason.
-
-Return JSON with these categories (only include non-empty ones):
+Return JSON with these categories (only include non-empty ones, skip if nothing NEW to extract):
 
 entities: [{name, type (person|ai|organization|place), location?, source_person, visibility, visibility_reason?}]
 facts: [{subject, predicate, value, source_person, confidence, visibility, visibility_reason?}]
@@ -61,10 +84,7 @@ preferences: [{person, category, preference, source_person, confidence, visibili
 vocabulary: [{word, category, misheard_as?, source_person, visibility}]
 events: [{description, date?, source_person, visibility, visibility_reason?}]
 
-Examples:
-- Default private + \"I love pizza\" -> visibility: \"private\" (no reason, matches default)
-- Default private + \"I love pizza, feel free to share that\" -> visibility: \"public\", visibility_reason: \"feel free to share that\"
-- Default public + \"Just between us, I'm thinking of quitting\" -> visibility: \"private\", visibility_reason: \"Just between us\"
+If the current message contains NO extractable new information (just casual chat, acknowledgments, etc), return: {}
 
 Return ONLY valid JSON, no markdown fences."
 
