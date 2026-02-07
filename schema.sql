@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict FbdBVJUBJCZYgy1f1RkCi2L59Lh7OKL7FhzdVFvblCx85w5hJuFFzLc4yCH7JWF
+\restrict sRZA4G9FVmcESFThyiIkTlVhDkfCZjXmWRUpjekakSkZxvVjABbwi8fTS7yK60t
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -455,6 +455,74 @@ ALTER TABLE public.agent_chat_processed OWNER TO nova;
 --
 
 COMMENT ON TABLE public.agent_chat_processed IS 'Tracks which messages each agent has processed from agent_chat. Prevents duplicate processing. Used by agent-chat-channel plugin.';
+
+
+--
+-- Name: agent_domains; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_domains (
+    id integer NOT NULL,
+    agent_id integer NOT NULL,
+    domain_topic character varying(255) NOT NULL,
+    source_entity_id integer,
+    vote_count integer DEFAULT 1,
+    created_at timestamp without time zone DEFAULT now(),
+    last_confirmed timestamp without time zone DEFAULT now(),
+    notes text
+);
+
+
+ALTER TABLE public.agent_domains OWNER TO nova;
+
+--
+-- Name: TABLE agent_domains; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agent_domains IS 'Domain ownership for agents. Each domain_topic can only belong to one agent (enforced by unique constraint). Supports vote-based reinforcement.';
+
+
+--
+-- Name: COLUMN agent_domains.domain_topic; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_domains.domain_topic IS 'The topic/responsibility this agent owns';
+
+
+--
+-- Name: COLUMN agent_domains.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_domains.source_entity_id IS 'Entity who assigned this domain (for attribution)';
+
+
+--
+-- Name: COLUMN agent_domains.vote_count; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_domains.vote_count IS 'Reinforcement count - incremented when domain assignment is reconfirmed';
+
+
+--
+-- Name: agent_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.agent_domains_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agent_domains_id_seq OWNER TO nova;
+
+--
+-- Name: agent_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.agent_domains_id_seq OWNED BY public.agent_domains.id;
 
 
 --
@@ -2523,6 +2591,13 @@ ALTER TABLE ONLY public.agent_chat ALTER COLUMN id SET DEFAULT nextval('public.a
 
 
 --
+-- Name: agent_domains id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_domains ALTER COLUMN id SET DEFAULT nextval('public.agent_domains_id_seq'::regclass);
+
+
+--
 -- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2733,6 +2808,22 @@ ALTER TABLE ONLY public.agent_chat
 
 ALTER TABLE ONLY public.agent_chat_processed
     ADD CONSTRAINT agent_chat_processed_pkey PRIMARY KEY (chat_id, agent);
+
+
+--
+-- Name: agent_domains agent_domains_domain_topic_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_domains
+    ADD CONSTRAINT agent_domains_domain_topic_key UNIQUE (domain_topic);
+
+
+--
+-- Name: agent_domains agent_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_domains
+    ADD CONSTRAINT agent_domains_pkey PRIMARY KEY (id);
 
 
 --
@@ -3134,6 +3225,27 @@ CREATE UNIQUE INDEX idx_agent_chat_processed_unique ON public.agent_chat_process
 --
 
 CREATE INDEX idx_agent_chat_sender ON public.agent_chat USING btree (sender, created_at DESC);
+
+
+--
+-- Name: idx_agent_domains_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_domains_agent ON public.agent_domains USING btree (agent_id);
+
+
+--
+-- Name: idx_agent_domains_topic; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_domains_topic ON public.agent_domains USING btree (domain_topic);
+
+
+--
+-- Name: idx_agent_domains_votes; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_domains_votes ON public.agent_domains USING btree (vote_count DESC);
 
 
 --
@@ -3658,6 +3770,22 @@ ALTER TABLE ONLY public.agent_chat_processed
 
 ALTER TABLE ONLY public.agent_chat
     ADD CONSTRAINT agent_chat_reply_to_fkey FOREIGN KEY (reply_to) REFERENCES public.agent_chat(id);
+
+
+--
+-- Name: agent_domains agent_domains_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_domains
+    ADD CONSTRAINT agent_domains_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: agent_domains agent_domains_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_domains
+    ADD CONSTRAINT agent_domains_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(id);
 
 
 --
@@ -4664,5 +4792,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict FbdBVJUBJCZYgy1f1RkCi2L59Lh7OKL7FhzdVFvblCx85w5hJuFFzLc4yCH7JWF
+\unrestrict sRZA4G9FVmcESFThyiIkTlVhDkfCZjXmWRUpjekakSkZxvVjABbwi8fTS7yK60t
 
