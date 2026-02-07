@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict iW4Z8taTCmhA2Mjz9WmNAfEeXIiDP7zDjhL2O0beot4dDaZ7gZJAT5dW5edoYmO
+\restrict aEHYEZb76h0cFOposEhqc9bsoqQPx2rFddxwyxLuJQhTEaN3wLm3rVg2gyVh4lB
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1922,7 +1922,7 @@ ALTER TABLE public.projects OWNER TO nova;
 -- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.projects IS 'Project registry. Check for existing projects before creating new ones.';
+COMMENT ON TABLE public.projects IS 'Project tracking. For repo-backed projects (locked=TRUE, repo_url set), use GitHub for management. For non-repo projects, use notes field here.';
 
 
 --
@@ -1936,14 +1936,14 @@ COMMENT ON COLUMN public.projects.git_config IS 'Per-project Git config: branch 
 -- Name: COLUMN projects.repo_url; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.projects.repo_url IS 'Canonical repo URL. When locked, this is the permanent pointer - track details in the repo itself.';
+COMMENT ON COLUMN public.projects.repo_url IS 'GitHub repo URL. When set with locked=TRUE, this is the source of truth. Manage project via repo, not database.';
 
 
 --
 -- Name: COLUMN projects.locked; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.projects.locked IS 'When TRUE, prevents accidental updates. Must explicitly set locked=FALSE first.';
+COMMENT ON COLUMN public.projects.locked IS 'When TRUE, project is repo-backed. Use GitHub (repo_url) for docs/updates, not this table. Prevents accidental writes to notes field.';
 
 
 --
@@ -3920,7 +3920,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO athena;
 -- Name: TABLE agent_chat_processed; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,INSERT ON TABLE public.agent_chat_processed TO newhart;
+GRANT SELECT,INSERT,UPDATE ON TABLE public.agent_chat_processed TO newhart;
 GRANT SELECT ON TABLE public.agent_chat_processed TO gem;
 GRANT SELECT ON TABLE public.agent_chat_processed TO coder;
 GRANT SELECT ON TABLE public.agent_chat_processed TO scout;
@@ -4618,5 +4618,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict iW4Z8taTCmhA2Mjz9WmNAfEeXIiDP7zDjhL2O0beot4dDaZ7gZJAT5dW5edoYmO
+\unrestrict aEHYEZb76h0cFOposEhqc9bsoqQPx2rFddxwyxLuJQhTEaN3wLm3rVg2gyVh4lB
 
