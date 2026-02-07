@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fSHkEt7d9Mz5MkepYaLKiqHcpNGDFV5TIZk2uPdDhOQAkfXVsrl1bKEGiWDkIdm
+\restrict 8eKzqkeUmLYheV9HBmjBUZ7bVQsRhcwJvhRnueo1daxybXqyS1q3xyU40NosyPd
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -4324,6 +4324,13 @@ GRANT SELECT ON TABLE public.agent_jobs TO athena;
 
 
 --
+-- Name: SEQUENCE agent_jobs_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
+
+
+--
 -- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4540,6 +4547,20 @@ GRANT SELECT ON TABLE public.gambling_logs TO athena;
 --
 
 GRANT SELECT,INSERT ON TABLE public.job_messages TO newhart;
+GRANT SELECT ON TABLE public.job_messages TO gem;
+GRANT SELECT ON TABLE public.job_messages TO coder;
+GRANT SELECT ON TABLE public.job_messages TO scout;
+GRANT SELECT ON TABLE public.job_messages TO iris;
+GRANT SELECT ON TABLE public.job_messages TO gidget;
+GRANT SELECT ON TABLE public.job_messages TO ticker;
+GRANT SELECT ON TABLE public.job_messages TO athena;
+
+
+--
+-- Name: SEQUENCE job_messages_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.job_messages_id_seq TO newhart;
 
 
 --
@@ -5018,5 +5039,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fSHkEt7d9Mz5MkepYaLKiqHcpNGDFV5TIZk2uPdDhOQAkfXVsrl1bKEGiWDkIdm
+\unrestrict 8eKzqkeUmLYheV9HBmjBUZ7bVQsRhcwJvhRnueo1daxybXqyS1q3xyU40NosyPd
 
