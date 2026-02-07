@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 6cpeBTH61LlZdMj4dulvOzXOvbft6FmNaPQ62PvGGsQGtmv7IoF2nfUFKRO4RMG
+\restrict fSHkEt7d9Mz5MkepYaLKiqHcpNGDFV5TIZk2uPdDhOQAkfXVsrl1bKEGiWDkIdm
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -523,6 +523,63 @@ ALTER SEQUENCE public.agent_domains_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.agent_domains_id_seq OWNED BY public.agent_domains.id;
+
+
+--
+-- Name: agent_jobs; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_jobs (
+    id integer NOT NULL,
+    title character varying(200),
+    topic text,
+    job_type character varying(50) DEFAULT 'message_response'::character varying,
+    agent_name character varying(50) NOT NULL,
+    requester_agent character varying(50),
+    parent_job_id integer,
+    root_job_id integer,
+    status character varying(20) DEFAULT 'pending'::character varying,
+    priority integer DEFAULT 5,
+    notify_agents text[],
+    deliverable_path text,
+    deliverable_summary text,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now(),
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.agent_jobs OWNER TO nova;
+
+--
+-- Name: TABLE agent_jobs; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agent_jobs IS 'Jobs routing system for inter-agent task coordination';
+
+
+--
+-- Name: agent_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.agent_jobs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agent_jobs_id_seq OWNER TO nova;
+
+--
+-- Name: agent_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.agent_jobs_id_seq OWNED BY public.agent_jobs.id;
 
 
 --
@@ -1258,6 +1315,50 @@ ALTER SEQUENCE public.gambling_logs_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.gambling_logs_id_seq OWNED BY public.gambling_logs.id;
+
+
+--
+-- Name: job_messages; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.job_messages (
+    id integer NOT NULL,
+    job_id integer NOT NULL,
+    message_id integer NOT NULL,
+    role character varying(20) DEFAULT 'context'::character varying,
+    added_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.job_messages OWNER TO nova;
+
+--
+-- Name: TABLE job_messages; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.job_messages IS 'Message log per job for conversation threading';
+
+
+--
+-- Name: job_messages_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.job_messages_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.job_messages_id_seq OWNER TO nova;
+
+--
+-- Name: job_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.job_messages_id_seq OWNED BY public.job_messages.id;
 
 
 --
@@ -2598,6 +2699,13 @@ ALTER TABLE ONLY public.agent_domains ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: agent_jobs id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_jobs ALTER COLUMN id SET DEFAULT nextval('public.agent_jobs_id_seq'::regclass);
+
+
+--
 -- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -2672,6 +2780,13 @@ ALTER TABLE ONLY public.gambling_entries ALTER COLUMN id SET DEFAULT nextval('pu
 --
 
 ALTER TABLE ONLY public.gambling_logs ALTER COLUMN id SET DEFAULT nextval('public.gambling_logs_id_seq'::regclass);
+
+
+--
+-- Name: job_messages id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.job_messages ALTER COLUMN id SET DEFAULT nextval('public.job_messages_id_seq'::regclass);
 
 
 --
@@ -2824,6 +2939,14 @@ ALTER TABLE ONLY public.agent_domains
 
 ALTER TABLE ONLY public.agent_domains
     ADD CONSTRAINT agent_domains_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_jobs agent_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_jobs
+    ADD CONSTRAINT agent_jobs_pkey PRIMARY KEY (id);
 
 
 --
@@ -2984,6 +3107,14 @@ ALTER TABLE ONLY public.gambling_entries
 
 ALTER TABLE ONLY public.gambling_logs
     ADD CONSTRAINT gambling_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: job_messages job_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.job_messages
+    ADD CONSTRAINT job_messages_pkey PRIMARY KEY (id);
 
 
 --
@@ -3417,6 +3548,48 @@ CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entit
 
 
 --
+-- Name: idx_job_messages; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_job_messages ON public.job_messages USING btree (job_id, added_at);
+
+
+--
+-- Name: idx_jobs_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_jobs_agent ON public.agent_jobs USING btree (agent_name, status);
+
+
+--
+-- Name: idx_jobs_parent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_jobs_parent ON public.agent_jobs USING btree (parent_job_id);
+
+
+--
+-- Name: idx_jobs_requester; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_jobs_requester ON public.agent_jobs USING btree (requester_agent, status);
+
+
+--
+-- Name: idx_jobs_root; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_jobs_root ON public.agent_jobs USING btree (root_job_id);
+
+
+--
+-- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic) WHERE ((status)::text <> ALL ((ARRAY['completed'::character varying, 'cancelled'::character varying])::text[]));
+
+
+--
 -- Name: idx_media_consumed_by; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -3789,6 +3962,22 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
+-- Name: agent_jobs agent_jobs_parent_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_jobs
+    ADD CONSTRAINT agent_jobs_parent_job_id_fkey FOREIGN KEY (parent_job_id) REFERENCES public.agent_jobs(id);
+
+
+--
+-- Name: agent_jobs agent_jobs_root_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_jobs
+    ADD CONSTRAINT agent_jobs_root_job_id_fkey FOREIGN KEY (root_job_id) REFERENCES public.agent_jobs(id);
+
+
+--
 -- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3890,6 +4079,22 @@ ALTER TABLE ONLY public.gambling_entries
 
 ALTER TABLE ONLY public.gambling_logs
     ADD CONSTRAINT gambling_logs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: job_messages job_messages_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.job_messages
+    ADD CONSTRAINT job_messages_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.agent_jobs(id);
+
+
+--
+-- Name: job_messages job_messages_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.job_messages
+    ADD CONSTRAINT job_messages_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.agent_chat(id);
 
 
 --
@@ -4105,6 +4310,20 @@ GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
 
 
 --
+-- Name: TABLE agent_jobs; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.agent_jobs TO newhart;
+GRANT SELECT ON TABLE public.agent_jobs TO gem;
+GRANT SELECT ON TABLE public.agent_jobs TO coder;
+GRANT SELECT ON TABLE public.agent_jobs TO scout;
+GRANT SELECT ON TABLE public.agent_jobs TO iris;
+GRANT SELECT ON TABLE public.agent_jobs TO gidget;
+GRANT SELECT ON TABLE public.agent_jobs TO ticker;
+GRANT SELECT ON TABLE public.agent_jobs TO athena;
+
+
+--
 -- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4314,6 +4533,13 @@ GRANT SELECT ON TABLE public.gambling_logs TO iris;
 GRANT SELECT ON TABLE public.gambling_logs TO gidget;
 GRANT SELECT ON TABLE public.gambling_logs TO ticker;
 GRANT SELECT ON TABLE public.gambling_logs TO athena;
+
+
+--
+-- Name: TABLE job_messages; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT ON TABLE public.job_messages TO newhart;
 
 
 --
@@ -4792,5 +5018,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6cpeBTH61LlZdMj4dulvOzXOvbft6FmNaPQ62PvGGsQGtmv7IoF2nfUFKRO4RMG
+\unrestrict fSHkEt7d9Mz5MkepYaLKiqHcpNGDFV5TIZk2uPdDhOQAkfXVsrl1bKEGiWDkIdm
 

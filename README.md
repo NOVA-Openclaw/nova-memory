@@ -265,6 +265,79 @@ INSERT INTO agent_chat (channel, sender, message, mentions)
 VALUES ('default', 'nova', 'Hey, can you review the latest PR?', ARRAY['coder']);
 ```
 
+### Agent Jobs Tables (Task Routing & Pipelines)
+
+The `agent_jobs` and `job_messages` tables enable task coordination between agents with pipeline routing:
+
+**agent_jobs** - Task tracking with conversation threading
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | serial | Primary key |
+| `title` | varchar(200) | Short job description |
+| `topic` | text | Topic for message matching |
+| `job_type` | varchar(50) | message_response, research, creation, review, delegation |
+| `agent_name` | varchar(50) | Agent who owns this job |
+| `requester_agent` | varchar(50) | Who requested it |
+| `parent_job_id` | int | Immediate parent job (for hierarchy) |
+| `root_job_id` | int | Original job in pipeline (for tracing) |
+| `status` | varchar(20) | pending, in_progress, completed, failed, cancelled |
+| `priority` | int | Priority 1-10 (default 5) |
+| `notify_agents` | text[] | Agents to notify on completion (fan-out support) |
+| `deliverable_path` | text | Path to output file |
+| `deliverable_summary` | text | Brief description of results |
+| `error_message` | text | Error details if failed |
+
+**job_messages** - Conversation log per job
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `job_id` | int | FK to agent_jobs |
+| `message_id` | int | FK to agent_chat |
+| `role` | varchar(20) | initial, followup, response, context |
+| `added_at` | timestamp | When message was linked |
+
+**Key Concepts:**
+
+1. **Jobs as Threads**: Jobs are conversation threads, not 1:1 with messages. Related followup messages get added to existing jobs via topic matching.
+
+2. **Pipeline Routing**: Jobs can route through multiple agents with `notify_agents[]` specifying next hop(s).
+
+3. **Fan-Out**: `notify_agents = ARRAY['agent_a', 'agent_b']` notifies multiple agents on completion.
+
+4. **Root Tracking**: `root_job_id` links to original job for direct pipeline tracing without walking parent chain.
+
+**Example - Create a pipeline job:**
+```sql
+-- Scout researches, then notifies Newhart AND NOVA when done
+INSERT INTO agent_jobs (agent_name, requester_agent, job_type, title, topic, notify_agents)
+VALUES ('scout', 'nova', 'research', 'Research authors for Erato', 
+        'erato literary agent authors', ARRAY['newhart', 'nova']);
+```
+
+**Example - Query pending jobs:**
+```sql
+SELECT j.id, j.title, j.requester_agent, j.created_at,
+       (SELECT COUNT(*) FROM job_messages WHERE job_id = j.id) as message_count
+FROM agent_jobs j
+WHERE j.agent_name = 'newhart' AND j.status IN ('pending', 'in_progress')
+ORDER BY j.priority DESC, j.updated_at DESC;
+```
+
+**Example - Get full pipeline tree:**
+```sql
+WITH RECURSIVE job_tree AS (
+  SELECT id, agent_name, title, status, parent_job_id, 0 as depth
+  FROM agent_jobs WHERE id = $root_job_id
+  UNION ALL
+  SELECT j.id, j.agent_name, j.title, j.status, j.parent_job_id, jt.depth + 1
+  FROM agent_jobs j JOIN job_tree jt ON j.parent_job_id = jt.id
+)
+SELECT * FROM job_tree ORDER BY depth, id;
+```
+
+**Protocol:** See [nova-cognition/protocols/jobs-system.md](https://github.com/NOVA-Openclaw/nova-cognition/blob/main/protocols/jobs-system.md) for full specification.
+
 ### Lessons Table (Correction Learning)
 
 The `lessons` table supports adaptive learning from corrections:
