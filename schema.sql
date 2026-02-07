@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict aEHYEZb76h0cFOposEhqc9bsoqQPx2rFddxwyxLuJQhTEaN3wLm3rVg2gyVh4lB
+\restrict r58lGEwoTh63rqdOozqCvgy5V3RheTQOnpJJbVb9lnxakPRrp3k4JsLZLGWRfjP
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -901,7 +901,9 @@ CREATE TABLE public.entity_facts (
     visibility character varying(20) DEFAULT 'public'::character varying,
     privacy_scope integer[],
     source_entity_id integer,
-    visibility_reason text
+    visibility_reason text,
+    vote_count integer DEFAULT 1,
+    last_confirmed timestamp without time zone DEFAULT now()
 );
 
 
@@ -940,6 +942,20 @@ COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who prov
 --
 
 COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
+
+
+--
+-- Name: COLUMN entity_facts.vote_count; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.vote_count IS 'Reinforcement count - incremented each time this fact is re-confirmed in conversation';
+
+
+--
+-- Name: COLUMN entity_facts.last_confirmed; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
 
 
 --
@@ -2441,7 +2457,9 @@ CREATE TABLE public.vocabulary (
     category character varying(100),
     pronunciation character varying(255),
     misheard_as text[],
-    added_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    added_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    vote_count integer DEFAULT 1,
+    last_confirmed timestamp without time zone DEFAULT now()
 );
 
 
@@ -2452,6 +2470,20 @@ ALTER TABLE public.vocabulary OWNER TO nova;
 --
 
 COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition. Add names, terms, jargon as encountered.';
+
+
+--
+-- Name: COLUMN vocabulary.vote_count; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.vocabulary.vote_count IS 'Reinforcement count - incremented each time this word is mentioned';
+
+
+--
+-- Name: COLUMN vocabulary.last_confirmed; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.vocabulary.last_confirmed IS 'Timestamp of most recent confirmation';
 
 
 --
@@ -3217,6 +3249,13 @@ CREATE INDEX idx_entity_facts_visibility ON public.entity_facts USING btree (vis
 
 
 --
+-- Name: idx_entity_facts_vote_count; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_vote_count ON public.entity_facts USING btree (vote_count DESC);
+
+
+--
 -- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -3480,6 +3519,13 @@ CREATE INDEX idx_vehicles_owner ON public.vehicles USING btree (owner_id);
 --
 
 CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
+
+
+--
+-- Name: idx_vocabulary_vote_count; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_vocabulary_vote_count ON public.vocabulary USING btree (vote_count DESC);
 
 
 --
@@ -4618,5 +4664,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aEHYEZb76h0cFOposEhqc9bsoqQPx2rFddxwyxLuJQhTEaN3wLm3rVg2gyVh4lB
+\unrestrict r58lGEwoTh63rqdOozqCvgy5V3RheTQOnpJJbVb9lnxakPRrp3k4JsLZLGWRfjP
 
