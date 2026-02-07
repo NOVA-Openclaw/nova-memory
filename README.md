@@ -511,15 +511,15 @@ Set the `NOVA_MEMORY_SCRIPTS` environment variable to point to your scripts dire
 export NOVA_MEMORY_SCRIPTS="/path/to/nova-memory/scripts"
 ```
 
-### ⚠️ Note: Pending Feature
+### ✅ Hook Active
 
-The hook listens for `message:received` events, which is currently **planned but not yet implemented** in Clawdbot. 
+The hook listens for `message:received` events and triggers on every incoming message. 
 
-**Feature Request:** https://github.com/openclaw/openclaw/issues/5053
 
-Once implemented, the hook will automatically extract and store memories from every incoming message.
 
-**Current Workaround:** Run extraction manually after processing significant messages:
+Memories are automatically extracted and stored from conversations.
+
+**Manual extraction** (if needed):
 ```bash
 ./scripts/process-input.sh "User said: I love pizza from Mario's"
 ```
@@ -644,3 +644,42 @@ The catch-up script:
 - Runs extraction asynchronously
 
 State is stored in `~/.clawdbot/memory-catchup-state.json`.
+
+## Context Window (2026-02-07)
+
+The extraction pipeline now maintains a **20-message rolling context window** for improved reference resolution.
+
+### How It Works
+
+1. **Rolling Cache**: Last 20 messages stored in `~/.clawdbot/memory-message-cache.json`
+2. **Interleaved**: Both user AND assistant messages included chronologically
+3. **Bidirectional**: BOTH speakers' messages get extracted, not just user
+
+### Context Format
+
+```
+[USER] 1: How much do crawlers cost?
+[NOVA] 2: About $130M in today's dollars...
+[USER] 3: Let's build one for Burning Man
+[NOVA] 4: That would be legendary...
+---
+[CURRENT USER MESSAGE - EXTRACT FROM THIS]
+Yes, keep the aesthetic
+```
+
+### Benefits
+
+- **Reference resolution**: "Yes", "that", "do it" now have meaning
+- **Self-memory**: NOVA's actions/updates get extracted too
+- **Conversation flow**: Full context for both speakers
+
+### Deduplication
+
+**Layer 1 (Prompt)**: Existing facts/vocab queried and included in prompt
+**Layer 2 (Storage)**: `store-memories.sh` checks before every insert
+
+### Scripts Updated
+
+- `memory-catchup.sh` - Now processes both roles, builds context cache
+- `extract-memories.sh` - Updated prompt for conversation format
+- `store-memories.sh` - Added duplicate checking functions
