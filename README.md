@@ -89,7 +89,7 @@ The `projects` table tracks active work with optional Git configuration:
 | `notes` | text | General notes |
 | `git_config` | jsonb | Per-project Git settings (see below) |
 | `repo_url` | text | Canonical repo URL (permanent pointer when locked) |
-| `locked` | boolean | When TRUE, prevents accidental updates to this record |
+| `locked` | boolean | When TRUE, project is repo-backed. Use GitHub for management, not this table. |
 
 **Repo-Backed Projects:**
 
