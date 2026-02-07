@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict dVUuj13Gk8mBlQayZwlammgFLmckIR8XicM4Y6Uf5WAYXSmGlF4YNs8MT8logCq
+\restrict 9jA7l2ZnIeXHlIYYo6Kt9gARbOegS5h5vMr5waM11BWpCT0Ca8WTXYwo2DUDRl6
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1824,53 +1824,6 @@ CREATE TABLE public.price_cache_v2 (
 ALTER TABLE public.price_cache_v2 OWNER TO nova;
 
 --
--- Name: sops; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.sops (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    description text,
-    steps jsonb,
-    tools text[],
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE public.sops OWNER TO nova;
-
---
--- Name: TABLE sops; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.sops IS 'Global standard operating procedures. Reference for common workflows.';
-
-
---
--- Name: processes_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
---
-
-CREATE SEQUENCE public.processes_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.processes_id_seq OWNER TO nova;
-
---
--- Name: processes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
---
-
-ALTER SEQUENCE public.processes_id_seq OWNED BY public.sops.id;
-
-
---
 -- Name: project_entities; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1959,6 +1912,7 @@ CREATE TABLE public.projects (
     git_config jsonb,
     repo_url text,
     locked boolean DEFAULT false,
+    skills text[],
     CONSTRAINT projects_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])))
 );
 
@@ -2308,21 +2262,6 @@ CREATE VIEW public.v_portfolio_allocation AS
 
 
 ALTER VIEW public.v_portfolio_allocation OWNER TO nova;
-
---
--- Name: v_project_sops; Type: VIEW; Schema: public; Owner: nova
---
-
-CREATE VIEW public.v_project_sops AS
- SELECT p.name AS project,
-    s.name AS sop,
-    s.description
-   FROM ((public.project_sops ps
-     JOIN public.projects p ON ((ps.project_id = p.id)))
-     JOIN public.sops s ON ((ps.sop_id = s.id)));
-
-
-ALTER VIEW public.v_project_sops OWNER TO nova;
 
 --
 -- Name: v_relationships; Type: VIEW; Schema: public; Owner: nova
@@ -2714,13 +2653,6 @@ ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.pro
 
 
 --
--- Name: sops id; Type: DEFAULT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.sops ALTER COLUMN id SET DEFAULT nextval('public.processes_id_seq'::regclass);
-
-
---
 -- Name: tasks id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -3051,22 +2983,6 @@ ALTER TABLE ONLY public.preferences
 
 ALTER TABLE ONLY public.price_cache_v2
     ADD CONSTRAINT price_cache_v2_pkey PRIMARY KEY (symbol, asset_class);
-
-
---
--- Name: sops processes_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.sops
-    ADD CONSTRAINT processes_name_key UNIQUE (name);
-
-
---
--- Name: sops processes_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.sops
-    ADD CONSTRAINT processes_pkey PRIMARY KEY (id);
 
 
 --
@@ -3520,13 +3436,6 @@ CREATE UNIQUE INDEX idx_snapshots_day ON public.portfolio_snapshots USING btree 
 
 
 --
--- Name: idx_sops_name; Type: INDEX; Schema: public; Owner: nova
---
-
-CREATE INDEX idx_sops_name ON public.sops USING btree (name);
-
-
---
 -- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -3890,14 +3799,6 @@ ALTER TABLE ONLY public.project_entities
 
 ALTER TABLE ONLY public.project_sops
     ADD CONSTRAINT project_sops_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
-
-
---
--- Name: project_sops project_sops_sop_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.project_sops
-    ADD CONSTRAINT project_sops_sop_id_fkey FOREIGN KEY (sop_id) REFERENCES public.sops(id) ON DELETE CASCADE;
 
 
 --
@@ -4420,29 +4321,6 @@ GRANT SELECT ON TABLE public.price_cache_v2 TO athena;
 
 
 --
--- Name: TABLE sops; Type: ACL; Schema: public; Owner: nova
---
-
-REVOKE ALL ON TABLE public.sops FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.sops TO nova;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sops TO newhart;
-GRANT SELECT ON TABLE public.sops TO gem;
-GRANT SELECT ON TABLE public.sops TO coder;
-GRANT SELECT ON TABLE public.sops TO scout;
-GRANT SELECT ON TABLE public.sops TO iris;
-GRANT SELECT ON TABLE public.sops TO gidget;
-GRANT SELECT ON TABLE public.sops TO ticker;
-GRANT SELECT ON TABLE public.sops TO athena;
-
-
---
--- Name: SEQUENCE processes_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.processes_id_seq TO newhart;
-
-
---
 -- Name: TABLE project_entities; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4667,20 +4545,6 @@ GRANT SELECT ON TABLE public.v_portfolio_allocation TO athena;
 
 
 --
--- Name: TABLE v_project_sops; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_project_sops TO newhart;
-GRANT SELECT ON TABLE public.v_project_sops TO gem;
-GRANT SELECT ON TABLE public.v_project_sops TO coder;
-GRANT SELECT ON TABLE public.v_project_sops TO scout;
-GRANT SELECT ON TABLE public.v_project_sops TO iris;
-GRANT SELECT ON TABLE public.v_project_sops TO gidget;
-GRANT SELECT ON TABLE public.v_project_sops TO ticker;
-GRANT SELECT ON TABLE public.v_project_sops TO athena;
-
-
---
 -- Name: TABLE v_relationships; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -4771,5 +4635,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dVUuj13Gk8mBlQayZwlammgFLmckIR8XicM4Y6Uf5WAYXSmGlF4YNs8MT8logCq
+\unrestrict 9jA7l2ZnIeXHlIYYo6Kt9gARbOegS5h5vMr5waM11BWpCT0Ca8WTXYwo2DUDRl6
 
