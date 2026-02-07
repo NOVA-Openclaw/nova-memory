@@ -48,6 +48,62 @@ The schema (`schema.sql`) includes tables for:
 - **sops** - Standard Operating Procedures for various tasks and workflows  
 - **agents** - Registry of AI agent instances for delegation
 
+### Access Control Architecture
+
+The schema uses two mechanisms to enforce separation of concerns in multi-agent systems:
+
+#### 1. Table-Level Comments (Access Control Documentation)
+
+Every table has a PostgreSQL `COMMENT` explaining its purpose and access rules:
+
+```sql
+-- Query a table's access control comment
+SELECT obj_description('agents'::regclass, 'pg_class');
+
+-- List all table comments
+SELECT c.relname as table_name, obj_description(c.oid, 'pg_class') as access_rules
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY c.relname;
+```
+
+**Example comments:**
+- `agents` → "Agent registry. READ-ONLY for most agents. Modifications via NHR (Newhart) only."
+- `projects` → "Project tracking. For repo-backed projects (locked=TRUE), use GitHub for management."
+
+**Philosophy:** When an agent gets "permission denied", the comment explains *why* and *who* to route the request to. Permission denied is a **signpost**, not just a roadblock.
+
+#### 2. Row-Level Locks (`locked` Column)
+
+Tables like `projects` have a `locked` boolean column with a trigger that prevents updates:
+
+```sql
+-- Trigger prevents updates to locked rows
+CREATE OR REPLACE FUNCTION prevent_locked_project_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.locked = TRUE AND NEW.locked = TRUE THEN
+    RAISE EXCEPTION 'Project % is locked. Set locked=FALSE first to modify.', OLD.name;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Use case:** Repo-backed projects are locked because their source of truth is GitHub, not the database. The database just holds a pointer.
+
+#### Workflow Example
+
+```
+1. NOVA tries: UPDATE agents SET nickname = 'Erato' WHERE name = 'erato';
+2. PostgreSQL: "permission denied for table agents"
+3. NOVA checks: SELECT obj_description('agents'::regclass, 'pg_class');
+4. Comment says: "Modifications via NHR (Newhart) only"
+5. NOVA messages Newhart with the update request
+6. Newhart (with write access) makes the change
+```
+
+This enforces domain ownership without manual discipline—the database itself guides agents to the correct workflow.
+
 ### SOPs Table (Standard Operating Procedures)
 
 The `sops` table stores procedural knowledge and workflows:
