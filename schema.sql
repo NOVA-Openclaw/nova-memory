@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 3DeoSI0vZUcqwsLjqeBGmTkVJknDjxlUbh3yeSryGuWqvyvNq2NKsTjQ5A0DwsD
+\restrict T0sAUnJYRox8ToLWNAcdTiMumwnJ6t0GrUPJVgcqWeB8QfabXYMdcPxy0jhMqVv
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2520,7 +2520,12 @@ CREATE TABLE public.tasks (
     notes text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    task_number integer
+    task_number integer,
+    blocked boolean DEFAULT false,
+    blocked_reason text,
+    blocked_on integer,
+    last_worked_at timestamp with time zone,
+    work_notes text
 );
 
 
@@ -4857,6 +4862,14 @@ ALTER TABLE ONLY public.tasks
 
 
 --
+-- Name: tasks tasks_blocked_on_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_blocked_on_fkey FOREIGN KEY (blocked_on) REFERENCES public.entities(id);
+
+
+--
 -- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -5773,5 +5786,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 3DeoSI0vZUcqwsLjqeBGmTkVJknDjxlUbh3yeSryGuWqvyvNq2NKsTjQ5A0DwsD
+\unrestrict T0sAUnJYRox8ToLWNAcdTiMumwnJ6t0GrUPJVgcqWeB8QfabXYMdcPxy0jhMqVv
 
