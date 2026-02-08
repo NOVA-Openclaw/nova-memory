@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 8eKzqkeUmLYheV9HBmjBUZ7bVQsRhcwJvhRnueo1daxybXqyS1q3xyU40NosyPd
+\restrict N9KwsceHghfPgvcEOPrIbE6EE3fobYt4mFVtojuS3ugJmqDdGm5dkLxSngYv3dV
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -974,6 +974,12 @@ CREATE TABLE public.entities (
     pronouns character varying(50),
     user_id character varying(255),
     auth_token character varying(255),
+    collaborate boolean,
+    collaboration_scope text,
+    trust_level integer DEFAULT 0,
+    introduction_context text,
+    capabilities jsonb,
+    access_constraints jsonb,
     CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[])))
 );
 
@@ -985,6 +991,48 @@ ALTER TABLE public.entities OWNER TO nova;
 --
 
 COMMENT ON TABLE public.entities IS 'People, AIs, organizations. NOVA has full access. Use entity_facts for attributes.';
+
+
+--
+-- Name: COLUMN entities.collaborate; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.collaborate IS 'If true, collaborate with this entity. If false, task them. NULL = not assessed.';
+
+
+--
+-- Name: COLUMN entities.collaboration_scope; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.collaboration_scope IS 'full | domain-specific | supervised - determines collaboration breadth';
+
+
+--
+-- Name: COLUMN entities.trust_level; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.trust_level IS '0-10 scale determining context/access level in collaborations';
+
+
+--
+-- Name: COLUMN entities.introduction_context; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.introduction_context IS 'How/why we connected with this entity, relationship context';
+
+
+--
+-- Name: COLUMN entities.capabilities; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.capabilities IS 'What this entity can do - domains, skills, tools';
+
+
+--
+-- Name: COLUMN entities.access_constraints; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.access_constraints IS 'Topics/data this entity should not see';
 
 
 --
@@ -5039,5 +5087,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 8eKzqkeUmLYheV9HBmjBUZ7bVQsRhcwJvhRnueo1daxybXqyS1q3xyU40NosyPd
+\unrestrict N9KwsceHghfPgvcEOPrIbE6EE3fobYt4mFVtojuS3ugJmqDdGm5dkLxSngYv3dV
 
