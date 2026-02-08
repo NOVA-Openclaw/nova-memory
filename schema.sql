@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 2JYzpOUmUFfkzKXT6bQqEwCSaVqEBOORPShGcLMdG4XZ0XrnclOxYX1U2ZkCASm
+\restrict 3DeoSI0vZUcqwsLjqeBGmTkVJknDjxlUbh3yeSryGuWqvyvNq2NKsTjQ5A0DwsD
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -45,6 +45,23 @@ CREATE TYPE public.agent_chat_status AS ENUM (
 
 
 ALTER TYPE public.agent_chat_status OWNER TO nova;
+
+--
+-- Name: calculate_word_count(); Type: FUNCTION; Schema: public; Owner: erato
+--
+
+CREATE FUNCTION public.calculate_word_count() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.word_count = array_length(regexp_split_to_array(trim(NEW.content), '\s+'), 1);
+    NEW.character_count = length(NEW.content);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.calculate_word_count() OWNER TO erato;
 
 --
 -- Name: chat(text, character varying); Type: FUNCTION; Schema: public; Owner: nova
@@ -353,6 +370,35 @@ $$;
 
 ALTER FUNCTION public.update_media_search_vector() OWNER TO nova;
 
+--
+-- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: public; Owner: erato
+--
+
+CREATE FUNCTION public.update_work_status_on_publication() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE works SET status = 'published' WHERE id = NEW.work_id AND status = 'complete';
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_work_status_on_publication() OWNER TO erato;
+
+--
+-- Name: update_works_timestamp(); Type: FUNCTION; Schema: public; Owner: erato
+--
+
+CREATE FUNCTION public.update_works_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END;
+$$;
+
+
+ALTER FUNCTION public.update_works_timestamp() OWNER TO erato;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -619,7 +665,7 @@ ALTER TABLE public.agent_system_config OWNER TO nova;
 -- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_system_config IS 'System-wide agent configuration. READ for all agents, WRITE restricted to NOVA and Newhart. Stores universal context, system defaults, and cross-agent config.';
+COMMENT ON TABLE public.agent_system_config IS 'Newhart''s domain: System-wide agent configuration. NOVA has READ-ONLY access. To modify, message Newhart via agent_chat. Stores universal context seed, system defaults, and cross-agent config.';
 
 
 --
@@ -2308,6 +2354,47 @@ ALTER SEQUENCE public.projects_id_seq OWNED BY public.projects.id;
 
 
 --
+-- Name: publications; Type: TABLE; Schema: public; Owner: erato
+--
+
+CREATE TABLE public.publications (
+    id integer NOT NULL,
+    work_id integer NOT NULL,
+    published_to character varying(100) NOT NULL,
+    publication_type character varying(50) NOT NULL,
+    url text,
+    context text,
+    published_at timestamp with time zone DEFAULT now() NOT NULL,
+    published_by character varying(50),
+    CONSTRAINT valid_publication_type CHECK (((publication_type)::text = ANY ((ARRAY['git_repo'::character varying, 'doc'::character varying, 'file'::character varying, 'agent_chat'::character varying, 'external'::character varying, 'other'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.publications OWNER TO erato;
+
+--
+-- Name: publications_id_seq; Type: SEQUENCE; Schema: public; Owner: erato
+--
+
+CREATE SEQUENCE public.publications_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.publications_id_seq OWNER TO erato;
+
+--
+-- Name: publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: erato
+--
+
+ALTER SEQUENCE public.publications_id_seq OWNED BY public.publications.id;
+
+
+--
 -- Name: ralph_sessions; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2373,6 +2460,45 @@ ALTER SEQUENCE public.ralph_sessions_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
+
+
+--
+-- Name: tags; Type: TABLE; Schema: public; Owner: erato
+--
+
+CREATE TABLE public.tags (
+    id integer NOT NULL,
+    name character varying(50) NOT NULL,
+    category character varying(50),
+    description text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT lowercase_name CHECK (((name)::text = lower((name)::text))),
+    CONSTRAINT valid_category CHECK (((category IS NULL) OR ((category)::text = ANY ((ARRAY['genre'::character varying, 'mood'::character varying, 'theme'::character varying, 'style'::character varying, 'audience'::character varying, 'project'::character varying])::text[]))))
+);
+
+
+ALTER TABLE public.tags OWNER TO erato;
+
+--
+-- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: erato
+--
+
+CREATE SEQUENCE public.tags_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tags_id_seq OWNER TO erato;
+
+--
+-- Name: tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: erato
+--
+
+ALTER SEQUENCE public.tags_id_seq OWNED BY public.tags.id;
 
 
 --
@@ -2920,6 +3046,68 @@ ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
 
 
 --
+-- Name: work_tags; Type: TABLE; Schema: public; Owner: erato
+--
+
+CREATE TABLE public.work_tags (
+    work_id integer NOT NULL,
+    tag_id integer NOT NULL,
+    added_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.work_tags OWNER TO erato;
+
+--
+-- Name: works; Type: TABLE; Schema: public; Owner: erato
+--
+
+CREATE TABLE public.works (
+    id integer NOT NULL,
+    title character varying(255) NOT NULL,
+    work_type character varying(50) NOT NULL,
+    content text NOT NULL,
+    context_prompt text,
+    word_count integer,
+    character_count integer,
+    language character varying(10) DEFAULT 'en'::character varying,
+    status character varying(20) DEFAULT 'draft'::character varying,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version integer DEFAULT 1,
+    parent_work_id integer,
+    metadata jsonb,
+    CONSTRAINT positive_counts CHECK (((word_count >= 0) AND (character_count >= 0))),
+    CONSTRAINT valid_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'complete'::character varying, 'published'::character varying, 'archived'::character varying])::text[]))),
+    CONSTRAINT valid_work_type CHECK (((work_type)::text = ANY ((ARRAY['haiku'::character varying, 'poem'::character varying, 'prose'::character varying, 'documentation'::character varying, 'story'::character varying, 'dialogue'::character varying, 'microfiction'::character varying, 'essay'::character varying, 'other'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.works OWNER TO erato;
+
+--
+-- Name: works_id_seq; Type: SEQUENCE; Schema: public; Owner: erato
+--
+
+CREATE SEQUENCE public.works_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.works_id_seq OWNER TO erato;
+
+--
+-- Name: works_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: erato
+--
+
+ALTER SEQUENCE public.works_id_seq OWNED BY public.works.id;
+
+
+--
 -- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -3123,10 +3311,24 @@ ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.pro
 
 
 --
+-- Name: publications id; Type: DEFAULT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.publications ALTER COLUMN id SET DEFAULT nextval('public.publications_id_seq'::regclass);
+
+
+--
 -- Name: ralph_sessions id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.ralph_sessions ALTER COLUMN id SET DEFAULT nextval('public.ralph_sessions_id_seq'::regclass);
+
+
+--
+-- Name: tags id; Type: DEFAULT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.tags ALTER COLUMN id SET DEFAULT nextval('public.tags_id_seq'::regclass);
 
 
 --
@@ -3148,6 +3350,13 @@ ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.veh
 --
 
 ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
+
+
+--
+-- Name: works id; Type: DEFAULT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.works ALTER COLUMN id SET DEFAULT nextval('public.works_id_seq'::regclass);
 
 
 --
@@ -3535,6 +3744,14 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: publications publications_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.publications
+    ADD CONSTRAINT publications_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ralph_sessions ralph_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3548,6 +3765,22 @@ ALTER TABLE ONLY public.ralph_sessions
 
 ALTER TABLE ONLY public.ralph_sessions
     ADD CONSTRAINT ralph_sessions_session_series_id_iteration_key UNIQUE (session_series_id, iteration);
+
+
+--
+-- Name: tags tags_name_key; Type: CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_name_key UNIQUE (name);
+
+
+--
+-- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
 
 
 --
@@ -3580,6 +3813,22 @@ ALTER TABLE ONLY public.vocabulary
 
 ALTER TABLE ONLY public.vocabulary
     ADD CONSTRAINT vocabulary_word_key UNIQUE (word);
+
+
+--
+-- Name: work_tags work_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.work_tags
+    ADD CONSTRAINT work_tags_pkey PRIMARY KEY (work_id, tag_id);
+
+
+--
+-- Name: works works_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.works
+    ADD CONSTRAINT works_pkey PRIMARY KEY (id);
 
 
 --
@@ -4017,6 +4266,34 @@ CREATE INDEX idx_projects_status ON public.projects USING btree (status);
 
 
 --
+-- Name: idx_publications_by; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_publications_by ON public.publications USING btree (published_by);
+
+
+--
+-- Name: idx_publications_date; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_publications_date ON public.publications USING btree (published_at DESC);
+
+
+--
+-- Name: idx_publications_type; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_publications_type ON public.publications USING btree (publication_type);
+
+
+--
+-- Name: idx_publications_work; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_publications_work ON public.publications USING btree (work_id);
+
+
+--
 -- Name: idx_ralph_series_latest; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -4042,6 +4319,20 @@ CREATE INDEX idx_snapshots_date ON public.portfolio_snapshots USING btree (snaps
 --
 
 CREATE UNIQUE INDEX idx_snapshots_day ON public.portfolio_snapshots USING btree (((snapshot_at)::date));
+
+
+--
+-- Name: idx_tags_category; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_tags_category ON public.tags USING btree (category);
+
+
+--
+-- Name: idx_tags_name; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_tags_name ON public.tags USING btree (name);
 
 
 --
@@ -4098,6 +4389,62 @@ CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
 --
 
 CREATE INDEX idx_vocabulary_vote_count ON public.vocabulary USING btree (vote_count DESC);
+
+
+--
+-- Name: idx_work_tags_tag; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_work_tags_tag ON public.work_tags USING btree (tag_id);
+
+
+--
+-- Name: idx_work_tags_work; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_work_tags_work ON public.work_tags USING btree (work_id);
+
+
+--
+-- Name: idx_works_created; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_works_created ON public.works USING btree (created_at DESC);
+
+
+--
+-- Name: idx_works_language; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_works_language ON public.works USING btree (language);
+
+
+--
+-- Name: idx_works_metadata; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_works_metadata ON public.works USING gin (metadata);
+
+
+--
+-- Name: idx_works_status; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_works_status ON public.works USING btree (status);
+
+
+--
+-- Name: idx_works_type; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_works_type ON public.works USING btree (work_type);
+
+
+--
+-- Name: idx_works_updated; Type: INDEX; Schema: public; Owner: erato
+--
+
+CREATE INDEX idx_works_updated ON public.works USING btree (updated_at DESC);
 
 
 --
@@ -4179,6 +4526,13 @@ CREATE TRIGGER media_search_vector_update BEFORE INSERT OR UPDATE ON public.medi
 
 
 --
+-- Name: publications publication_status_update; Type: TRIGGER; Schema: public; Owner: erato
+--
+
+CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR EACH ROW EXECUTE FUNCTION public.update_work_status_on_publication();
+
+
+--
 -- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -4190,6 +4544,20 @@ CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH
 --
 
 CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+
+
+--
+-- Name: works works_calculate_counts; Type: TRIGGER; Schema: public; Owner: erato
+--
+
+CREATE TRIGGER works_calculate_counts BEFORE INSERT OR UPDATE OF content ON public.works FOR EACH ROW EXECUTE FUNCTION public.calculate_word_count();
+
+
+--
+-- Name: works works_updated_at; Type: TRIGGER; Schema: public; Owner: erato
+--
+
+CREATE TRIGGER works_updated_at BEFORE UPDATE ON public.works FOR EACH ROW EXECUTE FUNCTION public.update_works_timestamp();
 
 
 --
@@ -4473,6 +4841,14 @@ ALTER TABLE ONLY public.project_tasks
 
 
 --
+-- Name: publications publications_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.publications
+    ADD CONSTRAINT publications_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -4513,6 +4889,30 @@ ALTER TABLE ONLY public.vehicles
 
 
 --
+-- Name: work_tags work_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.work_tags
+    ADD CONSTRAINT work_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
+
+
+--
+-- Name: work_tags work_tags_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.work_tags
+    ADD CONSTRAINT work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
+
+
+--
+-- Name: works works_parent_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+--
+
+ALTER TABLE ONLY public.works
+    ADD CONSTRAINT works_parent_work_id_fkey FOREIGN KEY (parent_work_id) REFERENCES public.works(id) ON DELETE SET NULL;
+
+
+--
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
 --
 
@@ -4524,6 +4924,7 @@ GRANT USAGE ON SCHEMA public TO iris;
 GRANT USAGE ON SCHEMA public TO gidget;
 GRANT USAGE ON SCHEMA public TO ticker;
 GRANT USAGE ON SCHEMA public TO athena;
+GRANT ALL ON SCHEMA public TO erato;
 
 
 --
@@ -4621,6 +5022,8 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
 -- Name: TABLE agent_system_config; Type: ACL; Schema: public; Owner: nova
 --
 
+REVOKE ALL ON TABLE public.agent_system_config FROM nova;
+GRANT SELECT ON TABLE public.agent_system_config TO nova;
 GRANT SELECT ON TABLE public.agent_system_config TO PUBLIC;
 GRANT INSERT,DELETE,UPDATE ON TABLE public.agent_system_config TO newhart;
 
@@ -5076,6 +5479,20 @@ GRANT SELECT ON TABLE public.projects TO athena;
 
 
 --
+-- Name: TABLE publications; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT SELECT ON TABLE public.publications TO nova;
+
+
+--
+-- Name: TABLE tags; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT SELECT ON TABLE public.tags TO nova;
+
+
+--
 -- Name: TABLE tasks; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -5314,10 +5731,32 @@ GRANT SELECT ON TABLE public.vocabulary TO athena;
 
 
 --
+-- Name: TABLE work_tags; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT SELECT ON TABLE public.work_tags TO nova;
+
+
+--
+-- Name: TABLE works; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT SELECT ON TABLE public.works TO nova;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: postgres
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO erato;
+
+
+--
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO newhart;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO erato;
 
 
 --
@@ -5334,5 +5773,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2JYzpOUmUFfkzKXT6bQqEwCSaVqEBOORPShGcLMdG4XZ0XrnclOxYX1U2ZkCASm
+\unrestrict 3DeoSI0vZUcqwsLjqeBGmTkVJknDjxlUbh3yeSryGuWqvyvNq2NKsTjQ5A0DwsD
 
