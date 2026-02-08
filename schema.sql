@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5USpjRbvOok3IuF5uGoySpwV0ea5qurvCzCdYDo2XgCT88AJu5uQVlUfQOWGqhg
+\restrict IIRG53QP0grYQF4H4I8hadkkoDduMlXq07DtoV1I6gAVEOKBK4Rt6EVwh7aSvf7
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2561,6 +2561,63 @@ ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
 
 
 --
+-- Name: unsolved_problems; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.unsolved_problems (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    category character varying(100),
+    description text,
+    source_url text,
+    difficulty character varying(50),
+    status character varying(50) DEFAULT 'unexplored'::character varying,
+    total_time_spent_minutes integer DEFAULT 0,
+    last_worked_at timestamp with time zone,
+    work_sessions integer DEFAULT 0,
+    current_approach text,
+    progress_notes text,
+    blockers text,
+    subagents_used text[],
+    external_resources text[],
+    added_at timestamp with time zone DEFAULT now(),
+    added_by character varying(100) DEFAULT 'NOVA'::character varying,
+    priority integer DEFAULT 5
+);
+
+
+ALTER TABLE public.unsolved_problems OWNER TO nova;
+
+--
+-- Name: TABLE unsolved_problems; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.unsolved_problems IS 'Humanity''s unsolved problems for NOVA to work on during idle time. Part of the Motivation System - provides meaningful default work when task queue is empty.';
+
+
+--
+-- Name: unsolved_problems_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.unsolved_problems_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.unsolved_problems_id_seq OWNER TO nova;
+
+--
+-- Name: unsolved_problems_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.unsolved_problems_id_seq OWNED BY public.unsolved_problems.id;
+
+
+--
 -- Name: v_agent_chat_recent; Type: VIEW; Schema: public; Owner: nova
 --
 
@@ -3344,6 +3401,13 @@ ALTER TABLE ONLY public.tasks ALTER COLUMN id SET DEFAULT nextval('public.tasks_
 
 
 --
+-- Name: unsolved_problems id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.unsolved_problems ALTER COLUMN id SET DEFAULT nextval('public.unsolved_problems_id_seq'::regclass);
+
+
+--
 -- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -3794,6 +3858,14 @@ ALTER TABLE ONLY public.tags
 
 ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: unsolved_problems unsolved_problems_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.unsolved_problems
+    ADD CONSTRAINT unsolved_problems_pkey PRIMARY KEY (id);
 
 
 --
@@ -4373,6 +4445,20 @@ CREATE INDEX idx_tasks_project ON public.tasks USING btree (project_id);
 --
 
 CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
+
+
+--
+-- Name: idx_unsolved_problems_priority; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_unsolved_problems_priority ON public.unsolved_problems USING btree (priority DESC);
+
+
+--
+-- Name: idx_unsolved_problems_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_unsolved_problems_status ON public.unsolved_problems USING btree (status);
 
 
 --
@@ -5786,5 +5872,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5USpjRbvOok3IuF5uGoySpwV0ea5qurvCzCdYDo2XgCT88AJu5uQVlUfQOWGqhg
+\unrestrict IIRG53QP0grYQF4H4I8hadkkoDduMlXq07DtoV1I6gAVEOKBK4Rt6EVwh7aSvf7
 

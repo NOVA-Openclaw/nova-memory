@@ -23,7 +23,7 @@ export ANTHROPIC_API_KEY="your-key-here"
 
 # 5. (Optional) Install Clawdbot hook for automatic extraction
 cp -r hooks/memory-extract ~/clawd/hooks/
-clawdbot hooks enable memory-extract
+openclaw hooks enable memory-extract
 ```
 
 ## Overview
@@ -629,7 +629,7 @@ The `hooks/memory-extract/` directory contains a Clawdbot hook that automaticall
 cp -r hooks/memory-extract ~/clawd/hooks/
 
 # Enable the hook
-clawdbot hooks enable memory-extract
+openclaw hooks enable memory-extract
 ```
 
 ### Configuration
@@ -763,16 +763,16 @@ For systems without `message:received` hooks, use the catch-up processor:
 ./scripts/memory-catchup.sh
 
 # Set up cron to run every minute
-(crontab -l 2>/dev/null; echo "* * * * * source ~/.bashrc && /path/to/scripts/memory-catchup.sh >> ~/.clawdbot/logs/memory-catchup.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "* * * * * source ~/.bashrc && /path/to/scripts/memory-catchup.sh >> ~/.openclaw/logs/memory-catchup.log 2>&1") | crontab -
 ```
 
 The catch-up script:
-- Reads session transcripts from `~/.clawdbot/agents/main/sessions/`
+- Reads session transcripts from `~/.openclaw/agents/main/sessions/`
 - Tracks last processed timestamp to avoid duplicates
 - Rate-limits to 3 messages per run
 - Runs extraction asynchronously
 
-State is stored in `~/.clawdbot/memory-catchup-state.json`.
+State is stored in `~/.openclaw/memory-catchup-state.json`.
 
 ## Context Window (2026-02-07)
 
@@ -780,7 +780,7 @@ The extraction pipeline now maintains a **20-message rolling context window** fo
 
 ### How It Works
 
-1. **Rolling Cache**: Last 20 messages stored in `~/.clawdbot/memory-message-cache.json`
+1. **Rolling Cache**: Last 20 messages stored in `~/.openclaw/memory-message-cache.json`
 2. **Interleaved**: Both user AND assistant messages included chronologically
 3. **Bidirectional**: BOTH speakers' messages get extracted, not just user
 
