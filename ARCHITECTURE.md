@@ -120,7 +120,7 @@ See `REMINDERS.md` in this repo for the template.
 
 ### 5. Semantic Memory (Clawdbot SQLite)
 
-**Location:** `~/.clawdbot/memory/main.sqlite`
+**Location:** `~/.openclaw/memory/main.sqlite`
 
 **Purpose:** Powers the `memory_search` tool.
 

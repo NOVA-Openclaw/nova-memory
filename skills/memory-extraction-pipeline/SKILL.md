@@ -18,7 +18,7 @@ Runs via `message.received` hook (NOT cron) - fires on every incoming message.
 
 ## Context Window (2026-02-07)
 
-**20-message rolling cache** stored in `~/.clawdbot/memory-message-cache.json`
+**20-message rolling cache** stored in `~/.openclaw/memory-message-cache.json`
 
 - Interleaved user + assistant messages (chronological)
 - ~10 exchanges worth of conversation
@@ -98,9 +98,9 @@ This captures:
 
 ## Files
 
-- Cache: `~/.clawdbot/memory-message-cache.json`
-- State: `~/.clawdbot/memory-catchup-state.json`
-- Logs: `~/.clawdbot/logs/memory-extractions.log`
+- Cache: `~/.openclaw/memory-message-cache.json`
+- State: `~/.openclaw/memory-catchup-state.json`
+- Logs: `~/.openclaw/logs/memory-extractions.log`
 - Scripts: `~/clawd/scripts/memory-*.sh`, `extract-memories.sh`, `store-memories.sh`
 
 ## Notes

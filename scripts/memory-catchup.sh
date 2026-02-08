@@ -13,9 +13,9 @@ if [[ "$1" == "--log" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STATE_FILE="${HOME}/.clawdbot/memory-catchup-state.json"
-CACHE_FILE="${HOME}/.clawdbot/memory-message-cache.json"
-TRANSCRIPT_DIR="${HOME}/.clawdbot/agents/main/sessions"
+STATE_FILE="${HOME}/.openclaw/memory-catchup-state.json"
+CACHE_FILE="${HOME}/.openclaw/memory-message-cache.json"
+TRANSCRIPT_DIR="${HOME}/.openclaw/agents/main/sessions"
 EXTRACT_SCRIPT="${SCRIPT_DIR}/process-input.sh"
 CACHE_SIZE=20
 
@@ -201,7 +201,7 @@ while IFS= read -r line; do
     export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(grep ANTHROPIC_API_KEY ~/.bashrc | cut -d= -f2 | tr -d \"\'\" | head -1)}"
     
     if [ "$VERBOSE_LOG" = true ]; then
-        EXTRACT_LOG="${HOME}/.clawdbot/logs/memory-extractions.log"
+        EXTRACT_LOG="${HOME}/.openclaw/logs/memory-extractions.log"
         echo "---" >> "$EXTRACT_LOG"
         echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $SPEAKER MESSAGE (with conversation context):" >> "$EXTRACT_LOG"
         echo "$CONTEXT" | head -60 >> "$EXTRACT_LOG"

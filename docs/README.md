@@ -54,7 +54,7 @@ Nova-memory is a PostgreSQL-based long-term memory system for AI assistants that
 - [Performance Tuning](performance-tuning.md) - Optimization and scaling
 
 ### 🛠 Integration
-- [Clawdbot Integration](clawdbot-integration.md) - Hooks, plugins, and tools
+- [OpenClaw Integration](integration-overview.md) - Hooks, plugins, and tools
 - [API Reference](api-reference.md) - REST endpoints and client libraries
 - [Agent Communication Protocols](agent-communication.md) - Inter-agent messaging
 
@@ -93,7 +93,7 @@ WHERE status = 'active';
 echo "Test message" | ./scripts/extract-memories.sh | ./scripts/store-memories.sh
 
 # Check extraction status
-tail -f ~/.clawdbot/logs/memory-catchup.log
+tail -f ~/.openclaw/logs/memory-catchup.log
 
 # Health check
 ./scripts/health-check.sh
@@ -186,7 +186,7 @@ WHERE name = 'nova-memory';
 ### Memory Extraction Issues
 1. **Check API connectivity:** `echo "test" | ./scripts/extract-memories.sh`
 2. **Verify cron job:** `crontab -l | grep memory-catchup`  
-3. **Review logs:** `tail -50 ~/.clawdbot/logs/memory-catchup.log`
+3. **Review logs:** `tail -50 ~/.openclaw/logs/memory-catchup.log`
 4. **Test database:** `psql -d nova_memory -c "SELECT COUNT(*) FROM entities;"`
 
 ### Performance Problems
@@ -196,10 +196,10 @@ WHERE name = 'nova-memory';
 4. **Review slow queries:** `SELECT * FROM pg_stat_statements ORDER BY mean_time DESC;`
 
 ### Integration Failures
-1. **Verify Clawdbot hooks:** `clawdbot hooks list`
+1. **Verify Clawdbot hooks:** `openclaw hooks list`
 2. **Test agent communication:** Insert test message in `agent_chat` table
 3. **Check environment variables:** `env | grep NOVA_MEMORY`
-4. **Review plugin logs:** `tail -f ~/.clawdbot/logs/plugin-*.log`
+4. **Review plugin logs:** `tail -f ~/.openclaw/logs/plugin-*.log`
 
 ## Development Workflow
 

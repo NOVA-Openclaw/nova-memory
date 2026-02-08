@@ -279,7 +279,7 @@ echo "NOVA_MEMORY_DB=postgresql://nova:password@localhost/nova_memory" >> ~/.bas
 # 4. Install integration hooks
 cp nova-memory/hooks/memory-extract ~/clawd/hooks/
 cp nova-cognition/hooks/job-system ~/clawd/hooks/
-clawdbot hooks enable memory-extract job-system
+openclaw hooks enable memory-extract job-system
 
 # 5. Populate agent registry
 psql -d nova_memory -f integration/seed-agents.sql

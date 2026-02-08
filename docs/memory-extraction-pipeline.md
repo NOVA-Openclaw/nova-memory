@@ -27,8 +27,8 @@ received        (cron job)        extraction           with deduplication
 **Location:** `~/clawd/nova-memory/scripts/memory-catchup.sh`
 
 **How it works:**
-1. Reads session transcripts from `~/.clawdbot/agents/main/sessions/`
-2. Tracks last processed timestamp in `~/.clawdbot/memory-catchup-state.json`
+1. Reads session transcripts from `~/.openclaw/agents/main/sessions/`
+2. Tracks last processed timestamp in `~/.openclaw/memory-catchup-state.json`
 3. Rate-limits to 3 messages per run to avoid API overload
 4. Builds 20-message context window for each extraction
 
@@ -45,7 +45,7 @@ received        (cron job)        extraction           with deduplication
 
 | Problem | Symptoms | Solution |
 |---------|----------|----------|
-| No new extractions | State file timestamp stuck | Delete state file: `rm ~/.clawdbot/memory-catchup-state.json` |
+| No new extractions | State file timestamp stuck | Delete state file: `rm ~/.openclaw/memory-catchup-state.json` |
 | Missing recent messages | Extractions lag behind chat | Check cron job is running: `systemctl status cron` |
 | Duplicate processing | Same messages processed twice | State file corruption - recreate with current timestamp |
 | Script hangs | Process doesn't complete | Check for stuck Claude API calls in extract-memories.sh |
@@ -94,7 +94,7 @@ Context: [Last 20 messages for reference resolution]
 |---------|----------|----------|
 | API timeouts | Script hangs on Claude calls | Check `ANTHROPIC_API_KEY` and network connectivity |
 | Invalid JSON output | Store script fails with parse errors | Add JSON validation to extract script |
-| Missing context | Poor reference resolution | Verify context cache in `~/.clawdbot/memory-message-cache.json` |
+| Missing context | Poor reference resolution | Verify context cache in `~/.openclaw/memory-message-cache.json` |
 | Rate limiting | HTTP 429 errors | Increase delay between API calls |
 
 ### 3. store-memories.sh - Database Storage
@@ -129,7 +129,7 @@ The pipeline maintains a **20-message rolling cache** for improved reference res
 
 ### Cache Structure
 
-**File:** `~/.clawdbot/memory-message-cache.json`
+**File:** `~/.openclaw/memory-message-cache.json`
 
 ```json
 [
@@ -182,7 +182,7 @@ sudo apt install postgresql-client jq curl
 
 ```bash
 # Add to crontab (runs every minute)
-* * * * * source ~/.bashrc && /path/to/nova-memory/scripts/memory-catchup.sh >> ~/.clawdbot/logs/memory-catchup.log 2>&1
+* * * * * source ~/.bashrc && /path/to/nova-memory/scripts/memory-catchup.sh >> ~/.openclaw/logs/memory-catchup.log 2>&1
 ```
 
 ### Manual Processing
@@ -207,7 +207,7 @@ echo '{"entities": [{"name": "John", "type": "person"}]}' | ./scripts/store-memo
 
 ```bash
 # Main processing log
-tail -f ~/.clawdbot/logs/memory-catchup.log
+tail -f ~/.openclaw/logs/memory-catchup.log
 
 # PostgreSQL logs (Ubuntu)
 sudo tail -f /var/log/postgresql/postgresql-16-main.log
@@ -225,7 +225,7 @@ psql -d nova_memory -c "SELECT * FROM entities WHERE name = 'John Doe';"
 
 # 2. Verify cron job
 ps aux | grep memory-catchup
-ls -la ~/.clawdbot/memory-catchup-state.json
+ls -la ~/.openclaw/memory-catchup-state.json
 
 # 3. Check API connectivity  
 echo "Test" | ./scripts/extract-memories.sh
@@ -267,7 +267,7 @@ SELECT 'facts', COUNT(*) FROM entity_facts WHERE created_at > NOW() - INTERVAL '
 crontab -l | grep memory-catchup
 
 # Check for script errors
-tail -50 ~/.clawdbot/logs/memory-catchup.log
+tail -50 ~/.openclaw/logs/memory-catchup.log
 
 # Test manual execution
 ./scripts/memory-catchup.sh
@@ -303,7 +303,7 @@ ALTER TABLE entity_facts ADD CONSTRAINT unique_entity_fact UNIQUE (entity_id, ke
 - Missing context connections
 
 **Solutions:**
-1. **Check context cache:** Verify `~/.clawdbot/memory-message-cache.json` has recent messages
+1. **Check context cache:** Verify `~/.openclaw/memory-message-cache.json` has recent messages
 2. **Increase context window:** Modify CONTEXT_SIZE in memory-catchup.sh
 3. **Improve Claude prompt:** Add more examples of pronoun resolution
 
@@ -362,7 +362,7 @@ CREATE TABLE extraction_stats (
 For automatic extraction on incoming messages:
 ```bash
 cp -r hooks/memory-extract ~/clawd/hooks/
-clawdbot hooks enable memory-extract
+openclaw hooks enable memory-extract
 export NOVA_MEMORY_SCRIPTS="/path/to/nova-memory/scripts"
 ```
 

@@ -1,5 +1,7 @@
 # Clawdbot Patches for Message Hooks
 
+> **⚠️ LEGACY:** These patches are for the historical Clawdbot system. OpenClaw now includes these features natively. This directory is kept for historical reference and migration documentation.
+
 These patches add `message:received` and `message:sent` hook events to Clawdbot.
 
 ## Status

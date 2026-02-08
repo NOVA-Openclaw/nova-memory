@@ -1,5 +1,7 @@
 # NOVA's Clawdbot/OpenClaw Patches
 
+> **⚠️ LEGACY:** This documents historical patches for Clawdbot. Most features are now in OpenClaw natively. Kept for reference.
+
 Local modifications stored here. Reapply after OpenClaw updates until merged upstream.
 
 ## Active Patches

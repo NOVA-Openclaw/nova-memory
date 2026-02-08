@@ -162,12 +162,12 @@ chmod +x scripts/*.sh
 
 ```bash
 # Install Clawdbot (if not already installed)
-npm install -g @clawdbot/cli
+npm install -g openclaw
 
 # Initialize workspace
 mkdir -p ~/clawd
 cd ~/clawd
-clawdbot init
+openclaw init
 ```
 
 ### 2. Memory Hook Installation
@@ -177,7 +177,7 @@ clawdbot init
 cp -r ~/nova-memory/hooks/memory-extract ~/clawd/hooks/
 
 # Enable the hook
-clawdbot hooks enable memory-extract
+openclaw hooks enable memory-extract
 
 # Configure hook environment
 echo "NOVA_MEMORY_SCRIPTS=$HOME/nova-memory/scripts" >> ~/clawd/.env
@@ -221,10 +221,10 @@ SELECT name, status, goal FROM projects WHERE status = 'active';
 
 ```bash
 # Create log directory
-mkdir -p ~/.clawdbot/logs
+mkdir -p ~/.openclaw/logs
 
 # Add cron job for memory extraction
-(crontab -l 2>/dev/null; echo "* * * * * source ~/.bashrc && $HOME/nova-memory/scripts/memory-catchup.sh >> ~/.clawdbot/logs/memory-catchup.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "* * * * * source ~/.bashrc && $HOME/nova-memory/scripts/memory-catchup.sh >> ~/.openclaw/logs/memory-catchup.log 2>&1") | crontab -
 
 # Verify cron job
 crontab -l
@@ -235,7 +235,7 @@ crontab -l
 ```bash
 # Create logrotate configuration
 sudo tee /etc/logrotate.d/nova-memory << EOF
-$HOME/.clawdbot/logs/memory-catchup.log {
+$HOME/.openclaw/logs/memory-catchup.log {
     daily
     rotate 7
     compress
@@ -287,7 +287,7 @@ git clone https://github.com/NOVA-Openclaw/nova_scripts.git
 cp -r nova_scripts/clawdbot-plugins/agent-chat-channel ~/clawd/plugins/
 
 # Enable plugin
-clawdbot plugins enable agent-chat-channel
+openclaw plugins enable agent-chat-channel
 ```
 
 ### 2. Configure NOTIFY/LISTEN
@@ -446,8 +446,8 @@ else
 fi
 
 # Log file size
-if [ -f ~/.clawdbot/logs/memory-catchup.log ]; then
-    LOG_SIZE=$(du -h ~/.clawdbot/logs/memory-catchup.log | cut -f1)
+if [ -f ~/.openclaw/logs/memory-catchup.log ]; then
+    LOG_SIZE=$(du -h ~/.openclaw/logs/memory-catchup.log | cut -f1)
     echo "Log file size: $LOG_SIZE"
 fi
 
@@ -509,8 +509,8 @@ chmod 700 ~/nova-memory/scripts/
 chmod +x ~/nova-memory/scripts/*.sh
 
 # Secure log directory
-mkdir -p ~/.clawdbot/logs
-chmod 750 ~/.clawdbot/logs
+mkdir -p ~/.openclaw/logs
+chmod 750 ~/.openclaw/logs
 ```
 
 ### 3. API Key Management
@@ -552,7 +552,7 @@ crontab -l | grep memory-catchup
 ./scripts/process-input.sh "Test message from $(whoami)"
 
 # Check logs
-tail -f ~/.clawdbot/logs/memory-catchup.log
+tail -f ~/.openclaw/logs/memory-catchup.log
 
 # Verify API key
 echo "test" | ./scripts/extract-memories.sh
@@ -579,13 +579,13 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
 ```bash
 # Verify hook installation
-clawdbot hooks list
+openclaw hooks list
 
 # Check hook logs
-tail -f ~/.clawdbot/logs/hook-memory-extract.log
+tail -f ~/.openclaw/logs/hook-memory-extract.log
 
 # Test hook manually
-clawdbot hooks run memory-extract '{"type": "message:received", "message": "test"}'
+openclaw hooks run memory-extract '{"type": "message:received", "message": "test"}'
 ```
 
 ## Backup and Recovery

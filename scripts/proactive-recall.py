@@ -42,7 +42,7 @@ def get_openai_client():
     """Get OpenAI client with API key."""
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        config_path = Path.home() / ".clawdbot" / "clawdbot.json"
+        config_path = Path.home() / ".openclaw" / "openclaw.json"
         if config_path.exists():
             with open(config_path) as f:
                 config = json.load(f)
