@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict P0s6loP1jg9dRJS8a53PRqf7Tuz05rPu3u7B7Hm6aCS43lqpaOLB3JdEz59eAZD
+\restrict K3ZUgLhdl749OmT24X4teX2Vy5Ae0lt7qpOsf7qKczuoLXZKlytypxeiwLIgmRD
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -619,7 +619,7 @@ ALTER TABLE public.agent_system_config OWNER TO nova;
 -- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_system_config IS 'System-wide agent configuration: universal seeds, policies, defaults';
+COMMENT ON TABLE public.agent_system_config IS 'System-wide agent configuration. READ for all agents, WRITE restricted to NOVA and Newhart. Stores universal context, system defaults, and cross-agent config.';
 
 
 --
@@ -5334,5 +5334,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict P0s6loP1jg9dRJS8a53PRqf7Tuz05rPu3u7B7Hm6aCS43lqpaOLB3JdEz59eAZD
+\unrestrict K3ZUgLhdl749OmT24X4teX2Vy5Ae0lt7qpOsf7qKczuoLXZKlytypxeiwLIgmRD
 
