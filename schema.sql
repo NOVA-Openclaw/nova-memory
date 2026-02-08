@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict N9KwsceHghfPgvcEOPrIbE6EE3fobYt4mFVtojuS3ugJmqDdGm5dkLxSngYv3dV
+\restrict TrGFyENd304fIreTaBuI7h59VfcIjliilXc4gVjXMF8iK7hIa8B8YaJVU9APjaj
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -610,7 +610,8 @@ CREATE TABLE public.agents (
     unix_user character varying(50),
     collaborative boolean DEFAULT false,
     config_reasoning text,
-    fallback_model character varying(100)
+    fallback_model character varying(100),
+    collaborate jsonb
 );
 
 
@@ -705,6 +706,13 @@ COMMENT ON COLUMN public.agents.config_reasoning IS 'Newhart-maintained notes ex
 --
 
 COMMENT ON COLUMN public.agents.fallback_model IS 'Fallback model if primary fails (auth issues, rate limits, etc.)';
+
+
+--
+-- Name: COLUMN agents.collaborate; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.collaborate IS 'Collaboration scope: null = task-only, JSONB defines topics/areas where this agent can collaborate vs just execute. Example: {"allowed": ["architecture", "design"], "excluded": ["execution"]}';
 
 
 --
@@ -980,7 +988,8 @@ CREATE TABLE public.entities (
     introduction_context text,
     capabilities jsonb,
     access_constraints jsonb,
-    CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[])))
+    CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[]))),
+    CONSTRAINT valid_collaboration_scope CHECK (((collaboration_scope IS NULL) OR (collaboration_scope = ANY (ARRAY['full'::text, 'domain-specific'::text, 'supervised'::text]))))
 );
 
 
@@ -4384,7 +4393,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
 
 REVOKE ALL ON TABLE public.agents FROM nova;
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agents TO newhart;
+GRANT ALL ON TABLE public.agents TO newhart;
 GRANT SELECT ON TABLE public.agents TO gem;
 GRANT SELECT ON TABLE public.agents TO coder;
 GRANT SELECT ON TABLE public.agents TO scout;
@@ -5087,5 +5096,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict N9KwsceHghfPgvcEOPrIbE6EE3fobYt4mFVtojuS3ugJmqDdGm5dkLxSngYv3dV
+\unrestrict TrGFyENd304fIreTaBuI7h59VfcIjliilXc4gVjXMF8iK7hIa8B8YaJVU9APjaj
 
