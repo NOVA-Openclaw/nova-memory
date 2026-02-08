@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nIWSfmn970Qb21qG9tAfnG2eGa25wYF7eh4QJP8neAjbrV51uOjfYbtSchV8SEj
+\restrict hyJaqV5HDUj4ElXU5VpY0V64nUlrddvAdrzd83HuvCNAxmN6MWipBItSWMxGMst
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -611,7 +611,8 @@ CREATE TABLE public.agents (
     collaborative boolean DEFAULT false,
     config_reasoning text,
     fallback_model character varying(100),
-    collaborate jsonb
+    collaborate jsonb,
+    decision_criteria text
 );
 
 
@@ -713,6 +714,13 @@ COMMENT ON COLUMN public.agents.fallback_model IS 'Fallback model if primary fai
 --
 
 COMMENT ON COLUMN public.agents.collaborate IS 'Collaboration scope: null = task-only, JSONB defines topics/areas where this agent can collaborate vs just execute. Example: {"allowed": ["architecture", "design"], "excluded": ["execution"]}';
+
+
+--
+-- Name: COLUMN agents.decision_criteria; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agents.decision_criteria IS 'Criteria for when to spawn this agent - helps NOVA route tasks';
 
 
 --
@@ -5096,5 +5104,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nIWSfmn970Qb21qG9tAfnG2eGa25wYF7eh4QJP8neAjbrV51uOjfYbtSchV8SEj
+\unrestrict hyJaqV5HDUj4ElXU5VpY0V64nUlrddvAdrzd83HuvCNAxmN6MWipBItSWMxGMst
 
