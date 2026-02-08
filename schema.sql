@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict x1X1g6tDgJ1Xll6dafGkwpJXbDeAazGD3fU4fpTTblLZqhI1maja95Jei7VLIFf
+\restrict w2OnsfZktyic88drUOmHxuP6uXKIggKbvVZLgAPm8nldMi8f7R1HY9VlwPJTRbL
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2226,6 +2226,74 @@ ALTER SEQUENCE public.projects_id_seq OWNED BY public.projects.id;
 
 
 --
+-- Name: ralph_sessions; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.ralph_sessions (
+    id integer NOT NULL,
+    session_series_id text NOT NULL,
+    iteration integer DEFAULT 1 NOT NULL,
+    agent_id text NOT NULL,
+    spawned_session_key text,
+    task_description text,
+    iteration_goal text,
+    state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    status text DEFAULT 'PENDING'::text NOT NULL,
+    error_message text,
+    tokens_used integer,
+    cost numeric(10,4),
+    created_at timestamp with time zone DEFAULT now(),
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone
+);
+
+
+ALTER TABLE public.ralph_sessions OWNER TO nova;
+
+--
+-- Name: TABLE ralph_sessions; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.ralph_sessions IS 'Tracks Ralph-style iterative agent sessions. Each iteration runs with fresh context, state persists in DB.';
+
+
+--
+-- Name: COLUMN ralph_sessions.session_series_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.ralph_sessions.session_series_id IS 'UUID or descriptive ID linking all iterations of the same task';
+
+
+--
+-- Name: COLUMN ralph_sessions.status; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.ralph_sessions.status IS 'PENDING=not started, RUNNING=in progress, CONTINUE=done but more needed, COMPLETE=finished, ERROR=failed';
+
+
+--
+-- Name: ralph_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.ralph_sessions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.ralph_sessions_id_seq OWNER TO nova;
+
+--
+-- Name: ralph_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
+
+
+--
 -- Name: tasks; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2946,6 +3014,13 @@ ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.pro
 
 
 --
+-- Name: ralph_sessions id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.ralph_sessions ALTER COLUMN id SET DEFAULT nextval('public.ralph_sessions_id_seq'::regclass);
+
+
+--
 -- Name: tasks id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -3340,6 +3415,22 @@ ALTER TABLE ONLY public.projects
 
 ALTER TABLE ONLY public.projects
     ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ralph_sessions ralph_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.ralph_sessions
+    ADD CONSTRAINT ralph_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ralph_sessions ralph_sessions_session_series_id_iteration_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.ralph_sessions
+    ADD CONSTRAINT ralph_sessions_session_series_id_iteration_key UNIQUE (session_series_id, iteration);
 
 
 --
@@ -3806,6 +3897,20 @@ CREATE INDEX idx_project_tasks_status ON public.project_tasks USING btree (statu
 --
 
 CREATE INDEX idx_projects_status ON public.projects USING btree (status);
+
+
+--
+-- Name: idx_ralph_series_latest; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_ralph_series_latest ON public.ralph_sessions USING btree (session_series_id, iteration DESC);
+
+
+--
+-- Name: idx_ralph_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_ralph_status ON public.ralph_sessions USING btree (status) WHERE (status = ANY (ARRAY['PENDING'::text, 'RUNNING'::text]));
 
 
 --
@@ -5104,5 +5209,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict x1X1g6tDgJ1Xll6dafGkwpJXbDeAazGD3fU4fpTTblLZqhI1maja95Jei7VLIFf
+\unrestrict w2OnsfZktyic88drUOmHxuP6uXKIggKbvVZLgAPm8nldMi8f7R1HY9VlwPJTRbL
 
