@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict w2OnsfZktyic88drUOmHxuP6uXKIggKbvVZLgAPm8nldMi8f7R1HY9VlwPJTRbL
+\restrict OQWfQicYCyydz9aloEk10I4iBmMq7UauhRo2pebBJds8hSEQxBpawzmElvyXM4r
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -105,6 +105,23 @@ $$;
 
 
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
+
+--
+-- Name: get_ralph_state(text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.get_ralph_state(p_series_id text) RETURNS TABLE(iteration integer, state jsonb, status text)
+    LANGUAGE sql
+    AS $$
+  SELECT iteration, state, status
+  FROM ralph_sessions
+  WHERE session_series_id = p_series_id
+  ORDER BY iteration DESC
+  LIMIT 1;
+$$;
+
+
+ALTER FUNCTION public.get_ralph_state(p_series_id text) OWNER TO nova;
 
 --
 -- Name: notify_agent_chat(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -2586,6 +2603,33 @@ CREATE VIEW public.v_portfolio_allocation AS
 
 
 ALTER VIEW public.v_portfolio_allocation OWNER TO nova;
+
+--
+-- Name: v_ralph_active; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_ralph_active AS
+ SELECT session_series_id,
+    agent_id,
+    max(iteration) AS current_iteration,
+    ( SELECT r2.status
+           FROM public.ralph_sessions r2
+          WHERE (r2.session_series_id = r1.session_series_id)
+          ORDER BY r2.iteration DESC
+         LIMIT 1) AS latest_status,
+    min(created_at) AS started_at,
+    sum(tokens_used) AS total_tokens,
+    sum(cost) AS total_cost
+   FROM public.ralph_sessions r1
+  GROUP BY session_series_id, agent_id
+ HAVING (( SELECT r2.status
+           FROM public.ralph_sessions r2
+          WHERE (r2.session_series_id = r1.session_series_id)
+          ORDER BY r2.iteration DESC
+         LIMIT 1) = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'CONTINUE'::text]));
+
+
+ALTER VIEW public.v_ralph_active OWNER TO nova;
 
 --
 -- Name: v_relationships; Type: VIEW; Schema: public; Owner: nova
@@ -5209,5 +5253,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict w2OnsfZktyic88drUOmHxuP6uXKIggKbvVZLgAPm8nldMi8f7R1HY9VlwPJTRbL
+\unrestrict OQWfQicYCyydz9aloEk10I4iBmMq7UauhRo2pebBJds8hSEQxBpawzmElvyXM4r
 
