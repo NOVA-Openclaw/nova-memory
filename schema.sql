@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict OQWfQicYCyydz9aloEk10I4iBmMq7UauhRo2pebBJds8hSEQxBpawzmElvyXM4r
+\restrict w8zP8oKDzrOMBvnZQs6s49qwCOJRcAetqAFuSYF2ICGxEMaiBXqk7sPU77yLK9L
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -597,6 +597,71 @@ ALTER SEQUENCE public.agent_jobs_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.agent_jobs_id_seq OWNED BY public.agent_jobs.id;
+
+
+--
+-- Name: agent_system_config; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_system_config (
+    key text NOT NULL,
+    value text NOT NULL,
+    value_type text DEFAULT 'text'::text NOT NULL,
+    description text,
+    updated_at timestamp without time zone DEFAULT now(),
+    updated_by text DEFAULT 'system'::text
+);
+
+
+ALTER TABLE public.agent_system_config OWNER TO nova;
+
+--
+-- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.agent_system_config IS 'System-wide agent configuration: universal seeds, policies, defaults';
+
+
+--
+-- Name: COLUMN agent_system_config.key; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_system_config.key IS 'Unique configuration key identifier';
+
+
+--
+-- Name: COLUMN agent_system_config.value; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_system_config.value IS 'Configuration value (stored as text, cast based on value_type)';
+
+
+--
+-- Name: COLUMN agent_system_config.value_type; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_system_config.value_type IS 'Type hint: text, json, boolean, number';
+
+
+--
+-- Name: COLUMN agent_system_config.description; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_system_config.description IS 'Human-readable description of what this config controls';
+
+
+--
+-- Name: COLUMN agent_system_config.updated_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_system_config.updated_at IS 'Last modification timestamp';
+
+
+--
+-- Name: COLUMN agent_system_config.updated_by; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.agent_system_config.updated_by IS 'Agent or system that last modified this config';
 
 
 --
@@ -3134,6 +3199,14 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
+-- Name: agent_system_config agent_system_config_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_system_config
+    ADD CONSTRAINT agent_system_config_pkey PRIMARY KEY (key);
+
+
+--
 -- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -4545,6 +4618,14 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
 
 
 --
+-- Name: TABLE agent_system_config; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.agent_system_config TO PUBLIC;
+GRANT INSERT,DELETE,UPDATE ON TABLE public.agent_system_config TO newhart;
+
+
+--
 -- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -5253,5 +5334,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict OQWfQicYCyydz9aloEk10I4iBmMq7UauhRo2pebBJds8hSEQxBpawzmElvyXM4r
+\unrestrict w8zP8oKDzrOMBvnZQs6s49qwCOJRcAetqAFuSYF2ICGxEMaiBXqk7sPU77yLK9L
 
