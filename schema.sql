@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 9bbm67focGZjMbgBSqaH0kwWWarn7kSQDUEuYPAHy2il43aszRRQPtC0i4YRizg
+\restrict TjGB5s181B7rgIuTQ6uqSQen7cw15abgVibJJuDi5KeZaTPhrb5zULLOAkzWedv
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2525,7 +2525,10 @@ CREATE TABLE public.tasks (
     blocked_reason text,
     blocked_on integer,
     last_worked_at timestamp with time zone,
-    work_notes text
+    work_notes text,
+    task_type character varying(20) DEFAULT 'one_off'::character varying,
+    recurrence_interval interval,
+    last_completed_at timestamp with time zone
 );
 
 
@@ -2536,6 +2539,27 @@ ALTER TABLE public.tasks OWNER TO nova;
 --
 
 COMMENT ON TABLE public.tasks IS 'Task tracking. NOVA can create, update status, assign. Check before starting work.';
+
+
+--
+-- Name: COLUMN tasks.task_type; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.tasks.task_type IS 'one_off = complete once, recurring = resets after completion, fallback = low-priority repeatable when idle';
+
+
+--
+-- Name: COLUMN tasks.recurrence_interval; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.tasks.recurrence_interval IS 'How often recurring tasks reset (e.g., 1 day, 1 week)';
+
+
+--
+-- Name: COLUMN tasks.last_completed_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.tasks.last_completed_at IS 'When task was last completed (for recurring reset logic)';
 
 
 --
@@ -5872,5 +5896,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9bbm67focGZjMbgBSqaH0kwWWarn7kSQDUEuYPAHy2il43aszRRQPtC0i4YRizg
+\unrestrict TjGB5s181B7rgIuTQ6uqSQen7cw15abgVibJJuDi5KeZaTPhrb5zULLOAkzWedv
 
