@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict qIacggDO2KmfiEZ9VHRsKnwsOpvIjjvRRMk7l8gL1X02uxzEDtF2A5lQNm3ILnI
+\restrict VorngfLCw9Ntwrut17N04jkgqhKoW8cDoiFPgG9zia9rhlB5oNCzhCrtvpvFhPn
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -17,6 +17,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
 
 --
 -- Name: vector; Type: EXTENSION; Schema: -; Owner: -
@@ -1225,7 +1239,7 @@ CREATE TABLE public.entities (
     auth_token character varying(255),
     collaborate boolean,
     collaboration_scope text,
-    trust_level integer DEFAULT 0,
+    trust_level character varying(20) DEFAULT 'unknown'::character varying,
     introduction_context text,
     capabilities jsonb,
     access_constraints jsonb,
@@ -1261,7 +1275,7 @@ COMMENT ON COLUMN public.entities.collaboration_scope IS 'full | domain-specific
 -- Name: COLUMN entities.trust_level; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.entities.trust_level IS '0-10 scale determining context/access level in collaborations';
+COMMENT ON COLUMN public.entities.trust_level IS 'Trust level for confidence scoring: owner, admin, user, unknown, untrusted';
 
 
 --
@@ -6271,5 +6285,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict qIacggDO2KmfiEZ9VHRsKnwsOpvIjjvRRMk7l8gL1X02uxzEDtF2A5lQNm3ILnI
+\unrestrict VorngfLCw9Ntwrut17N04jkgqhKoW8cDoiFPgG9zia9rhlB5oNCzhCrtvpvFhPn
 
