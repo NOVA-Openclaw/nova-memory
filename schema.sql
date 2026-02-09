@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict UK7h43vasR2SJT3o17To3jm7aLwDrryD4Z8wqfQIiujScOwu8Tv9mGjFMTtnlIY
+\restrict jhGpx63FTy5kn8nxYqPi0bD6yJodXEYeVQYy4Wj2NOeoz0aqZTgbRaK26ofYeBI
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -77,6 +77,111 @@ $$;
 
 
 ALTER FUNCTION public.chat(p_message text, p_sender character varying) OWNER TO nova;
+
+--
+-- Name: cleanup_old_archives(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.cleanup_old_archives() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM entity_facts_archive 
+    WHERE archived_at < NOW() - INTERVAL '1 year';
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$;
+
+
+ALTER FUNCTION public.cleanup_old_archives() OWNER TO nova;
+
+--
+-- Name: FUNCTION cleanup_old_archives(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.cleanup_old_archives() IS 'Hard deletes archived facts older than 1 year. Run via cron or decay script.';
+
+
+--
+-- Name: cleanup_old_embeddings_archive(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.cleanup_old_embeddings_archive() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE 
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM memory_embeddings_archive WHERE archived_at < NOW() - INTERVAL '1 year';
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$;
+
+
+ALTER FUNCTION public.cleanup_old_embeddings_archive() OWNER TO nova;
+
+--
+-- Name: FUNCTION cleanup_old_embeddings_archive(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.cleanup_old_embeddings_archive() IS 'Hard deletes archived embeddings older than 1 year.';
+
+
+--
+-- Name: cleanup_old_events_archive(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.cleanup_old_events_archive() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE 
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM events_archive WHERE archived_at < NOW() - INTERVAL '1 year';
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$;
+
+
+ALTER FUNCTION public.cleanup_old_events_archive() OWNER TO nova;
+
+--
+-- Name: FUNCTION cleanup_old_events_archive(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.cleanup_old_events_archive() IS 'Hard deletes archived events older than 1 year.';
+
+
+--
+-- Name: cleanup_old_lessons_archive(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.cleanup_old_lessons_archive() RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE 
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM lessons_archive WHERE archived_at < NOW() - INTERVAL '1 year';
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$;
+
+
+ALTER FUNCTION public.cleanup_old_lessons_archive() OWNER TO nova;
+
+--
+-- Name: FUNCTION cleanup_old_lessons_archive(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.cleanup_old_lessons_archive() IS 'Hard deletes archived lessons older than 1 year.';
+
 
 --
 -- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: nova
@@ -1221,7 +1326,13 @@ CREATE TABLE public.entity_facts (
     source_entity_id integer,
     visibility_reason text,
     vote_count integer DEFAULT 1,
-    last_confirmed timestamp without time zone DEFAULT now()
+    last_confirmed timestamp without time zone DEFAULT now(),
+    data_type character varying(20) DEFAULT 'observation'::character varying,
+    last_confirmed_at timestamp with time zone DEFAULT now(),
+    confirmation_count integer DEFAULT 1,
+    decay_rate real,
+    CONSTRAINT chk_confidence CHECK (((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))),
+    CONSTRAINT chk_data_type CHECK (((data_type)::text = ANY ((ARRAY['permanent'::character varying, 'identity'::character varying, 'preference'::character varying, 'temporal'::character varying, 'observation'::character varying])::text[])))
 );
 
 
@@ -1274,6 +1385,38 @@ COMMENT ON COLUMN public.entity_facts.vote_count IS 'Reinforcement count - incre
 --
 
 COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
+
+
+--
+-- Name: entity_facts_archive; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entity_facts_archive (
+    id integer NOT NULL,
+    entity_id integer,
+    key character varying(255),
+    value text,
+    source character varying(100),
+    confidence real,
+    data_type character varying(20),
+    last_confirmed_at timestamp with time zone,
+    confirmation_count integer,
+    decay_rate real,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone DEFAULT now(),
+    archive_reason character varying(50),
+    archived_by character varying(50) DEFAULT 'decay_script'::character varying
+);
+
+
+ALTER TABLE public.entity_facts_archive OWNER TO nova;
+
+--
+-- Name: TABLE entity_facts_archive; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entity_facts_archive IS 'Soft-deleted entity facts. 1-year retention, then hard deleted. Can be restored if archived incorrectly.';
 
 
 --
@@ -1393,7 +1536,9 @@ CREATE TABLE public.events (
     description text,
     source character varying(255),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED
+    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED,
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -1427,6 +1572,27 @@ ALTER SEQUENCE public.events_id_seq OWNER TO nova;
 
 ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
+
+--
+-- Name: events_archive; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.events_archive (
+    id integer DEFAULT nextval('public.events_id_seq'::regclass) NOT NULL,
+    event_date timestamp without time zone NOT NULL,
+    title character varying(500) NOT NULL,
+    description text,
+    source character varying(255),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED,
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamp with time zone DEFAULT now(),
+    archived_at timestamp with time zone DEFAULT now(),
+    archive_reason character varying(50)
+);
+
+
+ALTER TABLE public.events_archive OWNER TO nova;
 
 --
 -- Name: gambling_entries; Type: TABLE; Schema: public; Owner: nova
@@ -1568,7 +1734,8 @@ CREATE TABLE public.lessons (
     correction_source text,
     reinforced_at timestamp without time zone,
     confidence double precision DEFAULT 1.0,
-    last_referenced timestamp without time zone
+    last_referenced timestamp without time zone,
+    last_confirmed_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -1608,6 +1775,36 @@ ALTER SEQUENCE public.lessons_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.lessons_id_seq OWNED BY public.lessons.id;
+
+
+--
+-- Name: lessons_archive; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.lessons_archive (
+    id integer DEFAULT nextval('public.lessons_id_seq'::regclass) NOT NULL,
+    lesson text NOT NULL,
+    context text,
+    source character varying(255),
+    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    original_behavior text,
+    correction_source text,
+    reinforced_at timestamp without time zone,
+    confidence double precision DEFAULT 1.0,
+    last_referenced timestamp without time zone,
+    last_confirmed_at timestamp with time zone DEFAULT now(),
+    archived_at timestamp with time zone DEFAULT now(),
+    archive_reason character varying(50)
+);
+
+
+ALTER TABLE public.lessons_archive OWNER TO nova;
+
+--
+-- Name: COLUMN lessons_archive.confidence; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.lessons_archive.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
 
 
 --
@@ -1871,7 +2068,9 @@ CREATE TABLE public.memory_embeddings (
     content text NOT NULL,
     embedding public.vector(1536),
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -1905,6 +2104,27 @@ ALTER SEQUENCE public.memory_embeddings_id_seq OWNER TO nova;
 
 ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings.id;
 
+
+--
+-- Name: memory_embeddings_archive; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.memory_embeddings_archive (
+    id integer DEFAULT nextval('public.memory_embeddings_id_seq'::regclass) NOT NULL,
+    source_type character varying(50) NOT NULL,
+    source_id text,
+    content text NOT NULL,
+    embedding public.vector(1536),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamp with time zone DEFAULT now(),
+    archived_at timestamp with time zone DEFAULT now(),
+    archive_reason character varying(50)
+);
+
+
+ALTER TABLE public.memory_embeddings_archive OWNER TO nova;
 
 --
 -- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -3597,6 +3817,14 @@ ALTER TABLE ONLY public.entities
 
 
 --
+-- Name: entity_facts_archive entity_facts_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_facts_archive
+    ADD CONSTRAINT entity_facts_archive_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3645,6 +3873,14 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
+-- Name: events_archive events_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.events_archive
+    ADD CONSTRAINT events_archive_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -3674,6 +3910,14 @@ ALTER TABLE ONLY public.gambling_logs
 
 ALTER TABLE ONLY public.job_messages
     ADD CONSTRAINT job_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: lessons_archive lessons_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.lessons_archive
+    ADD CONSTRAINT lessons_archive_pkey PRIMARY KEY (id);
 
 
 --
@@ -3714,6 +3958,14 @@ ALTER TABLE ONLY public.media_tags
 
 ALTER TABLE ONLY public.media_tags
     ADD CONSTRAINT media_tags_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: memory_embeddings_archive memory_embeddings_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.memory_embeddings_archive
+    ADD CONSTRAINT memory_embeddings_archive_pkey PRIMARY KEY (id);
 
 
 --
@@ -3933,6 +4185,20 @@ ALTER TABLE ONLY public.works
 
 
 --
+-- Name: events_archive_event_date_idx; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX events_archive_event_date_idx ON public.events_archive USING btree (event_date);
+
+
+--
+-- Name: events_archive_search_vector_idx; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX events_archive_search_vector_idx ON public.events_archive USING gin (search_vector);
+
+
+--
 -- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -4073,10 +4339,45 @@ CREATE INDEX idx_entities_user_id ON public.entities USING btree (user_id) WHERE
 
 
 --
+-- Name: idx_entity_facts_archive_date; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_archive_date ON public.entity_facts_archive USING btree (archived_at);
+
+
+--
+-- Name: idx_entity_facts_archive_entity; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_archive_entity ON public.entity_facts_archive USING btree (entity_id);
+
+
+--
+-- Name: idx_entity_facts_archive_key; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_archive_key ON public.entity_facts_archive USING btree (key);
+
+
+--
+-- Name: idx_entity_facts_confidence; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_confidence ON public.entity_facts USING btree (confidence) WHERE (confidence < (1.0)::double precision);
+
+
+--
 -- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_entity_facts_data ON public.entity_facts USING gin (data);
+
+
+--
+-- Name: idx_entity_facts_data_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_data_type ON public.entity_facts USING btree (data_type);
 
 
 --
@@ -4560,6 +4861,20 @@ CREATE INDEX idx_works_type ON public.works USING btree (work_type);
 --
 
 CREATE INDEX idx_works_updated ON public.works USING btree (updated_at DESC);
+
+
+--
+-- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+
+
+--
+-- Name: memory_embeddings_archive_source_type_idx; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX memory_embeddings_archive_source_type_idx ON public.memory_embeddings_archive USING btree (source_type);
 
 
 --
@@ -5896,5 +6211,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict UK7h43vasR2SJT3o17To3jm7aLwDrryD4Z8wqfQIiujScOwu8Tv9mGjFMTtnlIY
+\unrestrict jhGpx63FTy5kn8nxYqPi0bD6yJodXEYeVQYy4Wj2NOeoz0aqZTgbRaK26ofYeBI
 
