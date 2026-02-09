@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict pmN0ddrYmnh19UPEFWUuEVikx9Cr9n63DoRPnyIk16Eevx5b4KHENk9GenzbrUF
+\restrict d554ERJ31Tt5kjs7Gu2fNQtyGDb9MRCD3PG4xmE5wYgFfnr9eOmJpjwFnK3pe0r
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1044,7 +1044,8 @@ CREATE TABLE public.artwork (
     inspiration_source text,
     quality_score integer,
     nostr_event_id text,
-    nostr_image_url text
+    nostr_image_url text,
+    x_tweet_id text
 );
 
 
@@ -6300,5 +6301,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pmN0ddrYmnh19UPEFWUuEVikx9Cr9n63DoRPnyIk16Eevx5b4KHENk9GenzbrUF
+\unrestrict d554ERJ31Tt5kjs7Gu2fNQtyGDb9MRCD3PG4xmE5wYgFfnr9eOmJpjwFnK3pe0r
 
