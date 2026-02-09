@@ -5597,3 +5597,89 @@ CREATE EVENT TRIGGER schema_change_trigger ON ddl_command_end
 
 \unrestrict ft6e6VEhwIjHLqwKSzFuygOFIO1cXGO3Wra820aceqB9mDli6mmOOKVwko0fEzl
 
+
+--
+-- Name: documents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.documents (
+    id integer NOT NULL,
+    path text NOT NULL,
+    title character varying(255),
+    doc_type character varying(50),
+    description text,
+    tags text[],
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: TABLE documents; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.documents IS 'Registry of workspace documents, configs, and knowledge files. Tracks what files exist and their purpose for cross-session discovery.';
+
+
+--
+-- Name: documents_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.documents_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: documents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.documents_id_seq OWNED BY public.documents.id;
+
+
+--
+-- Name: documents id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents ALTER COLUMN id SET DEFAULT nextval('public.documents_id_seq'::regclass);
+
+
+--
+-- Name: documents documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: documents documents_path_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_path_key UNIQUE (path);
+
+
+--
+-- Name: idx_documents_doc_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_doc_type ON public.documents USING btree (doc_type);
+
+
+--
+-- Name: idx_documents_path; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_path ON public.documents USING btree (path);
+
+
+--
+-- Name: idx_documents_tags; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_tags ON public.documents USING gin (tags);
