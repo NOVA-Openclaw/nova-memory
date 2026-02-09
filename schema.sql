@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict tFcPXpx1m7uzDp2vTA45io4EBVC6cAMMAOf74oqzXZ3PCvdxDql044mlLDCKz3I
+\restrict he8JTrY7XdsOJ1nEI1umd7mrSAu7Sl07QwOBNRTnei5sbdFNgphPW9zezYPZzyD
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -17,6 +17,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
 
 --
 -- Name: vector; Type: EXTENSION; Schema: -; Owner: -
@@ -1225,7 +1239,7 @@ CREATE TABLE public.entities (
     auth_token character varying(255),
     collaborate boolean,
     collaboration_scope text,
-    trust_level integer DEFAULT 0,
+    trust_level character varying(20) DEFAULT 'unknown'::character varying,
     introduction_context text,
     capabilities jsonb,
     access_constraints jsonb,
@@ -1261,7 +1275,7 @@ COMMENT ON COLUMN public.entities.collaboration_scope IS 'full | domain-specific
 -- Name: COLUMN entities.trust_level; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.entities.trust_level IS '0-10 scale determining context/access level in collaborations';
+COMMENT ON COLUMN public.entities.trust_level IS 'Trust level for confidence scoring: owner, admin, user, unknown, untrusted';
 
 
 --
@@ -1305,6 +1319,51 @@ ALTER SEQUENCE public.entities_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.entities_id_seq OWNED BY public.entities.id;
+
+
+--
+-- Name: entity_fact_conflicts; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entity_fact_conflicts (
+    id integer NOT NULL,
+    entity_id integer,
+    key character varying(255),
+    fact_id_a integer,
+    fact_id_b integer,
+    value_a text,
+    value_b text,
+    confidence_a real,
+    confidence_b real,
+    resolution character varying(50),
+    resolved_at timestamp with time zone,
+    resolved_by character varying(50),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.entity_fact_conflicts OWNER TO nova;
+
+--
+-- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.entity_fact_conflicts_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNER TO nova;
+
+--
+-- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNED BY public.entity_fact_conflicts.id;
 
 
 --
@@ -3484,6 +3543,13 @@ ALTER TABLE ONLY public.entities ALTER COLUMN id SET DEFAULT nextval('public.ent
 
 
 --
+-- Name: entity_fact_conflicts id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_fact_conflicts ALTER COLUMN id SET DEFAULT nextval('public.entity_fact_conflicts_id_seq'::regclass);
+
+
+--
 -- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -3814,6 +3880,14 @@ ALTER TABLE ONLY public.entities
 
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entities_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: entity_fact_conflicts entity_fact_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_fact_conflicts
+    ADD CONSTRAINT entity_fact_conflicts_pkey PRIMARY KEY (id);
 
 
 --
@@ -4398,6 +4472,13 @@ CREATE INDEX idx_entity_facts_privacy_scope ON public.entity_facts USING gin (pr
 --
 
 CREATE INDEX idx_entity_facts_source_entity ON public.entity_facts USING btree (source_entity_id);
+
+
+--
+-- Name: idx_entity_facts_value_trgm; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_value_trgm ON public.entity_facts USING gin (lower(value) public.gin_trgm_ops);
 
 
 --
@@ -5060,6 +5141,14 @@ ALTER TABLE ONLY public.agent_jobs
 
 ALTER TABLE ONLY public.certificates
     ADD CONSTRAINT certificates_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: entity_fact_conflicts entity_fact_conflicts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_fact_conflicts
+    ADD CONSTRAINT entity_fact_conflicts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
 
 --
@@ -6203,5 +6292,9 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
+<<<<<<< HEAD
 \unrestrict tFcPXpx1m7uzDp2vTA45io4EBVC6cAMMAOf74oqzXZ3PCvdxDql044mlLDCKz3I
+=======
+\unrestrict he8JTrY7XdsOJ1nEI1umd7mrSAu7Sl07QwOBNRTnei5sbdFNgphPW9zezYPZzyD
+>>>>>>> feature/memory-confidence-system
 
