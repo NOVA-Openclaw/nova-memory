@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict VorngfLCw9Ntwrut17N04jkgqhKoW8cDoiFPgG9zia9rhlB5oNCzhCrtvpvFhPn
+\restrict he8JTrY7XdsOJ1nEI1umd7mrSAu7Sl07QwOBNRTnei5sbdFNgphPW9zezYPZzyD
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -4475,6 +4475,13 @@ CREATE INDEX idx_entity_facts_source_entity ON public.entity_facts USING btree (
 
 
 --
+-- Name: idx_entity_facts_value_trgm; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_entity_facts_value_trgm ON public.entity_facts USING gin (lower(value) public.gin_trgm_ops);
+
+
+--
 -- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -6285,5 +6292,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict VorngfLCw9Ntwrut17N04jkgqhKoW8cDoiFPgG9zia9rhlB5oNCzhCrtvpvFhPn
+\unrestrict he8JTrY7XdsOJ1nEI1umd7mrSAu7Sl07QwOBNRTnei5sbdFNgphPW9zezYPZzyD
 
