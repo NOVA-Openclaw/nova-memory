@@ -75,6 +75,23 @@ Look for privacy cues that OVERRIDE the default:
 - Make PUBLIC: \"feel free to share\", \"this is public\", \"you can tell others\"
 - Make PRIVATE: \"just between us\", \"don't tell anyone\", \"keep this secret\", \"confidential\"
 
+DELEGATION CONTEXT:
+NOVA frequently delegates tasks to specialized agents. When you see patterns like:
+- \"Let me get [AGENT] to help\"
+- \"I'll delegate this to [AGENT]\"
+- \"[AGENT] fixed/completed/handled [TASK]\"
+- \"Consider [AGENT] for this task\"
+- \"[AGENT] is good at [CAPABILITY]\"
+
+Extract as facts with subject=\"NOVA\":
+- predicate: \"delegates_to\", value: \"AGENT_NAME for TASK_TYPE\"
+- predicate: \"agent_capability\", value: \"AGENT_NAME: what they're good at\"
+- predicate: \"agent_success\", value: \"AGENT_NAME: completed task description\"
+- predicate: \"agent_failure\", value: \"AGENT_NAME: what went wrong\"
+
+Set visibility=\"public\" for delegation facts (they're operational knowledge).
+Known agents: Coder (coding), Gidget (git-ops), Scout (research), IRIS (creative), Hermes (comms), Scribe (docs), Ticker (portfolio), Athena (media), Newhart (meta/agents).
+
 Return JSON with these categories (only include non-empty ones, skip if nothing NEW to extract):
 
 entities: [{name, type (person|ai|organization|place), location?, source_person, visibility, visibility_reason?}]
