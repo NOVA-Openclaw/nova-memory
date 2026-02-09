@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict jhGpx63FTy5kn8nxYqPi0bD6yJodXEYeVQYy4Wj2NOeoz0aqZTgbRaK26ofYeBI
+\restrict h7dWjh2RRKdbfTlGangefvSyLS1Oy9OgJtCgoy2gWhnedocLMcbI7XRtHYXIbjH
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1392,18 +1392,25 @@ COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recen
 --
 
 CREATE TABLE public.entity_facts_archive (
-    id integer NOT NULL,
+    id integer,
     entity_id integer,
     key character varying(255),
     value text,
-    source character varying(100),
-    confidence real,
+    data jsonb,
+    source character varying(255),
+    confidence double precision,
+    learned_at timestamp without time zone,
+    updated_at timestamp without time zone,
+    visibility character varying(20),
+    privacy_scope integer[],
+    source_entity_id integer,
+    visibility_reason text,
+    vote_count integer,
+    last_confirmed timestamp without time zone,
     data_type character varying(20),
     last_confirmed_at timestamp with time zone,
     confirmation_count integer,
     decay_rate real,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
     archived_at timestamp with time zone DEFAULT now(),
     archive_reason character varying(50),
     archived_by character varying(50) DEFAULT 'decay_script'::character varying
@@ -1411,13 +1418,6 @@ CREATE TABLE public.entity_facts_archive (
 
 
 ALTER TABLE public.entity_facts_archive OWNER TO nova;
-
---
--- Name: TABLE entity_facts_archive; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.entity_facts_archive IS 'Soft-deleted entity facts. 1-year retention, then hard deleted. Can be restored if archived incorrectly.';
-
 
 --
 -- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -3817,14 +3817,6 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entity_facts_archive entity_facts_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.entity_facts_archive
-    ADD CONSTRAINT entity_facts_archive_pkey PRIMARY KEY (id);
-
-
---
 -- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -6211,5 +6203,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jhGpx63FTy5kn8nxYqPi0bD6yJodXEYeVQYy4Wj2NOeoz0aqZTgbRaK26ofYeBI
+\unrestrict h7dWjh2RRKdbfTlGangefvSyLS1Oy9OgJtCgoy2gWhnedocLMcbI7XRtHYXIbjH
 
