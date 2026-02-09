@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict he8JTrY7XdsOJ1nEI1umd7mrSAu7Sl07QwOBNRTnei5sbdFNgphPW9zezYPZzyD
+\restrict HMYRANFQPIlyLFlGkSQDOizdUc6Tf68qZ8v2XWxVcJVc6fDLdjnQfMxBw0sctvg
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1243,6 +1243,7 @@ CREATE TABLE public.entities (
     introduction_context text,
     capabilities jsonb,
     access_constraints jsonb,
+    preferred_contact character varying(50),
     CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[]))),
     CONSTRAINT valid_collaboration_scope CHECK (((collaboration_scope IS NULL) OR (collaboration_scope = ANY (ARRAY['full'::text, 'domain-specific'::text, 'supervised'::text]))))
 );
@@ -1297,6 +1298,13 @@ COMMENT ON COLUMN public.entities.capabilities IS 'What this entity can do - dom
 --
 
 COMMENT ON COLUMN public.entities.access_constraints IS 'Topics/data this entity should not see';
+
+
+--
+-- Name: COLUMN entities.preferred_contact; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entities.preferred_contact IS 'Preferred communication method: signal, email, slack, telegram, whatsapp, etc.';
 
 
 --
@@ -6292,9 +6300,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-<<<<<<< HEAD
-\unrestrict tFcPXpx1m7uzDp2vTA45io4EBVC6cAMMAOf74oqzXZ3PCvdxDql044mlLDCKz3I
-=======
-\unrestrict he8JTrY7XdsOJ1nEI1umd7mrSAu7Sl07QwOBNRTnei5sbdFNgphPW9zezYPZzyD
->>>>>>> feature/memory-confidence-system
+\unrestrict HMYRANFQPIlyLFlGkSQDOizdUc6Tf68qZ8v2XWxVcJVc6fDLdjnQfMxBw0sctvg
 
