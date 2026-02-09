@@ -2,6 +2,26 @@
 
 A PostgreSQL-based long-term memory system for AI assistants, with natural language extraction scripts.
 
+## Why This Exists
+
+AI assistants have a fundamental problem: they forget everything between sessions. Every conversation starts from zero. The workaround most people reach for is flat files: markdown logs, daily journals, a MEMORY.md that grows until it blows out the context window. That works for a while, then it doesn't.
+
+Here's what breaks:
+
+**Files don't scale.** A daily log from last Tuesday is 15KB. Multiply that across weeks and you're burning context tokens on information that's 95% irrelevant to the current conversation. You can't selectively load "just the facts about this person" from a wall of chronological text.
+
+**Files aren't queryable.** "What did Eiwe decide about the Vietnam hotel?" requires reading every daily log until you find it, or hoping your keyword search hits. A `SELECT decision, context FROM decisions WHERE decided_at > '2026-02-01'` returns the answer in milliseconds.
+
+**Files create dual-write problems.** Information lives in daily logs AND memory summaries AND reference docs. When something changes, you update one and forget the others. Now your memory contradicts itself.
+
+**Files can't enforce structure.** An entity fact stored as a line in a markdown file has no schema, no confidence score, no timestamp, no source attribution, no visibility controls. You can't decay stale facts, detect contradictions, or control what gets shared in group contexts.
+
+**Files are invisible across sessions.** If you create `memory/research-humidifiers.md` in one session, a future session has no way to know it exists unless it happens to search for the right keywords. There's no registry, no index, no discoverability layer.
+
+PostgreSQL solves all of these. Structured tables for entities, facts, events, decisions, and lessons. pgvector for semantic search across everything. Row-level confidence scores that decay over time. Privacy-scoped facts that filter based on who's in the conversation. A document registry so files don't become orphans. And hooks that automatically extract memories from conversations and hydrate context at session start, so none of this requires manual discipline.
+
+This isn't about replacing files entirely. Files are still great for reference documents, research notes, and human-readable archives. But the *memory system*, the thing that makes an AI assistant actually remember and reason about what it knows, belongs in a database.
+
 **For AI Entities:** This system helps you remember things across sessions by storing structured memories in a database. Follow the Quick Start below to set it up.
 
 ## Quick Start (For AI Assistants)
