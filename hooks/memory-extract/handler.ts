@@ -10,14 +10,16 @@
  * Never blocks message delivery. All errors are swallowed and logged.
  */
 
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { readFileSync, existsSync, readdirSync, statSync, appendFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
-const MEMORY_DB = "/home/openclaw/.openclaw/workspace/tools/memory-db";
-const SESSIONS_DIR = "/home/openclaw/.openclaw/agents/main/sessions";
-const LOG_FILE = "/home/openclaw/.openclaw/workspace/db/memory-extract.log";
-const STATE_FILE = "/home/openclaw/.openclaw/workspace/db/memory-extract-state.json";
+const HOME = process.env.HOME || "/home/openclaw";
+const WORKSPACE = process.env.OPENCLAW_WORKSPACE || join(HOME, ".openclaw/workspace");
+const MEMORY_DB = join(WORKSPACE, "tools/memory-db");
+const SESSIONS_DIR = join(HOME, ".openclaw/agents/main/sessions");
+const LOG_FILE = join(WORKSPACE, "db/memory-extract.log");
+const STATE_FILE = join(WORKSPACE, "db/memory-extract-state.json");
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes between extractions
 const MIN_MESSAGE_LENGTH = 80;
 
@@ -97,8 +99,13 @@ function getRecentTranscript(sessionId?: string, lineCount = 20): string[] {
 
     if (!sessionFile) return [];
 
-    const content = readFileSync(sessionFile, "utf-8");
-    const lines = content.trim().split("\n").slice(-lineCount);
+    let content: string;
+    try {
+      content = execSync(`tail -n ${lineCount} ${JSON.stringify(sessionFile)}`, { encoding: "utf-8" }).trim();
+    } catch {
+      content = readFileSync(sessionFile, "utf-8").trim();
+    }
+    const lines = content.split("\n");
     const messages: string[] = [];
 
     for (const line of lines) {
@@ -225,15 +232,12 @@ Rules:
 
 function storeMemory(entry: MemoryEntry) {
   try {
-    const esc = (s: string) => s.replace(/'/g, "'\\''");
+    const execOpts = { timeout: 5000, stdio: "pipe" as const };
 
     switch (entry.type) {
       case "fact":
         if (entry.entity && entry.key && entry.value) {
-          execSync(`${MEMORY_DB} add-fact '${esc(entry.entity)}' '${esc(entry.key)}' '${esc(entry.value)}'`, {
-            timeout: 5000,
-            stdio: "pipe",
-          });
+          execFileSync(MEMORY_DB, ["add-fact", entry.entity, entry.key, entry.value], execOpts);
           log(`stored fact: ${entry.entity}.${entry.key} = ${entry.value}`);
         }
         break;
@@ -241,35 +245,28 @@ function storeMemory(entry: MemoryEntry) {
       case "event":
         if (entry.title) {
           const today = new Date().toISOString().split("T")[0];
-          const desc = entry.description ? `--desc '${esc(entry.description)}'` : "";
-          execSync(`${MEMORY_DB} log-event '${today}' '${esc(entry.title)}' ${desc}`, {
-            timeout: 5000,
-            stdio: "pipe",
-          });
+          const args = ["log-event", today, entry.title];
+          if (entry.description) args.push(entry.description);
+          execFileSync(MEMORY_DB, args, execOpts);
           log(`stored event: ${entry.title}`);
         }
         break;
 
       case "lesson":
         if (entry.lesson) {
-          const ctx = entry.context ? `'${esc(entry.context)}'` : "";
-          execSync(`${MEMORY_DB} add-lesson '${esc(entry.lesson)}' ${ctx}`, {
-            timeout: 5000,
-            stdio: "pipe",
-          });
+          const args = ["add-lesson", entry.lesson];
+          if (entry.context) args.push(entry.context);
+          execFileSync(MEMORY_DB, args, execOpts);
           log(`stored lesson: ${entry.lesson.slice(0, 60)}`);
         }
         break;
 
       case "decision":
         if (entry.title) {
-          // Store decisions as events with a "decision:" prefix
           const today = new Date().toISOString().split("T")[0];
-          const desc = entry.description ? `--desc '${esc(entry.description)}'` : "";
-          execSync(`${MEMORY_DB} log-event '${today}' 'Decision: ${esc(entry.title)}' ${desc}`, {
-            timeout: 5000,
-            stdio: "pipe",
-          });
+          const args = ["log-event", today, `Decision: ${entry.title}`];
+          if (entry.description) args.push(entry.description);
+          execFileSync(MEMORY_DB, args, execOpts);
           log(`stored decision: ${entry.title}`);
         }
         break;

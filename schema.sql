@@ -5675,7 +5675,6 @@ CREATE INDEX idx_documents_doc_type ON public.documents USING btree (doc_type);
 -- Name: idx_documents_path; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_documents_path ON public.documents USING btree (path);
 
 
 --

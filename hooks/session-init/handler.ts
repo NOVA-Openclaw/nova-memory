@@ -10,8 +10,12 @@
 
 import { execSync } from "child_process";
 import { appendFileSync } from "fs";
+import { join } from "path";
 
-const LOG_FILE = "/home/openclaw/.openclaw/workspace/db/session-init.log";
+const HOME = process.env.HOME || "/home/openclaw";
+const WORKSPACE = process.env.OPENCLAW_WORKSPACE || join(HOME, ".openclaw/workspace");
+const LOG_FILE = join(WORKSPACE, "db/session-init.log");
+const DB_NAME = "auri_memory";
 
 function log(msg: string) {
   try {
@@ -29,56 +33,45 @@ function pgAvailable(): boolean {
 }
 
 function pgQuery(sql: string): any[] {
-  const script = `
-    const { Pool } = require('pg');
-    const pool = new Pool({ database: 'auri_memory', host: '/var/run/postgresql' });
-    (async () => {
-      const { rows } = await pool.query(${JSON.stringify(sql)});
-      console.log(JSON.stringify(rows));
-      await pool.end();
-    })().catch(() => { process.stdout.write('[]'); process.exit(0); });
-  `;
   try {
-    const result = execSync(`node -e ${JSON.stringify(script)}`, {
-      encoding: "utf-8",
-      timeout: 8000,
-      cwd: "/home/openclaw/.openclaw/workspace",
-    }).trim();
-    return JSON.parse(result || "[]");
+    const result = execSync(
+      `psql -d ${DB_NAME} -h /var/run/postgresql -t -A -F '\t' -c ${JSON.stringify(sql)}`,
+      { encoding: "utf-8", timeout: 5000, stdio: ["pipe", "pipe", "pipe"] }
+    ).trim();
+    if (!result) return [];
+    return result.split("\n").map(line => line.split("\t"));
   } catch {
     return [];
   }
 }
 
-function formatEvents(rows: any[]): string {
+function formatEvents(rows: any[][]): string {
   if (!rows.length) return "";
   let out = "## Recent Events (48h)\n\n";
-  for (const r of rows) {
-    const date = r.event_date?.slice(0, 10) || "?";
-    const time = r.event_time?.slice(0, 5) || "";
-    const desc = r.description ? `: ${r.description.slice(0, 200)}` : "";
-    out += `- **${date}${time ? " " + time : ""}** ${r.title}${desc}\n`;
+  for (const [eventDate, eventTime, title, description] of rows) {
+    const time = eventTime ? ` ${eventTime}` : "";
+    const desc = description ? `: ${description.slice(0, 200)}` : "";
+    out += `- **${eventDate || "?"}${time}** ${title}${desc}\n`;
   }
   return out + "\n";
 }
 
-function formatDecisions(rows: any[]): string {
+function formatDecisions(rows: any[][]): string {
   if (!rows.length) return "";
   let out = "## Recent Decisions (7d)\n\n";
-  for (const r of rows) {
-    const date = r.decided_at?.slice(0, 10) || "?";
-    const ctx = r.context ? ` (${r.context.slice(0, 120)})` : "";
-    out += `- **${date}** ${r.decision}${ctx}\n`;
+  for (const [decidedAt, decision, context] of rows) {
+    const ctx = context ? ` (${context.slice(0, 120)})` : "";
+    out += `- **${decidedAt || "?"}** ${decision}${ctx}\n`;
   }
   return out + "\n";
 }
 
-function formatLessons(rows: any[]): string {
+function formatLessons(rows: any[][]): string {
   if (!rows.length) return "";
   let out = "## Active Lessons (7d)\n\n";
-  for (const r of rows) {
-    const ctx = r.context ? ` — ${r.context.slice(0, 120)}` : "";
-    out += `- ${r.lesson}${ctx}\n`;
+  for (const [lesson, context] of rows) {
+    const ctx = context ? ` — ${context.slice(0, 120)}` : "";
+    out += `- ${lesson}${ctx}\n`;
   }
   return out + "\n";
 }
@@ -90,7 +83,7 @@ const handler = async (event: any) => {
   if (!ctx?.bootstrapFiles) return;
 
   const sessionKey = ctx.sessionKey || event.sessionKey || "";
-  if (sessionKey.includes("isolated") || sessionKey.includes("spawn")) return;
+  if (sessionKey.includes("isolated") || sessionKey.includes("spawn") || sessionKey.includes("subagent")) return;
 
   if (!pgAvailable()) {
     log("skipped: PG unavailable");
@@ -98,7 +91,7 @@ const handler = async (event: any) => {
   }
 
   const events = pgQuery(
-    `SELECT event_date::text, event_time::text, title, description
+    `SELECT event_date::text, to_char(event_time, 'HH24:MI'), title, description
      FROM events
      WHERE event_date >= (CURRENT_DATE - INTERVAL '2 days')
      ORDER BY event_date DESC, event_time DESC NULLS LAST
@@ -106,7 +99,7 @@ const handler = async (event: any) => {
   );
 
   const decisions = pgQuery(
-    `SELECT decided_at::text, decision, context
+    `SELECT decided_at::date::text, decision, context
      FROM decisions
      WHERE decided_at >= (NOW() - INTERVAL '7 days')
      ORDER BY decided_at DESC
@@ -118,6 +111,7 @@ const handler = async (event: any) => {
      FROM lessons
      WHERE learned_at >= (NOW() - INTERVAL '7 days')
        AND superseded_by IS NULL
+       AND confidence > 0.3
      ORDER BY learned_at DESC
      LIMIT 10`
   );
