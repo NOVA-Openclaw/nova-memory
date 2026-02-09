@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HCV5lb64gULJT20uE9ztyyAVdnGGkKosEy4enZjYzVdI9wGJblXzwB6ULUtxi4P
+\restrict SzPLTD9iKIuxcbGTNAUByaPMCVww8c740I737uTsNtbTP2bz3ENJt2OtYGRmXj4
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -488,6 +488,25 @@ $$;
 
 
 ALTER FUNCTION public.update_media_search_vector() OWNER TO nova;
+
+--
+-- Name: update_music_analysis_search_vector(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.update_music_analysis_search_vector() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.search_vector := 
+        setweight(to_tsvector('english', COALESCE(NEW.analysis_type, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.analysis_summary, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.notes, '')), 'C');
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_music_analysis_search_vector() OWNER TO nova;
 
 --
 -- Name: update_music_search_vector(); Type: FUNCTION; Schema: public; Owner: nova
@@ -2269,6 +2288,56 @@ ALTER SEQUENCE public.models_id_seq OWNED BY public.ai_models.id;
 
 
 --
+-- Name: music_analysis; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.music_analysis (
+    id integer NOT NULL,
+    music_id integer,
+    analysis_type character varying(50) NOT NULL,
+    analysis_summary text,
+    detailed_findings jsonb,
+    complexity_score numeric(4,2),
+    uniqueness_score numeric(4,2),
+    analyzed_by integer,
+    analyzed_at timestamp without time zone DEFAULT now(),
+    notes text,
+    search_vector tsvector
+);
+
+
+ALTER TABLE public.music_analysis OWNER TO nova;
+
+--
+-- Name: TABLE music_analysis; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.music_analysis IS 'Deep musical analysis (harmonic, rhythmic, lyrical, spectral). Managed by Erato.';
+
+
+--
+-- Name: music_analysis_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.music_analysis_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.music_analysis_id_seq OWNER TO nova;
+
+--
+-- Name: music_analysis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.music_analysis_id_seq OWNED BY public.music_analysis.id;
+
+
+--
 -- Name: music_library; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2316,6 +2385,13 @@ CREATE TABLE public.music_library (
 
 
 ALTER TABLE public.music_library OWNER TO nova;
+
+--
+-- Name: TABLE music_library; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.music_library IS 'Music-specific metadata extending media_consumed. Managed by Erato.';
+
 
 --
 -- Name: music_library_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -3798,6 +3874,13 @@ ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
+-- Name: music_analysis id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.music_analysis ALTER COLUMN id SET DEFAULT nextval('public.music_analysis_id_seq'::regclass);
+
+
+--
 -- Name: music_library id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -4241,6 +4324,14 @@ ALTER TABLE ONLY public.ai_models
 
 ALTER TABLE ONLY public.ai_models
     ADD CONSTRAINT models_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: music_analysis music_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.music_analysis
+    ADD CONSTRAINT music_analysis_pkey PRIMARY KEY (id);
 
 
 --
@@ -4866,6 +4957,27 @@ CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivff
 
 
 --
+-- Name: idx_music_analysis_music; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_music_analysis_music ON public.music_analysis USING btree (music_id);
+
+
+--
+-- Name: idx_music_analysis_search; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_music_analysis_search ON public.music_analysis USING gin (search_vector);
+
+
+--
+-- Name: idx_music_analysis_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_music_analysis_type ON public.music_analysis USING btree (analysis_type);
+
+
+--
 -- Name: idx_music_library_album; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -5301,6 +5413,13 @@ CREATE TRIGGER media_search_vector_update BEFORE INSERT OR UPDATE ON public.medi
 
 
 --
+-- Name: music_analysis music_analysis_search_update; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER music_analysis_search_update BEFORE INSERT OR UPDATE ON public.music_analysis FOR EACH ROW EXECUTE FUNCTION public.update_music_analysis_search_vector();
+
+
+--
 -- Name: music_library music_search_update; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -5580,6 +5699,22 @@ ALTER TABLE ONLY public.media_queue
 
 ALTER TABLE ONLY public.media_tags
     ADD CONSTRAINT media_tags_media_id_fkey FOREIGN KEY (media_id) REFERENCES public.media_consumed(id) ON DELETE CASCADE;
+
+
+--
+-- Name: music_analysis music_analysis_analyzed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.music_analysis
+    ADD CONSTRAINT music_analysis_analyzed_by_fkey FOREIGN KEY (analyzed_by) REFERENCES public.agents(id);
+
+
+--
+-- Name: music_analysis music_analysis_music_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.music_analysis
+    ADD CONSTRAINT music_analysis_music_id_fkey FOREIGN KEY (music_id) REFERENCES public.music_library(id) ON DELETE CASCADE;
 
 
 --
@@ -6595,5 +6730,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HCV5lb64gULJT20uE9ztyyAVdnGGkKosEy4enZjYzVdI9wGJblXzwB6ULUtxi4P
+\unrestrict SzPLTD9iKIuxcbGTNAUByaPMCVww8c740I737uTsNtbTP2bz3ENJt2OtYGRmXj4
 
