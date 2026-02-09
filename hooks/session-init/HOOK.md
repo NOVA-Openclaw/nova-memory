@@ -1,38 +1,30 @@
 ---
 name: session-init
-description: "Generate privacy-filtered context when session starts"
+description: "Inject recent activity context from PostgreSQL into agent bootstrap"
 metadata:
   {
-    "clawdbot":
+    "openclaw":
       {
-        "emoji": "🔐",
-        "events": ["message:received"],
+        "emoji": "📋",
+        "events": ["agent:bootstrap"],
+        "requires": { "bins": ["psql", "node"] },
       },
   }
 ---
 
 # Session Init Hook
 
-Generates privacy-filtered context based on session participants.
+Automatically queries PostgreSQL for recent activity and injects a summary into the agent's bootstrap context, replacing daily log file loading.
 
 ## What It Does
 
-When a message is received:
-1. Checks if session context file is stale (>5 min old or participants changed)
-2. Resolves participant phone numbers to entity IDs
-3. Queries entity_facts with privacy filtering
-4. Writes filtered context to `~/clawd/SESSION_CONTEXT.md`
+When `agent:bootstrap` fires:
 
-## Privacy Filtering
+1. Queries `events` table for last 48 hours of activity
+2. Queries `decisions` table for last 7 days
+3. Queries `lessons` table for last 7 days (non-superseded)
+4. Formats results and injects as `SESSION_CONTEXT.md` bootstrap file
 
-Only includes facts where:
-- `visibility = 'public'`, OR
-- `source_entity_id` matches a participant (their own data), OR
-- `privacy_scope` includes a participant (explicitly shared)
+## Fallback
 
-## Output
-
-`SESSION_CONTEXT.md` contains:
-- Participant names and entity IDs
-- Privacy-filtered facts from database
-- Timestamp for staleness checking
+If PostgreSQL is unavailable or no recent data exists, the hook silently skips.

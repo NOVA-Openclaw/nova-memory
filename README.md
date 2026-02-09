@@ -47,6 +47,7 @@ The schema (`schema.sql`) includes tables for:
 - **preferences** - User/system preferences
 - **sops** - Standard Operating Procedures for various tasks and workflows  
 - **agents** - Registry of AI agent instances for delegation
+- **documents** - Registry of workspace files and knowledge documents for cross-session discovery
 
 ### Access Control Architecture
 
@@ -556,6 +557,39 @@ SELECT title, theme, quality_score,
 FROM artwork ORDER BY created_at DESC LIMIT 5;
 ```
 
+### Documents Table (Document Registry)
+
+The `documents` table tracks workspace files and knowledge documents:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `id` | int | Primary key |
+| `path` | text | Unique file path (relative to workspace) |
+| `title` | varchar(255) | Human-readable title |
+| `doc_type` | varchar(50) | Category: config, memory, tool, hook, skill, etc. |
+| `description` | text | What this document contains/does |
+| `tags` | text[] | Searchable tags |
+
+**Use Cases:**
+- Discover what files exist without scanning the filesystem
+- Find relevant documents by type or keyword across sessions
+- Track which workspace files are registered vs unregistered
+
+**Example:**
+```sql
+-- Register a document
+INSERT INTO documents (path, title, doc_type, description)
+VALUES ('memory/research-craft-cli.md', 'Craft CLI Research', 'memory', 'Research notes on Craft.do API integration')
+ON CONFLICT (path) DO UPDATE SET title=EXCLUDED.title, updated_at=now();
+
+-- Find all memory documents
+SELECT title, path FROM documents WHERE doc_type = 'memory' ORDER BY title;
+
+-- Search documents
+SELECT title, path, description FROM documents
+WHERE title ILIKE '%research%' OR description ILIKE '%research%';
+```
+
 ### Setup
 
 ```bash
@@ -618,7 +652,18 @@ git add schema.sql && git commit -m "Update schema: [description]"
 git push
 ```
 
-## Clawdbot Hook (Automatic Extraction)
+## Hooks
+
+### Session Init Hook (`hooks/session-init/`)
+
+Automatically injects recent activity context from PostgreSQL into the agent's bootstrap. On `agent:bootstrap`, queries events (48h), decisions (7d), and lessons (7d), then formats them as a `SESSION_CONTEXT.md` bootstrap file. Falls back silently if PostgreSQL is unavailable.
+
+```bash
+cp -r hooks/session-init ~/clawd/hooks/
+openclaw hooks enable session-init
+```
+
+### Memory Extract Hook (`hooks/memory-extract/`)
 
 The `hooks/memory-extract/` directory contains a Clawdbot hook that automatically extracts memories from incoming messages.
 
