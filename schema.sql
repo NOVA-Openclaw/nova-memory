@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict d554ERJ31Tt5kjs7Gu2fNQtyGDb9MRCD3PG4xmE5wYgFfnr9eOmJpjwFnK3pe0r
+\restrict oi1UdeoqGAuWc7dMpmKTaVePgVRCDekHj090GUhPVXXwaQX5s3RK8ysKdNJrfdV
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1045,7 +1045,8 @@ CREATE TABLE public.artwork (
     quality_score integer,
     nostr_event_id text,
     nostr_image_url text,
-    x_tweet_id text
+    x_tweet_id text,
+    x_url text
 );
 
 
@@ -1221,6 +1222,114 @@ ALTER SEQUENCE public.conversations_id_seq OWNED BY public.conversations.id;
 
 
 --
+-- Name: entity_facts; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entity_facts (
+    id integer NOT NULL,
+    entity_id integer,
+    key character varying(255) NOT NULL,
+    value text NOT NULL,
+    data jsonb,
+    source character varying(255),
+    confidence double precision DEFAULT 1.0,
+    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    visibility character varying(20) DEFAULT 'public'::character varying,
+    privacy_scope integer[],
+    source_entity_id integer,
+    visibility_reason text,
+    vote_count integer DEFAULT 1,
+    last_confirmed timestamp without time zone DEFAULT now(),
+    data_type character varying(20) DEFAULT 'observation'::character varying,
+    last_confirmed_at timestamp with time zone DEFAULT now(),
+    confirmation_count integer DEFAULT 1,
+    decay_rate real,
+    CONSTRAINT chk_confidence CHECK (((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))),
+    CONSTRAINT chk_data_type CHECK (((data_type)::text = ANY ((ARRAY['permanent'::character varying, 'identity'::character varying, 'preference'::character varying, 'temporal'::character varying, 'observation'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.entity_facts OWNER TO nova;
+
+--
+-- Name: TABLE entity_facts; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entity_facts IS 'Key-value facts about entities. Check current_timezone for I)ruid before time-based actions.';
+
+
+--
+-- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
+
+
+--
+-- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
+
+
+--
+-- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
+
+
+--
+-- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
+
+
+--
+-- Name: COLUMN entity_facts.vote_count; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.vote_count IS 'Reinforcement count - incremented each time this fact is re-confirmed in conversation';
+
+
+--
+-- Name: COLUMN entity_facts.last_confirmed; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
+
+
+--
+-- Name: delegation_knowledge; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.delegation_knowledge AS
+ SELECT id,
+    key,
+    value,
+    confidence,
+    data_type,
+    source,
+    learned_at,
+    updated_at
+   FROM public.entity_facts ef
+  WHERE ((entity_id = 1) AND ((key)::text = ANY ((ARRAY['delegates_to'::character varying, 'task_delegation'::character varying, 'agent_capability'::character varying, 'agent_success'::character varying, 'agent_failure'::character varying])::text[])))
+  ORDER BY
+        CASE key
+            WHEN 'delegates_to'::text THEN 1
+            WHEN 'task_delegation'::text THEN 2
+            WHEN 'agent_capability'::text THEN 3
+            WHEN 'agent_success'::text THEN 4
+            WHEN 'agent_failure'::text THEN 5
+            ELSE 6
+        END, confidence DESC, value;
+
+
+ALTER VIEW public.delegation_knowledge OWNER TO nova;
+
+--
 -- Name: entities; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1373,86 +1482,6 @@ ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNED BY public.entity_fact_conflicts.id;
-
-
---
--- Name: entity_facts; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.entity_facts (
-    id integer NOT NULL,
-    entity_id integer,
-    key character varying(255) NOT NULL,
-    value text NOT NULL,
-    data jsonb,
-    source character varying(255),
-    confidence double precision DEFAULT 1.0,
-    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    visibility character varying(20) DEFAULT 'public'::character varying,
-    privacy_scope integer[],
-    source_entity_id integer,
-    visibility_reason text,
-    vote_count integer DEFAULT 1,
-    last_confirmed timestamp without time zone DEFAULT now(),
-    data_type character varying(20) DEFAULT 'observation'::character varying,
-    last_confirmed_at timestamp with time zone DEFAULT now(),
-    confirmation_count integer DEFAULT 1,
-    decay_rate real,
-    CONSTRAINT chk_confidence CHECK (((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))),
-    CONSTRAINT chk_data_type CHECK (((data_type)::text = ANY ((ARRAY['permanent'::character varying, 'identity'::character varying, 'preference'::character varying, 'temporal'::character varying, 'observation'::character varying])::text[])))
-);
-
-
-ALTER TABLE public.entity_facts OWNER TO nova;
-
---
--- Name: TABLE entity_facts; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.entity_facts IS 'Key-value facts about entities. Check current_timezone for I)ruid before time-based actions.';
-
-
---
--- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
-
-
---
--- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
-
-
---
--- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
-
-
---
--- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
-
-
---
--- Name: COLUMN entity_facts.vote_count; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.entity_facts.vote_count IS 'Reinforcement count - incremented each time this fact is re-confirmed in conversation';
-
-
---
--- Name: COLUMN entity_facts.last_confirmed; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
 
 
 --
@@ -5643,20 +5672,6 @@ GRANT SELECT ON TABLE public.conversations TO athena;
 
 
 --
--- Name: TABLE entities; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.entities TO newhart;
-GRANT SELECT ON TABLE public.entities TO gem;
-GRANT SELECT ON TABLE public.entities TO coder;
-GRANT SELECT ON TABLE public.entities TO scout;
-GRANT SELECT ON TABLE public.entities TO iris;
-GRANT SELECT ON TABLE public.entities TO gidget;
-GRANT SELECT ON TABLE public.entities TO ticker;
-GRANT SELECT ON TABLE public.entities TO athena;
-
-
---
 -- Name: TABLE entity_facts; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -5668,6 +5683,20 @@ GRANT SELECT ON TABLE public.entity_facts TO iris;
 GRANT SELECT ON TABLE public.entity_facts TO gidget;
 GRANT SELECT ON TABLE public.entity_facts TO ticker;
 GRANT SELECT ON TABLE public.entity_facts TO athena;
+
+
+--
+-- Name: TABLE entities; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.entities TO newhart;
+GRANT SELECT ON TABLE public.entities TO gem;
+GRANT SELECT ON TABLE public.entities TO coder;
+GRANT SELECT ON TABLE public.entities TO scout;
+GRANT SELECT ON TABLE public.entities TO iris;
+GRANT SELECT ON TABLE public.entities TO gidget;
+GRANT SELECT ON TABLE public.entities TO ticker;
+GRANT SELECT ON TABLE public.entities TO athena;
 
 
 --
@@ -6301,5 +6330,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict d554ERJ31Tt5kjs7Gu2fNQtyGDb9MRCD3PG4xmE5wYgFfnr9eOmJpjwFnK3pe0r
+\unrestrict oi1UdeoqGAuWc7dMpmKTaVePgVRCDekHj090GUhPVXXwaQX5s3RK8ysKdNJrfdV
 
