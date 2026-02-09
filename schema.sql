@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SzPLTD9iKIuxcbGTNAUByaPMCVww8c740I737uTsNtbTP2bz3ENJt2OtYGRmXj4
+\restrict ft6e6VEhwIjHLqwKSzFuygOFIO1cXGO3Wra820aceqB9mDli6mmOOKVwko0fEzl
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
@@ -40,14 +40,14 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
 
 
 --
--- Name: agent_chat_status; Type: TYPE; Schema: public; Owner: nova
+-- Name: agent_chat_status; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.agent_chat_status AS ENUM (
@@ -58,10 +58,8 @@ CREATE TYPE public.agent_chat_status AS ENUM (
 );
 
 
-ALTER TYPE public.agent_chat_status OWNER TO nova;
-
 --
--- Name: calculate_word_count(); Type: FUNCTION; Schema: public; Owner: erato
+-- Name: calculate_word_count(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.calculate_word_count() RETURNS trigger
@@ -75,10 +73,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.calculate_word_count() OWNER TO erato;
-
 --
--- Name: chat(text, character varying); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: chat(text, character varying); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.chat(p_message text, p_sender character varying DEFAULT 'nova'::character varying) RETURNS void
@@ -90,10 +86,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.chat(p_message text, p_sender character varying) OWNER TO nova;
-
 --
--- Name: cleanup_old_archives(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: cleanup_old_archives(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.cleanup_old_archives() RETURNS integer
@@ -110,17 +104,15 @@ END;
 $$;
 
 
-ALTER FUNCTION public.cleanup_old_archives() OWNER TO nova;
-
 --
--- Name: FUNCTION cleanup_old_archives(); Type: COMMENT; Schema: public; Owner: nova
+-- Name: FUNCTION cleanup_old_archives(); Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON FUNCTION public.cleanup_old_archives() IS 'Hard deletes archived facts older than 1 year. Run via cron or decay script.';
 
 
 --
--- Name: cleanup_old_embeddings_archive(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: cleanup_old_embeddings_archive(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.cleanup_old_embeddings_archive() RETURNS integer
@@ -136,17 +128,15 @@ END;
 $$;
 
 
-ALTER FUNCTION public.cleanup_old_embeddings_archive() OWNER TO nova;
-
 --
--- Name: FUNCTION cleanup_old_embeddings_archive(); Type: COMMENT; Schema: public; Owner: nova
+-- Name: FUNCTION cleanup_old_embeddings_archive(); Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON FUNCTION public.cleanup_old_embeddings_archive() IS 'Hard deletes archived embeddings older than 1 year.';
 
 
 --
--- Name: cleanup_old_events_archive(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: cleanup_old_events_archive(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.cleanup_old_events_archive() RETURNS integer
@@ -162,17 +152,15 @@ END;
 $$;
 
 
-ALTER FUNCTION public.cleanup_old_events_archive() OWNER TO nova;
-
 --
--- Name: FUNCTION cleanup_old_events_archive(); Type: COMMENT; Schema: public; Owner: nova
+-- Name: FUNCTION cleanup_old_events_archive(); Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON FUNCTION public.cleanup_old_events_archive() IS 'Hard deletes archived events older than 1 year.';
 
 
 --
--- Name: cleanup_old_lessons_archive(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: cleanup_old_lessons_archive(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.cleanup_old_lessons_archive() RETURNS integer
@@ -188,17 +176,15 @@ END;
 $$;
 
 
-ALTER FUNCTION public.cleanup_old_lessons_archive() OWNER TO nova;
-
 --
--- Name: FUNCTION cleanup_old_lessons_archive(); Type: COMMENT; Schema: public; Owner: nova
+-- Name: FUNCTION cleanup_old_lessons_archive(); Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON FUNCTION public.cleanup_old_lessons_archive() IS 'Hard deletes archived lessons older than 1 year.';
 
 
 --
--- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.embed_chat_message() RETURNS trigger
@@ -218,10 +204,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.embed_chat_message() OWNER TO nova;
-
 --
--- Name: expire_old_chat(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: expire_old_chat(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.expire_old_chat() RETURNS integer
@@ -240,10 +224,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
-
 --
--- Name: get_ralph_state(text); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: get_ralph_state(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.get_ralph_state(p_series_id text) RETURNS TABLE(iteration integer, state jsonb, status text)
@@ -257,10 +239,8 @@ CREATE FUNCTION public.get_ralph_state(p_series_id text) RETURNS TABLE(iteration
 $$;
 
 
-ALTER FUNCTION public.get_ralph_state(p_series_id text) OWNER TO nova;
-
 --
--- Name: notify_agent_chat(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: notify_agent_chat(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.notify_agent_chat() RETURNS trigger
@@ -286,10 +266,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.notify_agent_chat() OWNER TO postgres;
-
 --
--- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.notify_gambling_change() RETURNS trigger
@@ -302,10 +280,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.notify_gambling_change() OWNER TO nova;
-
 --
--- Name: notify_schema_change(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: notify_schema_change(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.notify_schema_change() RETURNS event_trigger
@@ -329,10 +305,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.notify_schema_change() OWNER TO postgres;
-
 --
--- Name: prevent_locked_project_update(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: prevent_locked_project_update(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.prevent_locked_project_update() RETURNS trigger
@@ -352,10 +326,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.prevent_locked_project_update() OWNER TO nova;
-
 --
--- Name: search_media(text, integer); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: search_media(text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.search_media(query_text text, result_limit integer DEFAULT 20) RETURNS TABLE(id integer, media_type character varying, title character varying, creator character varying, summary text, rank real)
@@ -378,10 +350,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.search_media(query_text text, result_limit integer) OWNER TO nova;
-
 --
--- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.search_memories(query_embedding public.vector, match_count integer DEFAULT 5, similarity_threshold double precision DEFAULT 0.7) RETURNS TABLE(id integer, source_type character varying, source_id text, content text, similarity double precision)
@@ -403,10 +373,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.search_memories(query_embedding public.vector, match_count integer, similarity_threshold double precision) OWNER TO nova;
-
 --
--- Name: send_agent_message(character varying, text, character varying, text[]); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: send_agent_message(character varying, text, character varying, text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying DEFAULT 'system'::character varying, p_mentions text[] DEFAULT NULL::text[]) RETURNS integer
@@ -437,10 +405,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) OWNER TO nova;
-
 --
--- Name: table_comment(text); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: table_comment(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.table_comment(tbl text) RETURNS text
@@ -450,10 +416,8 @@ CREATE FUNCTION public.table_comment(tbl text) RETURNS text
 $$;
 
 
-ALTER FUNCTION public.table_comment(tbl text) OWNER TO nova;
-
 --
--- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_agents_timestamp() RETURNS trigger
@@ -466,10 +430,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_agents_timestamp() OWNER TO nova;
-
 --
--- Name: update_media_search_vector(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: update_media_search_vector(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_media_search_vector() RETURNS trigger
@@ -487,10 +449,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_media_search_vector() OWNER TO nova;
-
 --
--- Name: update_music_analysis_search_vector(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: update_music_analysis_search_vector(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_music_analysis_search_vector() RETURNS trigger
@@ -506,10 +466,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_music_analysis_search_vector() OWNER TO nova;
-
 --
--- Name: update_music_search_vector(); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: update_music_search_vector(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_music_search_vector() RETURNS trigger
@@ -529,10 +487,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_music_search_vector() OWNER TO nova;
-
 --
--- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: public; Owner: erato
+-- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_work_status_on_publication() RETURNS trigger
@@ -545,10 +501,8 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_work_status_on_publication() OWNER TO erato;
-
 --
--- Name: update_works_timestamp(); Type: FUNCTION; Schema: public; Owner: erato
+-- Name: update_works_timestamp(); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_works_timestamp() RETURNS trigger
@@ -558,14 +512,12 @@ BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$;
 
 
-ALTER FUNCTION public.update_works_timestamp() OWNER TO erato;
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: agent_actions; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_actions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agent_actions (
@@ -580,17 +532,15 @@ CREATE TABLE public.agent_actions (
 );
 
 
-ALTER TABLE public.agent_actions OWNER TO nova;
-
 --
--- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agent_actions IS 'Log of NOVA actions for continuity. Write freely to track work and avoid duplicates.';
 
 
 --
--- Name: agent_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.agent_actions_id_seq
@@ -602,17 +552,15 @@ CREATE SEQUENCE public.agent_actions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_actions_id_seq OWNER TO nova;
-
 --
--- Name: agent_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.agent_actions_id_seq OWNED BY public.agent_actions.id;
 
 
 --
--- Name: agent_chat; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_chat; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agent_chat (
@@ -626,17 +574,15 @@ CREATE TABLE public.agent_chat (
 );
 
 
-ALTER TABLE public.agent_chat OWNER TO nova;
-
 --
--- Name: TABLE agent_chat; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_chat; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agent_chat IS 'Inter-agent messaging via PostgreSQL NOTIFY. Agents write messages here mentioning other agents; receiving agents listen via the agent-chat-channel Clawdbot plugin. Plugin source: https://github.com/NOVA-Openclaw/nova-scripts/tree/main/agent-chat-channel';
 
 
 --
--- Name: agent_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.agent_chat_id_seq
@@ -648,17 +594,15 @@ CREATE SEQUENCE public.agent_chat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_chat_id_seq OWNER TO nova;
-
 --
--- Name: agent_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.agent_chat_id_seq OWNED BY public.agent_chat.id;
 
 
 --
--- Name: agent_chat_processed; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_chat_processed; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agent_chat_processed (
@@ -672,17 +616,15 @@ CREATE TABLE public.agent_chat_processed (
 );
 
 
-ALTER TABLE public.agent_chat_processed OWNER TO nova;
-
 --
--- Name: TABLE agent_chat_processed; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_chat_processed; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agent_chat_processed IS 'Tracks which messages each agent has processed from agent_chat. Prevents duplicate processing. Used by agent-chat-channel plugin.';
 
 
 --
--- Name: agent_domains; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_domains; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agent_domains (
@@ -697,38 +639,36 @@ CREATE TABLE public.agent_domains (
 );
 
 
-ALTER TABLE public.agent_domains OWNER TO nova;
-
 --
--- Name: TABLE agent_domains; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_domains; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agent_domains IS 'Domain ownership for agents. Each domain_topic can only belong to one agent (enforced by unique constraint). Supports vote-based reinforcement.';
 
 
 --
--- Name: COLUMN agent_domains.domain_topic; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_domains.domain_topic; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_domains.domain_topic IS 'The topic/responsibility this agent owns';
 
 
 --
--- Name: COLUMN agent_domains.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_domains.source_entity_id; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_domains.source_entity_id IS 'Entity who assigned this domain (for attribution)';
 
 
 --
--- Name: COLUMN agent_domains.vote_count; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_domains.vote_count; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_domains.vote_count IS 'Reinforcement count - incremented when domain assignment is reconfirmed';
 
 
 --
--- Name: agent_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.agent_domains_id_seq
@@ -740,17 +680,15 @@ CREATE SEQUENCE public.agent_domains_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_domains_id_seq OWNER TO nova;
-
 --
--- Name: agent_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.agent_domains_id_seq OWNED BY public.agent_domains.id;
 
 
 --
--- Name: agent_jobs; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_jobs; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agent_jobs (
@@ -775,17 +713,15 @@ CREATE TABLE public.agent_jobs (
 );
 
 
-ALTER TABLE public.agent_jobs OWNER TO nova;
-
 --
--- Name: TABLE agent_jobs; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_jobs; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agent_jobs IS 'Jobs routing system for inter-agent task coordination';
 
 
 --
--- Name: agent_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.agent_jobs_id_seq
@@ -797,17 +733,15 @@ CREATE SEQUENCE public.agent_jobs_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_jobs_id_seq OWNER TO nova;
-
 --
--- Name: agent_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.agent_jobs_id_seq OWNED BY public.agent_jobs.id;
 
 
 --
--- Name: agent_system_config; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_system_config; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agent_system_config (
@@ -820,59 +754,57 @@ CREATE TABLE public.agent_system_config (
 );
 
 
-ALTER TABLE public.agent_system_config OWNER TO nova;
-
 --
--- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agent_system_config IS 'Newhart''s domain: System-wide agent configuration. NOVA has READ-ONLY access. To modify, message Newhart via agent_chat. Stores universal context seed, system defaults, and cross-agent config.';
 
 
 --
--- Name: COLUMN agent_system_config.key; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.key; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_system_config.key IS 'Unique configuration key identifier';
 
 
 --
--- Name: COLUMN agent_system_config.value; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.value; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_system_config.value IS 'Configuration value (stored as text, cast based on value_type)';
 
 
 --
--- Name: COLUMN agent_system_config.value_type; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.value_type; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_system_config.value_type IS 'Type hint: text, json, boolean, number';
 
 
 --
--- Name: COLUMN agent_system_config.description; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.description; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_system_config.description IS 'Human-readable description of what this config controls';
 
 
 --
--- Name: COLUMN agent_system_config.updated_at; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.updated_at; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_system_config.updated_at IS 'Last modification timestamp';
 
 
 --
--- Name: COLUMN agent_system_config.updated_by; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.updated_by; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agent_system_config.updated_by IS 'Agent or system that last modified this config';
 
 
 --
--- Name: agents; Type: TABLE; Schema: public; Owner: nova
+-- Name: agents; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.agents (
@@ -905,115 +837,113 @@ CREATE TABLE public.agents (
 );
 
 
-ALTER TABLE public.agents OWNER TO nova;
-
 --
--- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.agents IS 'Agent registry. NOVA has READ-ONLY access. Modifications must go through NHR (Newhart) agent. Permission denied is intentional.';
 
 
 --
--- Name: COLUMN agents.access_details; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.access_details; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_command, endpoint URL, etc.';
 
 
 --
--- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
 
 
 --
--- Name: COLUMN agents.persistent; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.persistent; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = instantiated on-demand';
 
 
 --
--- Name: COLUMN agents.seed_context; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.seed_context; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.seed_context IS 'JSON: files, queries, SOPs to inject before tasking';
 
 
 --
--- Name: COLUMN agents.instantiation_sop; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.instantiation_sop; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.instantiation_sop IS 'SOP name for how to instantiate this agent (for ephemeral agents)';
 
 
 --
--- Name: COLUMN agents.nickname; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.nickname; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.nickname IS 'Short friendly name for easy reference';
 
 
 --
--- Name: COLUMN agents.instance_type; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.instance_type; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.instance_type IS 'subagent (spawned session) or peer (separate Clawdbot instance)';
 
 
 --
--- Name: COLUMN agents.home_dir; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.home_dir; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.home_dir IS 'Workspace path for peer agents';
 
 
 --
--- Name: COLUMN agents.unix_user; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.unix_user; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.unix_user IS 'Unix username for peer agents';
 
 
 --
--- Name: COLUMN agents.collaborative; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.collaborative; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.collaborative IS 'TRUE = work WITH NOVA in dialogue, FALSE = work FOR NOVA on tasks';
 
 
 --
--- Name: COLUMN agents.config_reasoning; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.config_reasoning; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.config_reasoning IS 'Newhart-maintained notes explaining why this agent is configured as it is (model, persistent, collaborative, etc.)';
 
 
 --
--- Name: COLUMN agents.fallback_model; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.fallback_model; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.fallback_model IS 'Fallback model if primary fails (auth issues, rate limits, etc.)';
 
 
 --
--- Name: COLUMN agents.collaborate; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.collaborate; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.collaborate IS 'Collaboration scope: null = task-only, JSONB defines topics/areas where this agent can collaborate vs just execute. Example: {"allowed": ["architecture", "design"], "excluded": ["execution"]}';
 
 
 --
--- Name: COLUMN agents.decision_criteria; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.decision_criteria; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.agents.decision_criteria IS 'Criteria for when to spawn this agent - helps NOVA route tasks';
 
 
 --
--- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.agents_id_seq
@@ -1025,17 +955,15 @@ CREATE SEQUENCE public.agents_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agents_id_seq OWNER TO nova;
-
 --
--- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
 
 
 --
--- Name: ai_models; Type: TABLE; Schema: public; Owner: nova
+-- Name: ai_models; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.ai_models (
@@ -1056,17 +984,15 @@ CREATE TABLE public.ai_models (
 );
 
 
-ALTER TABLE public.ai_models OWNER TO nova;
-
 --
--- Name: TABLE ai_models; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE ai_models; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.ai_models IS 'Available AI models. NOVA maintains this; Newhart reads for agent assignments. Credentials and endpoints stored in 1Password (see credential_ref column).';
 
 
 --
--- Name: artwork; Type: TABLE; Schema: public; Owner: nova
+-- Name: artwork; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.artwork (
@@ -1092,31 +1018,29 @@ CREATE TABLE public.artwork (
 );
 
 
-ALTER TABLE public.artwork OWNER TO nova;
-
 --
--- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.artwork IS 'Archive of NOVAs Instagram artwork. Reference for future compilation.';
 
 
 --
--- Name: COLUMN artwork.image_data; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN artwork.image_data; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.artwork.image_data IS 'Raw image binary data (PNG/JPG)';
 
 
 --
--- Name: COLUMN artwork.inspiration_source; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN artwork.inspiration_source; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.artwork.inspiration_source IS 'News snippet or source that inspired this artwork';
 
 
 --
--- Name: artwork_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: artwork_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.artwork_id_seq
@@ -1128,17 +1052,15 @@ CREATE SEQUENCE public.artwork_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.artwork_id_seq OWNER TO nova;
-
 --
--- Name: artwork_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: artwork_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.artwork_id_seq OWNED BY public.artwork.id;
 
 
 --
--- Name: asset_classes; Type: TABLE; Schema: public; Owner: nova
+-- Name: asset_classes; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.asset_classes (
@@ -1151,10 +1073,8 @@ CREATE TABLE public.asset_classes (
 );
 
 
-ALTER TABLE public.asset_classes OWNER TO nova;
-
 --
--- Name: certificates; Type: TABLE; Schema: public; Owner: nova
+-- Name: certificates; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.certificates (
@@ -1173,38 +1093,36 @@ CREATE TABLE public.certificates (
 );
 
 
-ALTER TABLE public.certificates OWNER TO nova;
-
 --
--- Name: TABLE certificates; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE certificates; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.certificates IS 'Client certificates issued by NOVA CA. Security-sensitive. Verify before modifications.';
 
 
 --
--- Name: COLUMN certificates.fingerprint; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN certificates.fingerprint; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.certificates.fingerprint IS 'SHA256 fingerprint of the certificate';
 
 
 --
--- Name: COLUMN certificates.serial; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN certificates.serial; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.certificates.serial IS 'Certificate serial number';
 
 
 --
--- Name: COLUMN certificates.revoked_at; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN certificates.revoked_at; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.certificates.revoked_at IS 'If set, certificate is revoked and should be rejected';
 
 
 --
--- Name: certificates_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: certificates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.certificates_id_seq
@@ -1216,17 +1134,15 @@ CREATE SEQUENCE public.certificates_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.certificates_id_seq OWNER TO nova;
-
 --
--- Name: certificates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: certificates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.certificates_id_seq OWNED BY public.certificates.id;
 
 
 --
--- Name: conversations; Type: TABLE; Schema: public; Owner: nova
+-- Name: conversations; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.conversations (
@@ -1239,10 +1155,8 @@ CREATE TABLE public.conversations (
 );
 
 
-ALTER TABLE public.conversations OWNER TO nova;
-
 --
--- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.conversations_id_seq
@@ -1254,17 +1168,15 @@ CREATE SEQUENCE public.conversations_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.conversations_id_seq OWNER TO nova;
-
 --
--- Name: conversations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: conversations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.conversations_id_seq OWNED BY public.conversations.id;
 
 
 --
--- Name: entity_facts; Type: TABLE; Schema: public; Owner: nova
+-- Name: entity_facts; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.entity_facts (
@@ -1292,59 +1204,57 @@ CREATE TABLE public.entity_facts (
 );
 
 
-ALTER TABLE public.entity_facts OWNER TO nova;
-
 --
--- Name: TABLE entity_facts; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE entity_facts; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.entity_facts IS 'Key-value facts about entities. Check current_timezone for I)ruid before time-based actions.';
 
 
 --
--- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
 
 
 --
--- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
 
 
 --
--- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
 
 
 --
--- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
 
 
 --
--- Name: COLUMN entity_facts.vote_count; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entity_facts.vote_count; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entity_facts.vote_count IS 'Reinforcement count - incremented each time this fact is re-confirmed in conversation';
 
 
 --
--- Name: COLUMN entity_facts.last_confirmed; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entity_facts.last_confirmed; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
 
 
 --
--- Name: delegation_knowledge; Type: VIEW; Schema: public; Owner: nova
+-- Name: delegation_knowledge; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.delegation_knowledge AS
@@ -1369,10 +1279,8 @@ CREATE VIEW public.delegation_knowledge AS
         END, confidence DESC, value;
 
 
-ALTER VIEW public.delegation_knowledge OWNER TO nova;
-
 --
--- Name: entities; Type: TABLE; Schema: public; Owner: nova
+-- Name: entities; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.entities (
@@ -1401,66 +1309,64 @@ CREATE TABLE public.entities (
 );
 
 
-ALTER TABLE public.entities OWNER TO nova;
-
 --
--- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.entities IS 'People, AIs, organizations. NOVA has full access. Use entity_facts for attributes.';
 
 
 --
--- Name: COLUMN entities.collaborate; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.collaborate; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.collaborate IS 'If true, collaborate with this entity. If false, task them. NULL = not assessed.';
 
 
 --
--- Name: COLUMN entities.collaboration_scope; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.collaboration_scope; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.collaboration_scope IS 'full | domain-specific | supervised - determines collaboration breadth';
 
 
 --
--- Name: COLUMN entities.trust_level; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.trust_level; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.trust_level IS 'Trust level for confidence scoring: owner, admin, user, unknown, untrusted';
 
 
 --
--- Name: COLUMN entities.introduction_context; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.introduction_context; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.introduction_context IS 'How/why we connected with this entity, relationship context';
 
 
 --
--- Name: COLUMN entities.capabilities; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.capabilities; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.capabilities IS 'What this entity can do - domains, skills, tools';
 
 
 --
--- Name: COLUMN entities.access_constraints; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.access_constraints; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.access_constraints IS 'Topics/data this entity should not see';
 
 
 --
--- Name: COLUMN entities.preferred_contact; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN entities.preferred_contact; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.entities.preferred_contact IS 'Preferred communication method: signal, email, slack, telegram, whatsapp, etc.';
 
 
 --
--- Name: entities_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: entities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.entities_id_seq
@@ -1472,17 +1378,15 @@ CREATE SEQUENCE public.entities_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.entities_id_seq OWNER TO nova;
-
 --
--- Name: entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.entities_id_seq OWNED BY public.entities.id;
 
 
 --
--- Name: entity_fact_conflicts; Type: TABLE; Schema: public; Owner: nova
+-- Name: entity_fact_conflicts; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.entity_fact_conflicts (
@@ -1502,10 +1406,8 @@ CREATE TABLE public.entity_fact_conflicts (
 );
 
 
-ALTER TABLE public.entity_fact_conflicts OWNER TO nova;
-
 --
--- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.entity_fact_conflicts_id_seq
@@ -1517,17 +1419,15 @@ CREATE SEQUENCE public.entity_fact_conflicts_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNER TO nova;
-
 --
--- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNED BY public.entity_fact_conflicts.id;
 
 
 --
--- Name: entity_facts_archive; Type: TABLE; Schema: public; Owner: nova
+-- Name: entity_facts_archive; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.entity_facts_archive (
@@ -1556,10 +1456,8 @@ CREATE TABLE public.entity_facts_archive (
 );
 
 
-ALTER TABLE public.entity_facts_archive OWNER TO nova;
-
 --
--- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.entity_facts_id_seq
@@ -1571,17 +1469,15 @@ CREATE SEQUENCE public.entity_facts_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.entity_facts_id_seq OWNER TO nova;
-
 --
--- Name: entity_facts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: entity_facts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.entity_facts_id_seq OWNED BY public.entity_facts.id;
 
 
 --
--- Name: entity_relationships; Type: TABLE; Schema: public; Owner: nova
+-- Name: entity_relationships; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.entity_relationships (
@@ -1596,17 +1492,15 @@ CREATE TABLE public.entity_relationships (
 );
 
 
-ALTER TABLE public.entity_relationships OWNER TO nova;
-
 --
--- Name: TABLE entity_relationships; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE entity_relationships; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.entity_relationships IS 'Relationships between entities (family, work, friendship, etc).';
 
 
 --
--- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.entity_relationships_id_seq
@@ -1618,17 +1512,15 @@ CREATE SEQUENCE public.entity_relationships_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.entity_relationships_id_seq OWNER TO nova;
-
 --
--- Name: entity_relationships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: entity_relationships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.entity_relationships_id_seq OWNED BY public.entity_relationships.id;
 
 
 --
--- Name: event_entities; Type: TABLE; Schema: public; Owner: nova
+-- Name: event_entities; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.event_entities (
@@ -1638,10 +1530,8 @@ CREATE TABLE public.event_entities (
 );
 
 
-ALTER TABLE public.event_entities OWNER TO nova;
-
 --
--- Name: event_places; Type: TABLE; Schema: public; Owner: nova
+-- Name: event_places; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.event_places (
@@ -1650,10 +1540,8 @@ CREATE TABLE public.event_places (
 );
 
 
-ALTER TABLE public.event_places OWNER TO nova;
-
 --
--- Name: event_projects; Type: TABLE; Schema: public; Owner: nova
+-- Name: event_projects; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.event_projects (
@@ -1662,10 +1550,8 @@ CREATE TABLE public.event_projects (
 );
 
 
-ALTER TABLE public.event_projects OWNER TO nova;
-
 --
--- Name: events; Type: TABLE; Schema: public; Owner: nova
+-- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.events (
@@ -1681,17 +1567,15 @@ CREATE TABLE public.events (
 );
 
 
-ALTER TABLE public.events OWNER TO nova;
-
 --
--- Name: TABLE events; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE events; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.events IS 'Historical events, milestones, activities. Log significant occurrences.';
 
 
 --
--- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.events_id_seq
@@ -1703,17 +1587,15 @@ CREATE SEQUENCE public.events_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.events_id_seq OWNER TO nova;
-
 --
--- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
 
 --
--- Name: events_archive; Type: TABLE; Schema: public; Owner: nova
+-- Name: events_archive; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.events_archive (
@@ -1731,10 +1613,8 @@ CREATE TABLE public.events_archive (
 );
 
 
-ALTER TABLE public.events_archive OWNER TO nova;
-
 --
--- Name: gambling_entries; Type: TABLE; Schema: public; Owner: nova
+-- Name: gambling_entries; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.gambling_entries (
@@ -1751,10 +1631,8 @@ CREATE TABLE public.gambling_entries (
 );
 
 
-ALTER TABLE public.gambling_entries OWNER TO nova;
-
 --
--- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.gambling_entries_id_seq
@@ -1766,17 +1644,15 @@ CREATE SEQUENCE public.gambling_entries_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.gambling_entries_id_seq OWNER TO nova;
-
 --
--- Name: gambling_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: gambling_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.gambling_entries_id_seq OWNED BY public.gambling_entries.id;
 
 
 --
--- Name: gambling_logs; Type: TABLE; Schema: public; Owner: nova
+-- Name: gambling_logs; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.gambling_logs (
@@ -1791,10 +1667,8 @@ CREATE TABLE public.gambling_logs (
 );
 
 
-ALTER TABLE public.gambling_logs OWNER TO nova;
-
 --
--- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.gambling_logs_id_seq
@@ -1806,17 +1680,15 @@ CREATE SEQUENCE public.gambling_logs_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.gambling_logs_id_seq OWNER TO nova;
-
 --
--- Name: gambling_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: gambling_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.gambling_logs_id_seq OWNED BY public.gambling_logs.id;
 
 
 --
--- Name: job_messages; Type: TABLE; Schema: public; Owner: nova
+-- Name: job_messages; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.job_messages (
@@ -1828,17 +1700,15 @@ CREATE TABLE public.job_messages (
 );
 
 
-ALTER TABLE public.job_messages OWNER TO nova;
-
 --
--- Name: TABLE job_messages; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE job_messages; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.job_messages IS 'Message log per job for conversation threading';
 
 
 --
--- Name: job_messages_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: job_messages_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.job_messages_id_seq
@@ -1850,17 +1720,15 @@ CREATE SEQUENCE public.job_messages_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.job_messages_id_seq OWNER TO nova;
-
 --
--- Name: job_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: job_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.job_messages_id_seq OWNED BY public.job_messages.id;
 
 
 --
--- Name: lessons; Type: TABLE; Schema: public; Owner: nova
+-- Name: lessons; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.lessons (
@@ -1878,24 +1746,22 @@ CREATE TABLE public.lessons (
 );
 
 
-ALTER TABLE public.lessons OWNER TO nova;
-
 --
--- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.lessons IS 'Lessons and insights learned. Update when learning something worth remembering.';
 
 
 --
--- Name: COLUMN lessons.confidence; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN lessons.confidence; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.lessons.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
 
 
 --
--- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.lessons_id_seq
@@ -1907,17 +1773,15 @@ CREATE SEQUENCE public.lessons_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.lessons_id_seq OWNER TO nova;
-
 --
--- Name: lessons_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: lessons_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.lessons_id_seq OWNED BY public.lessons.id;
 
 
 --
--- Name: lessons_archive; Type: TABLE; Schema: public; Owner: nova
+-- Name: lessons_archive; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.lessons_archive (
@@ -1937,17 +1801,15 @@ CREATE TABLE public.lessons_archive (
 );
 
 
-ALTER TABLE public.lessons_archive OWNER TO nova;
-
 --
--- Name: COLUMN lessons_archive.confidence; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN lessons_archive.confidence; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.lessons_archive.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
 
 
 --
--- Name: media_consumed; Type: TABLE; Schema: public; Owner: nova
+-- Name: media_consumed; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.media_consumed (
@@ -1974,73 +1836,71 @@ CREATE TABLE public.media_consumed (
 );
 
 
-ALTER TABLE public.media_consumed OWNER TO nova;
-
 --
--- Name: TABLE media_consumed; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE media_consumed; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts consumed by entities. Log completions here.';
 
 
 --
--- Name: COLUMN media_consumed.summary; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.summary; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.summary IS 'Athena (librarian-agent) generated summary - objective, factual';
 
 
 --
--- Name: COLUMN media_consumed.metadata; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.metadata; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.metadata IS 'Flexible metadata: duration, language, format, topics, word_count, etc.';
 
 
 --
--- Name: COLUMN media_consumed.source_file; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.source_file; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.source_file IS 'Local file path if media was downloaded';
 
 
 --
--- Name: COLUMN media_consumed.status; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.status; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.status IS 'Processing status: pending, processing, completed, failed, queued';
 
 
 --
--- Name: COLUMN media_consumed.ingested_by; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.ingested_by; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.ingested_by IS 'Agent ID that processed this media';
 
 
 --
--- Name: COLUMN media_consumed.ingested_at; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.ingested_at; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.ingested_at IS 'Timestamp when media was ingested/processed';
 
 
 --
--- Name: COLUMN media_consumed.search_vector; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.search_vector; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.search_vector IS 'Full-text search vector (title + notes + transcript + summary)';
 
 
 --
--- Name: COLUMN media_consumed.insights; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_consumed.insights; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_consumed.insights IS 'NOVA personal insights - analysis, connections, opinions';
 
 
 --
--- Name: media_consumed_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: media_consumed_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.media_consumed_id_seq
@@ -2052,17 +1912,15 @@ CREATE SEQUENCE public.media_consumed_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.media_consumed_id_seq OWNER TO nova;
-
 --
--- Name: media_consumed_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: media_consumed_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.media_consumed_id_seq OWNED BY public.media_consumed.id;
 
 
 --
--- Name: media_queue; Type: TABLE; Schema: public; Owner: nova
+-- Name: media_queue; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.media_queue (
@@ -2085,38 +1943,36 @@ CREATE TABLE public.media_queue (
 );
 
 
-ALTER TABLE public.media_queue OWNER TO nova;
-
 --
--- Name: TABLE media_queue; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE media_queue; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.media_queue IS 'Queue for media ingestion. Librarian agent processes these.';
 
 
 --
--- Name: COLUMN media_queue.priority; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_queue.priority; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_queue.priority IS '1=urgent, 5=normal, 10=low priority';
 
 
 --
--- Name: COLUMN media_queue.status; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_queue.status; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_queue.status IS 'pending, processing, completed, failed, duplicate';
 
 
 --
--- Name: COLUMN media_queue.result_media_id; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_queue.result_media_id; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_queue.result_media_id IS 'Foreign key to resulting media_consumed record';
 
 
 --
--- Name: media_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: media_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.media_queue_id_seq
@@ -2128,17 +1984,15 @@ CREATE SEQUENCE public.media_queue_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.media_queue_id_seq OWNER TO nova;
-
 --
--- Name: media_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: media_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.media_queue_id_seq OWNED BY public.media_queue.id;
 
 
 --
--- Name: media_tags; Type: TABLE; Schema: public; Owner: nova
+-- Name: media_tags; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.media_tags (
@@ -2151,31 +2005,29 @@ CREATE TABLE public.media_tags (
 );
 
 
-ALTER TABLE public.media_tags OWNER TO nova;
-
 --
--- Name: TABLE media_tags; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE media_tags; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.media_tags IS 'Tags/topics for media items. Helps with recommendations and search.';
 
 
 --
--- Name: COLUMN media_tags.source; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_tags.source; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_tags.source IS 'auto=AI-generated, manual=user-added';
 
 
 --
--- Name: COLUMN media_tags.confidence; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN media_tags.confidence; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.media_tags.confidence IS 'AI confidence score for auto-generated tags';
 
 
 --
--- Name: media_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: media_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.media_tags_id_seq
@@ -2187,17 +2039,15 @@ CREATE SEQUENCE public.media_tags_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.media_tags_id_seq OWNER TO nova;
-
 --
--- Name: media_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: media_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.media_tags_id_seq OWNED BY public.media_tags.id;
 
 
 --
--- Name: memory_embeddings; Type: TABLE; Schema: public; Owner: nova
+-- Name: memory_embeddings; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.memory_embeddings (
@@ -2213,17 +2063,15 @@ CREATE TABLE public.memory_embeddings (
 );
 
 
-ALTER TABLE public.memory_embeddings OWNER TO nova;
-
 --
--- Name: TABLE memory_embeddings; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE memory_embeddings; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.memory_embeddings IS 'Vector embeddings for semantic memory search. Used by proactive-recall.py.';
 
 
 --
--- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.memory_embeddings_id_seq
@@ -2235,17 +2083,15 @@ CREATE SEQUENCE public.memory_embeddings_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.memory_embeddings_id_seq OWNER TO nova;
-
 --
--- Name: memory_embeddings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: memory_embeddings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings.id;
 
 
 --
--- Name: memory_embeddings_archive; Type: TABLE; Schema: public; Owner: nova
+-- Name: memory_embeddings_archive; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.memory_embeddings_archive (
@@ -2263,10 +2109,8 @@ CREATE TABLE public.memory_embeddings_archive (
 );
 
 
-ALTER TABLE public.memory_embeddings_archive OWNER TO nova;
-
 --
--- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.models_id_seq
@@ -2278,17 +2122,15 @@ CREATE SEQUENCE public.models_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.models_id_seq OWNER TO nova;
-
 --
--- Name: models_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: models_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.models_id_seq OWNED BY public.ai_models.id;
 
 
 --
--- Name: music_analysis; Type: TABLE; Schema: public; Owner: nova
+-- Name: music_analysis; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.music_analysis (
@@ -2306,17 +2148,15 @@ CREATE TABLE public.music_analysis (
 );
 
 
-ALTER TABLE public.music_analysis OWNER TO nova;
-
 --
--- Name: TABLE music_analysis; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE music_analysis; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.music_analysis IS 'Deep musical analysis (harmonic, rhythmic, lyrical, spectral). Managed by Erato.';
 
 
 --
--- Name: music_analysis_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: music_analysis_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.music_analysis_id_seq
@@ -2328,17 +2168,15 @@ CREATE SEQUENCE public.music_analysis_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.music_analysis_id_seq OWNER TO nova;
-
 --
--- Name: music_analysis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: music_analysis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.music_analysis_id_seq OWNED BY public.music_analysis.id;
 
 
 --
--- Name: music_library; Type: TABLE; Schema: public; Owner: nova
+-- Name: music_library; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.music_library (
@@ -2384,17 +2222,15 @@ CREATE TABLE public.music_library (
 );
 
 
-ALTER TABLE public.music_library OWNER TO nova;
-
 --
--- Name: TABLE music_library; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE music_library; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.music_library IS 'Music-specific metadata extending media_consumed. Managed by Erato.';
 
 
 --
--- Name: music_library_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: music_library_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.music_library_id_seq
@@ -2406,17 +2242,15 @@ CREATE SEQUENCE public.music_library_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.music_library_id_seq OWNER TO nova;
-
 --
--- Name: music_library_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: music_library_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.music_library_id_seq OWNED BY public.music_library.id;
 
 
 --
--- Name: place_properties; Type: TABLE; Schema: public; Owner: nova
+-- Name: place_properties; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.place_properties (
@@ -2428,10 +2262,8 @@ CREATE TABLE public.place_properties (
 );
 
 
-ALTER TABLE public.place_properties OWNER TO nova;
-
 --
--- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.place_properties_id_seq
@@ -2443,17 +2275,15 @@ CREATE SEQUENCE public.place_properties_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.place_properties_id_seq OWNER TO nova;
-
 --
--- Name: place_properties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: place_properties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.place_properties_id_seq OWNED BY public.place_properties.id;
 
 
 --
--- Name: places; Type: TABLE; Schema: public; Owner: nova
+-- Name: places; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.places (
@@ -2475,17 +2305,15 @@ CREATE TABLE public.places (
 );
 
 
-ALTER TABLE public.places OWNER TO nova;
-
 --
--- Name: TABLE places; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE places; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.places IS 'Locations (houses, venues, cities). Reference I)ruid houses in USER.md.';
 
 
 --
--- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.places_id_seq
@@ -2497,17 +2325,15 @@ CREATE SEQUENCE public.places_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.places_id_seq OWNER TO nova;
-
 --
--- Name: places_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: places_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.places_id_seq OWNED BY public.places.id;
 
 
 --
--- Name: portfolio_positions; Type: TABLE; Schema: public; Owner: nova
+-- Name: portfolio_positions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.portfolio_positions (
@@ -2523,10 +2349,8 @@ CREATE TABLE public.portfolio_positions (
 );
 
 
-ALTER TABLE public.portfolio_positions OWNER TO nova;
-
 --
--- Name: portfolio_positions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: portfolio_positions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.portfolio_positions_id_seq
@@ -2538,17 +2362,15 @@ CREATE SEQUENCE public.portfolio_positions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.portfolio_positions_id_seq OWNER TO nova;
-
 --
--- Name: portfolio_positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: portfolio_positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.portfolio_positions_id_seq OWNED BY public.portfolio_positions.id;
 
 
 --
--- Name: portfolio_snapshots; Type: TABLE; Schema: public; Owner: nova
+-- Name: portfolio_snapshots; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.portfolio_snapshots (
@@ -2563,10 +2385,8 @@ CREATE TABLE public.portfolio_snapshots (
 );
 
 
-ALTER TABLE public.portfolio_snapshots OWNER TO nova;
-
 --
--- Name: portfolio_snapshots_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: portfolio_snapshots_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.portfolio_snapshots_id_seq
@@ -2578,17 +2398,15 @@ CREATE SEQUENCE public.portfolio_snapshots_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.portfolio_snapshots_id_seq OWNER TO nova;
-
 --
--- Name: portfolio_snapshots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: portfolio_snapshots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.portfolio_snapshots_id_seq OWNED BY public.portfolio_snapshots.id;
 
 
 --
--- Name: positions; Type: TABLE; Schema: public; Owner: nova
+-- Name: positions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.positions (
@@ -2615,10 +2433,8 @@ CREATE TABLE public.positions (
 );
 
 
-ALTER TABLE public.positions OWNER TO nova;
-
 --
--- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.positions_id_seq
@@ -2630,17 +2446,15 @@ CREATE SEQUENCE public.positions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.positions_id_seq OWNER TO nova;
-
 --
--- Name: positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.positions_id_seq OWNED BY public.positions.id;
 
 
 --
--- Name: preferences; Type: TABLE; Schema: public; Owner: nova
+-- Name: preferences; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.preferences (
@@ -2653,17 +2467,15 @@ CREATE TABLE public.preferences (
 );
 
 
-ALTER TABLE public.preferences OWNER TO nova;
-
 --
--- Name: TABLE preferences; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE preferences; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.preferences IS 'User preferences by entity_id. Check before making assumptions.';
 
 
 --
--- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.preferences_id_seq
@@ -2675,17 +2487,15 @@ CREATE SEQUENCE public.preferences_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.preferences_id_seq OWNER TO nova;
-
 --
--- Name: preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.preferences_id_seq OWNED BY public.preferences.id;
 
 
 --
--- Name: price_cache_v2; Type: TABLE; Schema: public; Owner: nova
+-- Name: price_cache_v2; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.price_cache_v2 (
@@ -2704,10 +2514,8 @@ CREATE TABLE public.price_cache_v2 (
 );
 
 
-ALTER TABLE public.price_cache_v2 OWNER TO nova;
-
 --
--- Name: project_entities; Type: TABLE; Schema: public; Owner: nova
+-- Name: project_entities; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.project_entities (
@@ -2717,10 +2525,8 @@ CREATE TABLE public.project_entities (
 );
 
 
-ALTER TABLE public.project_entities OWNER TO nova;
-
 --
--- Name: project_tasks; Type: TABLE; Schema: public; Owner: nova
+-- Name: project_tasks; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.project_tasks (
@@ -2736,10 +2542,8 @@ CREATE TABLE public.project_tasks (
 );
 
 
-ALTER TABLE public.project_tasks OWNER TO nova;
-
 --
--- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.project_tasks_id_seq
@@ -2751,17 +2555,15 @@ CREATE SEQUENCE public.project_tasks_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.project_tasks_id_seq OWNER TO nova;
-
 --
--- Name: project_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: project_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.project_tasks_id_seq OWNED BY public.project_tasks.id;
 
 
 --
--- Name: projects; Type: TABLE; Schema: public; Owner: nova
+-- Name: projects; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.projects (
@@ -2781,45 +2583,43 @@ CREATE TABLE public.projects (
 );
 
 
-ALTER TABLE public.projects OWNER TO nova;
-
 --
--- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.projects IS 'Project tracking. For repo-backed projects (locked=TRUE, repo_url set), use GitHub for management. For non-repo projects, use notes field here.';
 
 
 --
--- Name: COLUMN projects.git_config; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN projects.git_config; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.projects.git_config IS 'Per-project Git config: branch strategy, commit conventions, PR workflow, etc.';
 
 
 --
--- Name: COLUMN projects.repo_url; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN projects.repo_url; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.projects.repo_url IS 'GitHub repo URL. When set with locked=TRUE, this is the source of truth. Manage project via repo, not database.';
 
 
 --
--- Name: COLUMN projects.locked; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN projects.locked; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.projects.locked IS 'When TRUE, project is repo-backed. Use GitHub (repo_url) for docs/updates, not this table. Prevents accidental writes to notes field.';
 
 
 --
--- Name: COLUMN projects.skills; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN projects.skills; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/clawd/skills/) relevant to this project';
 
 
 --
--- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.projects_id_seq
@@ -2831,17 +2631,15 @@ CREATE SEQUENCE public.projects_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.projects_id_seq OWNER TO nova;
-
 --
--- Name: projects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: projects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.projects_id_seq OWNED BY public.projects.id;
 
 
 --
--- Name: publications; Type: TABLE; Schema: public; Owner: erato
+-- Name: publications; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.publications (
@@ -2857,10 +2655,8 @@ CREATE TABLE public.publications (
 );
 
 
-ALTER TABLE public.publications OWNER TO erato;
-
 --
--- Name: publications_id_seq; Type: SEQUENCE; Schema: public; Owner: erato
+-- Name: publications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.publications_id_seq
@@ -2872,17 +2668,15 @@ CREATE SEQUENCE public.publications_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.publications_id_seq OWNER TO erato;
-
 --
--- Name: publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: erato
+-- Name: publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.publications_id_seq OWNED BY public.publications.id;
 
 
 --
--- Name: ralph_sessions; Type: TABLE; Schema: public; Owner: nova
+-- Name: ralph_sessions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.ralph_sessions (
@@ -2904,31 +2698,29 @@ CREATE TABLE public.ralph_sessions (
 );
 
 
-ALTER TABLE public.ralph_sessions OWNER TO nova;
-
 --
--- Name: TABLE ralph_sessions; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE ralph_sessions; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.ralph_sessions IS 'Tracks Ralph-style iterative agent sessions. Each iteration runs with fresh context, state persists in DB.';
 
 
 --
--- Name: COLUMN ralph_sessions.session_series_id; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN ralph_sessions.session_series_id; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.ralph_sessions.session_series_id IS 'UUID or descriptive ID linking all iterations of the same task';
 
 
 --
--- Name: COLUMN ralph_sessions.status; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN ralph_sessions.status; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.ralph_sessions.status IS 'PENDING=not started, RUNNING=in progress, CONTINUE=done but more needed, COMPLETE=finished, ERROR=failed';
 
 
 --
--- Name: ralph_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: ralph_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.ralph_sessions_id_seq
@@ -2940,17 +2732,15 @@ CREATE SEQUENCE public.ralph_sessions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.ralph_sessions_id_seq OWNER TO nova;
-
 --
--- Name: ralph_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: ralph_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
 
 
 --
--- Name: sops; Type: TABLE; Schema: public; Owner: postgres
+-- Name: sops; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.sops (
@@ -2964,10 +2754,8 @@ CREATE TABLE public.sops (
 );
 
 
-ALTER TABLE public.sops OWNER TO postgres;
-
 --
--- Name: sops_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: sops_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.sops_id_seq
@@ -2979,17 +2767,15 @@ CREATE SEQUENCE public.sops_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.sops_id_seq OWNER TO postgres;
-
 --
--- Name: sops_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: sops_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.sops_id_seq OWNED BY public.sops.id;
 
 
 --
--- Name: tags; Type: TABLE; Schema: public; Owner: erato
+-- Name: tags; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.tags (
@@ -3003,10 +2789,8 @@ CREATE TABLE public.tags (
 );
 
 
-ALTER TABLE public.tags OWNER TO erato;
-
 --
--- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: erato
+-- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.tags_id_seq
@@ -3018,17 +2802,15 @@ CREATE SEQUENCE public.tags_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.tags_id_seq OWNER TO erato;
-
 --
--- Name: tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: erato
+-- Name: tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.tags_id_seq OWNED BY public.tags.id;
 
 
 --
--- Name: tasks; Type: TABLE; Schema: public; Owner: nova
+-- Name: tasks; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.tasks (
@@ -3058,38 +2840,36 @@ CREATE TABLE public.tasks (
 );
 
 
-ALTER TABLE public.tasks OWNER TO nova;
-
 --
--- Name: TABLE tasks; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE tasks; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.tasks IS 'Task tracking. NOVA can create, update status, assign. Check before starting work.';
 
 
 --
--- Name: COLUMN tasks.task_type; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN tasks.task_type; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.tasks.task_type IS 'one_off = complete once, recurring = resets after completion, fallback = low-priority repeatable when idle';
 
 
 --
--- Name: COLUMN tasks.recurrence_interval; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN tasks.recurrence_interval; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.tasks.recurrence_interval IS 'How often recurring tasks reset (e.g., 1 day, 1 week)';
 
 
 --
--- Name: COLUMN tasks.last_completed_at; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN tasks.last_completed_at; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.tasks.last_completed_at IS 'When task was last completed (for recurring reset logic)';
 
 
 --
--- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.tasks_id_seq
@@ -3101,17 +2881,15 @@ CREATE SEQUENCE public.tasks_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.tasks_id_seq OWNER TO nova;
-
 --
--- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
 
 
 --
--- Name: unsolved_problems; Type: TABLE; Schema: public; Owner: nova
+-- Name: unsolved_problems; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.unsolved_problems (
@@ -3136,17 +2914,15 @@ CREATE TABLE public.unsolved_problems (
 );
 
 
-ALTER TABLE public.unsolved_problems OWNER TO nova;
-
 --
--- Name: TABLE unsolved_problems; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE unsolved_problems; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.unsolved_problems IS 'Humanity''s unsolved problems for NOVA to work on during idle time. Part of the Motivation System - provides meaningful default work when task queue is empty.';
 
 
 --
--- Name: unsolved_problems_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: unsolved_problems_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.unsolved_problems_id_seq
@@ -3158,17 +2934,15 @@ CREATE SEQUENCE public.unsolved_problems_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.unsolved_problems_id_seq OWNER TO nova;
-
 --
--- Name: unsolved_problems_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: unsolved_problems_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.unsolved_problems_id_seq OWNED BY public.unsolved_problems.id;
 
 
 --
--- Name: v_agent_chat_recent; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_agent_chat_recent; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_agent_chat_recent AS
@@ -3184,10 +2958,8 @@ CREATE VIEW public.v_agent_chat_recent AS
   ORDER BY created_at DESC;
 
 
-ALTER VIEW public.v_agent_chat_recent OWNER TO nova;
-
 --
--- Name: v_agent_chat_stats; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_agent_chat_stats; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_agent_chat_stats AS
@@ -3202,10 +2974,8 @@ CREATE VIEW public.v_agent_chat_stats AS
    FROM public.agent_chat;
 
 
-ALTER VIEW public.v_agent_chat_stats OWNER TO nova;
-
 --
--- Name: v_agents; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_agents; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_agents AS
@@ -3224,10 +2994,8 @@ CREATE VIEW public.v_agents AS
   ORDER BY persistent DESC, role, name;
 
 
-ALTER VIEW public.v_agents OWNER TO nova;
-
 --
--- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_entity_facts AS
@@ -3242,10 +3010,8 @@ CREATE VIEW public.v_entity_facts AS
      JOIN public.entity_facts ef ON ((e.id = ef.entity_id)));
 
 
-ALTER VIEW public.v_entity_facts OWNER TO nova;
-
 --
--- Name: v_event_timeline; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_event_timeline; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_event_timeline AS
@@ -3263,10 +3029,8 @@ CREATE VIEW public.v_event_timeline AS
   ORDER BY ev.event_date DESC;
 
 
-ALTER VIEW public.v_event_timeline OWNER TO nova;
-
 --
--- Name: v_gambling_summary; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_gambling_summary; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_gambling_summary AS
@@ -3290,10 +3054,8 @@ CREATE VIEW public.v_gambling_summary AS
   GROUP BY l.id, l.name, l.location;
 
 
-ALTER VIEW public.v_gambling_summary OWNER TO nova;
-
 --
--- Name: v_media_queue_pending; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_media_queue_pending; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_media_queue_pending AS
@@ -3319,10 +3081,8 @@ CREATE VIEW public.v_media_queue_pending AS
   ORDER BY mq.priority, mq.requested_at;
 
 
-ALTER VIEW public.v_media_queue_pending OWNER TO nova;
-
 --
--- Name: v_media_with_tags; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_media_with_tags; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_media_with_tags AS
@@ -3348,10 +3108,8 @@ SELECT
     NULL::character varying[] AS tags;
 
 
-ALTER VIEW public.v_media_with_tags OWNER TO nova;
-
 --
--- Name: v_metamours; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_metamours; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_metamours AS
@@ -3366,10 +3124,8 @@ CREATE VIEW public.v_metamours AS
   WHERE (((e1.name)::text = 'I)ruid'::text) AND ((r1.relationship)::text = ANY ((ARRAY['partner'::character varying, 'casual'::character varying])::text[])) AND (e3.id <> e1.id) AND (e3.id <> e2.id) AND ((e3.type)::text = 'person'::text));
 
 
-ALTER VIEW public.v_metamours OWNER TO nova;
-
 --
--- Name: v_pending_tasks; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_pending_tasks; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_pending_tasks AS
@@ -3387,10 +3143,8 @@ CREATE VIEW public.v_pending_tasks AS
   ORDER BY t.priority, t.due_date;
 
 
-ALTER VIEW public.v_pending_tasks OWNER TO nova;
-
 --
--- Name: v_portfolio_allocation; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_portfolio_allocation; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_portfolio_allocation AS
@@ -3405,10 +3159,8 @@ CREATE VIEW public.v_portfolio_allocation AS
   GROUP BY p.asset_class;
 
 
-ALTER VIEW public.v_portfolio_allocation OWNER TO nova;
-
 --
--- Name: v_ralph_active; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_ralph_active; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_ralph_active AS
@@ -3432,10 +3184,8 @@ CREATE VIEW public.v_ralph_active AS
          LIMIT 1) = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'CONTINUE'::text]));
 
 
-ALTER VIEW public.v_ralph_active OWNER TO nova;
-
 --
--- Name: v_relationships; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_relationships; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_relationships AS
@@ -3450,10 +3200,8 @@ CREATE VIEW public.v_relationships AS
      JOIN public.entities e2 ON ((r.entity_b = e2.id)));
 
 
-ALTER VIEW public.v_relationships OWNER TO nova;
-
 --
--- Name: v_task_tree; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_task_tree; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_task_tree AS
@@ -3495,10 +3243,8 @@ CREATE VIEW public.v_task_tree AS
   ORDER BY path;
 
 
-ALTER VIEW public.v_task_tree OWNER TO nova;
-
 --
--- Name: v_users; Type: VIEW; Schema: public; Owner: nova
+-- Name: v_users; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.v_users AS
@@ -3549,10 +3295,8 @@ CREATE VIEW public.v_users AS
   GROUP BY e.id, e.name, e.full_name, e.type;
 
 
-ALTER VIEW public.v_users OWNER TO nova;
-
 --
--- Name: vehicles; Type: TABLE; Schema: public; Owner: nova
+-- Name: vehicles; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.vehicles (
@@ -3572,10 +3316,8 @@ CREATE TABLE public.vehicles (
 );
 
 
-ALTER TABLE public.vehicles OWNER TO nova;
-
 --
--- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.vehicles_id_seq
@@ -3587,17 +3329,15 @@ CREATE SEQUENCE public.vehicles_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.vehicles_id_seq OWNER TO nova;
-
 --
--- Name: vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.vehicles_id_seq OWNED BY public.vehicles.id;
 
 
 --
--- Name: vocabulary; Type: TABLE; Schema: public; Owner: nova
+-- Name: vocabulary; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.vocabulary (
@@ -3612,31 +3352,29 @@ CREATE TABLE public.vocabulary (
 );
 
 
-ALTER TABLE public.vocabulary OWNER TO nova;
-
 --
--- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition. Add names, terms, jargon as encountered.';
 
 
 --
--- Name: COLUMN vocabulary.vote_count; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN vocabulary.vote_count; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.vocabulary.vote_count IS 'Reinforcement count - incremented each time this word is mentioned';
 
 
 --
--- Name: COLUMN vocabulary.last_confirmed; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN vocabulary.last_confirmed; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.vocabulary.last_confirmed IS 'Timestamp of most recent confirmation';
 
 
 --
--- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.vocabulary_id_seq
@@ -3648,17 +3386,15 @@ CREATE SEQUENCE public.vocabulary_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.vocabulary_id_seq OWNER TO nova;
-
 --
--- Name: vocabulary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: vocabulary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
 
 
 --
--- Name: work_tags; Type: TABLE; Schema: public; Owner: erato
+-- Name: work_tags; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.work_tags (
@@ -3668,10 +3404,8 @@ CREATE TABLE public.work_tags (
 );
 
 
-ALTER TABLE public.work_tags OWNER TO erato;
-
 --
--- Name: works; Type: TABLE; Schema: public; Owner: erato
+-- Name: works; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.works (
@@ -3695,10 +3429,8 @@ CREATE TABLE public.works (
 );
 
 
-ALTER TABLE public.works OWNER TO erato;
-
 --
--- Name: works_id_seq; Type: SEQUENCE; Schema: public; Owner: erato
+-- Name: works_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.works_id_seq
@@ -3710,304 +3442,302 @@ CREATE SEQUENCE public.works_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.works_id_seq OWNER TO erato;
-
 --
--- Name: works_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: erato
+-- Name: works_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.works_id_seq OWNED BY public.works.id;
 
 
 --
--- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_actions ALTER COLUMN id SET DEFAULT nextval('public.agent_actions_id_seq'::regclass);
 
 
 --
--- Name: agent_chat id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_chat id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_chat ALTER COLUMN id SET DEFAULT nextval('public.agent_chat_id_seq'::regclass);
 
 
 --
--- Name: agent_domains id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_domains id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_domains ALTER COLUMN id SET DEFAULT nextval('public.agent_domains_id_seq'::regclass);
 
 
 --
--- Name: agent_jobs id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_jobs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_jobs ALTER COLUMN id SET DEFAULT nextval('public.agent_jobs_id_seq'::regclass);
 
 
 --
--- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agents id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agents_id_seq'::regclass);
 
 
 --
--- Name: ai_models id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: ai_models id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ai_models ALTER COLUMN id SET DEFAULT nextval('public.models_id_seq'::regclass);
 
 
 --
--- Name: artwork id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: artwork id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artwork_id_seq'::regclass);
 
 
 --
--- Name: certificates id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: certificates id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.certificates ALTER COLUMN id SET DEFAULT nextval('public.certificates_id_seq'::regclass);
 
 
 --
--- Name: conversations id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: conversations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.conversations ALTER COLUMN id SET DEFAULT nextval('public.conversations_id_seq'::regclass);
 
 
 --
--- Name: entities id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: entities id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entities ALTER COLUMN id SET DEFAULT nextval('public.entities_id_seq'::regclass);
 
 
 --
--- Name: entity_fact_conflicts id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: entity_fact_conflicts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_fact_conflicts ALTER COLUMN id SET DEFAULT nextval('public.entity_fact_conflicts_id_seq'::regclass);
 
 
 --
--- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_facts ALTER COLUMN id SET DEFAULT nextval('public.entity_facts_id_seq'::regclass);
 
 
 --
--- Name: entity_relationships id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: entity_relationships id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_relationships ALTER COLUMN id SET DEFAULT nextval('public.entity_relationships_id_seq'::regclass);
 
 
 --
--- Name: events id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: events id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.events_id_seq'::regclass);
 
 
 --
--- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.gambling_entries ALTER COLUMN id SET DEFAULT nextval('public.gambling_entries_id_seq'::regclass);
 
 
 --
--- Name: gambling_logs id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: gambling_logs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.gambling_logs ALTER COLUMN id SET DEFAULT nextval('public.gambling_logs_id_seq'::regclass);
 
 
 --
--- Name: job_messages id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: job_messages id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.job_messages ALTER COLUMN id SET DEFAULT nextval('public.job_messages_id_seq'::regclass);
 
 
 --
--- Name: lessons id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: lessons id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.lessons ALTER COLUMN id SET DEFAULT nextval('public.lessons_id_seq'::regclass);
 
 
 --
--- Name: media_consumed id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: media_consumed id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_consumed ALTER COLUMN id SET DEFAULT nextval('public.media_consumed_id_seq'::regclass);
 
 
 --
--- Name: media_queue id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: media_queue id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_queue ALTER COLUMN id SET DEFAULT nextval('public.media_queue_id_seq'::regclass);
 
 
 --
--- Name: media_tags id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: media_tags id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_tags ALTER COLUMN id SET DEFAULT nextval('public.media_tags_id_seq'::regclass);
 
 
 --
--- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('public.memory_embeddings_id_seq'::regclass);
 
 
 --
--- Name: music_analysis id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: music_analysis id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_analysis ALTER COLUMN id SET DEFAULT nextval('public.music_analysis_id_seq'::regclass);
 
 
 --
--- Name: music_library id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: music_library id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_library ALTER COLUMN id SET DEFAULT nextval('public.music_library_id_seq'::regclass);
 
 
 --
--- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.place_properties ALTER COLUMN id SET DEFAULT nextval('public.place_properties_id_seq'::regclass);
 
 
 --
--- Name: places id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: places id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.places ALTER COLUMN id SET DEFAULT nextval('public.places_id_seq'::regclass);
 
 
 --
--- Name: portfolio_positions id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: portfolio_positions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.portfolio_positions ALTER COLUMN id SET DEFAULT nextval('public.portfolio_positions_id_seq'::regclass);
 
 
 --
--- Name: portfolio_snapshots id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: portfolio_snapshots id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.portfolio_snapshots ALTER COLUMN id SET DEFAULT nextval('public.portfolio_snapshots_id_seq'::regclass);
 
 
 --
--- Name: positions id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: positions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.positions ALTER COLUMN id SET DEFAULT nextval('public.positions_id_seq'::regclass);
 
 
 --
--- Name: preferences id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: preferences id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.preferences ALTER COLUMN id SET DEFAULT nextval('public.preferences_id_seq'::regclass);
 
 
 --
--- Name: project_tasks id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: project_tasks id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.project_tasks ALTER COLUMN id SET DEFAULT nextval('public.project_tasks_id_seq'::regclass);
 
 
 --
--- Name: projects id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: projects id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.projects_id_seq'::regclass);
 
 
 --
--- Name: publications id; Type: DEFAULT; Schema: public; Owner: erato
+-- Name: publications id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.publications ALTER COLUMN id SET DEFAULT nextval('public.publications_id_seq'::regclass);
 
 
 --
--- Name: ralph_sessions id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: ralph_sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ralph_sessions ALTER COLUMN id SET DEFAULT nextval('public.ralph_sessions_id_seq'::regclass);
 
 
 --
--- Name: sops id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: sops id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sops ALTER COLUMN id SET DEFAULT nextval('public.sops_id_seq'::regclass);
 
 
 --
--- Name: tags id; Type: DEFAULT; Schema: public; Owner: erato
+-- Name: tags id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tags ALTER COLUMN id SET DEFAULT nextval('public.tags_id_seq'::regclass);
 
 
 --
--- Name: tasks id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: tasks id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks ALTER COLUMN id SET DEFAULT nextval('public.tasks_id_seq'::regclass);
 
 
 --
--- Name: unsolved_problems id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: unsolved_problems id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.unsolved_problems ALTER COLUMN id SET DEFAULT nextval('public.unsolved_problems_id_seq'::regclass);
 
 
 --
--- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.vehicles_id_seq'::regclass);
 
 
 --
--- Name: vocabulary id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: vocabulary id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
 
 
 --
--- Name: works id; Type: DEFAULT; Schema: public; Owner: erato
+-- Name: works id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.works ALTER COLUMN id SET DEFAULT nextval('public.works_id_seq'::regclass);
 
 
 --
--- Name: agent_actions agent_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -4015,7 +3745,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_chat agent_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_chat agent_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_chat
@@ -4023,7 +3753,7 @@ ALTER TABLE ONLY public.agent_chat
 
 
 --
--- Name: agent_chat_processed agent_chat_processed_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_chat_processed agent_chat_processed_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_chat_processed
@@ -4031,7 +3761,7 @@ ALTER TABLE ONLY public.agent_chat_processed
 
 
 --
--- Name: agent_domains agent_domains_domain_topic_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_domain_topic_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -4039,7 +3769,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_domains agent_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -4047,7 +3777,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_jobs agent_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_jobs agent_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_jobs
@@ -4055,7 +3785,7 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
--- Name: agent_system_config agent_system_config_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_system_config agent_system_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_system_config
@@ -4063,7 +3793,7 @@ ALTER TABLE ONLY public.agent_system_config
 
 
 --
--- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agents
@@ -4071,7 +3801,7 @@ ALTER TABLE ONLY public.agents
 
 
 --
--- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agents
@@ -4079,7 +3809,7 @@ ALTER TABLE ONLY public.agents
 
 
 --
--- Name: artwork artwork_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: artwork artwork_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.artwork
@@ -4087,7 +3817,7 @@ ALTER TABLE ONLY public.artwork
 
 
 --
--- Name: asset_classes asset_classes_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: asset_classes asset_classes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.asset_classes
@@ -4095,7 +3825,7 @@ ALTER TABLE ONLY public.asset_classes
 
 
 --
--- Name: certificates certificates_fingerprint_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: certificates certificates_fingerprint_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.certificates
@@ -4103,7 +3833,7 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: certificates certificates_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: certificates certificates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.certificates
@@ -4111,7 +3841,7 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: certificates certificates_serial_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: certificates certificates_serial_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.certificates
@@ -4119,7 +3849,7 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.conversations
@@ -4127,7 +3857,7 @@ ALTER TABLE ONLY public.conversations
 
 
 --
--- Name: entities entities_name_type_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entities entities_name_type_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entities
@@ -4135,7 +3865,7 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entities
@@ -4143,7 +3873,7 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entities entities_user_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entities entities_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entities
@@ -4151,7 +3881,7 @@ ALTER TABLE ONLY public.entities
 
 
 --
--- Name: entity_fact_conflicts entity_fact_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_fact_conflicts entity_fact_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_fact_conflicts
@@ -4159,7 +3889,7 @@ ALTER TABLE ONLY public.entity_fact_conflicts
 
 
 --
--- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_facts
@@ -4167,7 +3897,7 @@ ALTER TABLE ONLY public.entity_facts
 
 
 --
--- Name: entity_relationships entity_relationships_entity_a_entity_b_relationship_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_relationships entity_relationships_entity_a_entity_b_relationship_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -4175,7 +3905,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -4183,7 +3913,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: event_entities event_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_entities event_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_entities
@@ -4191,7 +3921,7 @@ ALTER TABLE ONLY public.event_entities
 
 
 --
--- Name: event_places event_places_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_places event_places_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_places
@@ -4199,7 +3929,7 @@ ALTER TABLE ONLY public.event_places
 
 
 --
--- Name: event_projects event_projects_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_projects event_projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_projects
@@ -4207,7 +3937,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: events_archive events_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: events_archive events_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.events_archive
@@ -4215,7 +3945,7 @@ ALTER TABLE ONLY public.events_archive
 
 
 --
--- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.events
@@ -4223,7 +3953,7 @@ ALTER TABLE ONLY public.events
 
 
 --
--- Name: gambling_entries gambling_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: gambling_entries gambling_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.gambling_entries
@@ -4231,7 +3961,7 @@ ALTER TABLE ONLY public.gambling_entries
 
 
 --
--- Name: gambling_logs gambling_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: gambling_logs gambling_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.gambling_logs
@@ -4239,7 +3969,7 @@ ALTER TABLE ONLY public.gambling_logs
 
 
 --
--- Name: job_messages job_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: job_messages job_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.job_messages
@@ -4247,7 +3977,7 @@ ALTER TABLE ONLY public.job_messages
 
 
 --
--- Name: lessons_archive lessons_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: lessons_archive lessons_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.lessons_archive
@@ -4255,7 +3985,7 @@ ALTER TABLE ONLY public.lessons_archive
 
 
 --
--- Name: lessons lessons_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: lessons lessons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.lessons
@@ -4263,7 +3993,7 @@ ALTER TABLE ONLY public.lessons
 
 
 --
--- Name: media_consumed media_consumed_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_consumed media_consumed_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_consumed
@@ -4271,7 +4001,7 @@ ALTER TABLE ONLY public.media_consumed
 
 
 --
--- Name: media_queue media_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_queue media_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_queue
@@ -4279,7 +4009,7 @@ ALTER TABLE ONLY public.media_queue
 
 
 --
--- Name: media_tags media_tags_media_id_tag_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_tags media_tags_media_id_tag_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_tags
@@ -4287,7 +4017,7 @@ ALTER TABLE ONLY public.media_tags
 
 
 --
--- Name: media_tags media_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_tags media_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_tags
@@ -4295,7 +4025,7 @@ ALTER TABLE ONLY public.media_tags
 
 
 --
--- Name: memory_embeddings_archive memory_embeddings_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: memory_embeddings_archive memory_embeddings_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.memory_embeddings_archive
@@ -4303,7 +4033,7 @@ ALTER TABLE ONLY public.memory_embeddings_archive
 
 
 --
--- Name: memory_embeddings memory_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: memory_embeddings memory_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.memory_embeddings
@@ -4311,7 +4041,7 @@ ALTER TABLE ONLY public.memory_embeddings
 
 
 --
--- Name: ai_models models_model_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: ai_models models_model_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ai_models
@@ -4319,7 +4049,7 @@ ALTER TABLE ONLY public.ai_models
 
 
 --
--- Name: ai_models models_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: ai_models models_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ai_models
@@ -4327,7 +4057,7 @@ ALTER TABLE ONLY public.ai_models
 
 
 --
--- Name: music_analysis music_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: music_analysis music_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_analysis
@@ -4335,7 +4065,7 @@ ALTER TABLE ONLY public.music_analysis
 
 
 --
--- Name: music_library music_library_media_id_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: music_library music_library_media_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_library
@@ -4343,7 +4073,7 @@ ALTER TABLE ONLY public.music_library
 
 
 --
--- Name: music_library music_library_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: music_library music_library_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_library
@@ -4351,7 +4081,7 @@ ALTER TABLE ONLY public.music_library
 
 
 --
--- Name: place_properties place_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: place_properties place_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.place_properties
@@ -4359,7 +4089,7 @@ ALTER TABLE ONLY public.place_properties
 
 
 --
--- Name: places places_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: places places_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.places
@@ -4367,7 +4097,7 @@ ALTER TABLE ONLY public.places
 
 
 --
--- Name: places places_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: places places_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.places
@@ -4375,7 +4105,7 @@ ALTER TABLE ONLY public.places
 
 
 --
--- Name: portfolio_positions portfolio_positions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: portfolio_positions portfolio_positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.portfolio_positions
@@ -4383,7 +4113,7 @@ ALTER TABLE ONLY public.portfolio_positions
 
 
 --
--- Name: portfolio_snapshots portfolio_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: portfolio_snapshots portfolio_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.portfolio_snapshots
@@ -4391,7 +4121,7 @@ ALTER TABLE ONLY public.portfolio_snapshots
 
 
 --
--- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.positions
@@ -4399,7 +4129,7 @@ ALTER TABLE ONLY public.positions
 
 
 --
--- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.preferences
@@ -4407,7 +4137,7 @@ ALTER TABLE ONLY public.preferences
 
 
 --
--- Name: price_cache_v2 price_cache_v2_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: price_cache_v2 price_cache_v2_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.price_cache_v2
@@ -4415,7 +4145,7 @@ ALTER TABLE ONLY public.price_cache_v2
 
 
 --
--- Name: project_entities project_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: project_entities project_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.project_entities
@@ -4423,7 +4153,7 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.project_tasks
@@ -4431,7 +4161,7 @@ ALTER TABLE ONLY public.project_tasks
 
 
 --
--- Name: projects projects_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: projects projects_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.projects
@@ -4439,7 +4169,7 @@ ALTER TABLE ONLY public.projects
 
 
 --
--- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.projects
@@ -4447,7 +4177,7 @@ ALTER TABLE ONLY public.projects
 
 
 --
--- Name: publications publications_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+-- Name: publications publications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.publications
@@ -4455,7 +4185,7 @@ ALTER TABLE ONLY public.publications
 
 
 --
--- Name: ralph_sessions ralph_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: ralph_sessions ralph_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ralph_sessions
@@ -4463,7 +4193,7 @@ ALTER TABLE ONLY public.ralph_sessions
 
 
 --
--- Name: ralph_sessions ralph_sessions_session_series_id_iteration_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: ralph_sessions ralph_sessions_session_series_id_iteration_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ralph_sessions
@@ -4471,7 +4201,7 @@ ALTER TABLE ONLY public.ralph_sessions
 
 
 --
--- Name: sops sops_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: sops sops_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sops
@@ -4479,7 +4209,7 @@ ALTER TABLE ONLY public.sops
 
 
 --
--- Name: tags tags_name_key; Type: CONSTRAINT; Schema: public; Owner: erato
+-- Name: tags tags_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tags
@@ -4487,7 +4217,7 @@ ALTER TABLE ONLY public.tags
 
 
 --
--- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+-- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tags
@@ -4495,7 +4225,7 @@ ALTER TABLE ONLY public.tags
 
 
 --
--- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -4503,7 +4233,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: unsolved_problems unsolved_problems_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: unsolved_problems unsolved_problems_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.unsolved_problems
@@ -4511,7 +4241,7 @@ ALTER TABLE ONLY public.unsolved_problems
 
 
 --
--- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vehicles
@@ -4519,7 +4249,7 @@ ALTER TABLE ONLY public.vehicles
 
 
 --
--- Name: vocabulary vocabulary_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: vocabulary vocabulary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vocabulary
@@ -4527,7 +4257,7 @@ ALTER TABLE ONLY public.vocabulary
 
 
 --
--- Name: vocabulary vocabulary_word_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: vocabulary vocabulary_word_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vocabulary
@@ -4535,7 +4265,7 @@ ALTER TABLE ONLY public.vocabulary
 
 
 --
--- Name: work_tags work_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+-- Name: work_tags work_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.work_tags
@@ -4543,7 +4273,7 @@ ALTER TABLE ONLY public.work_tags
 
 
 --
--- Name: works works_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
+-- Name: works works_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.works
@@ -4551,791 +4281,791 @@ ALTER TABLE ONLY public.works
 
 
 --
--- Name: events_archive_event_date_idx; Type: INDEX; Schema: public; Owner: nova
+-- Name: events_archive_event_date_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX events_archive_event_date_idx ON public.events_archive USING btree (event_date);
 
 
 --
--- Name: events_archive_search_vector_idx; Type: INDEX; Schema: public; Owner: nova
+-- Name: events_archive_search_vector_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX events_archive_search_vector_idx ON public.events_archive USING gin (search_vector);
 
 
 --
--- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_actions_agent ON public.agent_actions USING btree (agent_id);
 
 
 --
--- Name: idx_agent_actions_time; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_actions_time; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_actions_time ON public.agent_actions USING btree (created_at DESC);
 
 
 --
--- Name: idx_agent_actions_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_actions_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_actions_type ON public.agent_actions USING btree (action_type);
 
 
 --
--- Name: idx_agent_chat_channel; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_chat_channel; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_chat_channel ON public.agent_chat USING btree (channel, created_at DESC);
 
 
 --
--- Name: idx_agent_chat_mentions; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_chat_mentions; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_chat_mentions ON public.agent_chat USING gin (mentions);
 
 
 --
--- Name: idx_agent_chat_processed_unique; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_chat_processed_unique; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_agent_chat_processed_unique ON public.agent_chat_processed USING btree (chat_id, agent);
 
 
 --
--- Name: idx_agent_chat_sender; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_chat_sender; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_chat_sender ON public.agent_chat USING btree (sender, created_at DESC);
 
 
 --
--- Name: idx_agent_domains_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_domains_agent; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_domains_agent ON public.agent_domains USING btree (agent_id);
 
 
 --
--- Name: idx_agent_domains_topic; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_domains_topic; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_domains_topic ON public.agent_domains USING btree (domain_topic);
 
 
 --
--- Name: idx_agent_domains_votes; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_domains_votes; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agent_domains_votes ON public.agent_domains USING btree (vote_count DESC);
 
 
 --
--- Name: idx_agents_provider; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agents_provider; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agents_provider ON public.agents USING btree (provider);
 
 
 --
--- Name: idx_agents_role; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agents_role; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agents_role ON public.agents USING btree (role);
 
 
 --
--- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_agents_status ON public.agents USING btree (status);
 
 
 --
--- Name: idx_certificates_entity_id; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_certificates_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_certificates_entity_id ON public.certificates USING btree (entity_id);
 
 
 --
--- Name: idx_certificates_fingerprint; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_certificates_fingerprint; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_certificates_fingerprint ON public.certificates USING btree (fingerprint);
 
 
 --
--- Name: idx_certificates_serial; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_certificates_serial; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_certificates_serial ON public.certificates USING btree (serial);
 
 
 --
--- Name: idx_chat_processed_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_chat_processed_agent; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
 
 
 --
--- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entities_name ON public.entities USING btree (name);
 
 
 --
--- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entities_type ON public.entities USING btree (type);
 
 
 --
--- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entities_user_id ON public.entities USING btree (user_id) WHERE (user_id IS NOT NULL);
 
 
 --
--- Name: idx_entity_facts_archive_date; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_archive_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_archive_date ON public.entity_facts_archive USING btree (archived_at);
 
 
 --
--- Name: idx_entity_facts_archive_entity; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_archive_entity; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_archive_entity ON public.entity_facts_archive USING btree (entity_id);
 
 
 --
--- Name: idx_entity_facts_archive_key; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_archive_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_archive_key ON public.entity_facts_archive USING btree (key);
 
 
 --
--- Name: idx_entity_facts_confidence; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_confidence; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_confidence ON public.entity_facts USING btree (confidence) WHERE (confidence < (1.0)::double precision);
 
 
 --
--- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_data ON public.entity_facts USING gin (data);
 
 
 --
--- Name: idx_entity_facts_data_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_data_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_data_type ON public.entity_facts USING btree (data_type);
 
 
 --
--- Name: idx_entity_facts_entity; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_entity; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_entity ON public.entity_facts USING btree (entity_id);
 
 
 --
--- Name: idx_entity_facts_key; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_key ON public.entity_facts USING btree (key);
 
 
 --
--- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_privacy_scope ON public.entity_facts USING gin (privacy_scope);
 
 
 --
--- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_source_entity ON public.entity_facts USING btree (source_entity_id);
 
 
 --
--- Name: idx_entity_facts_value_trgm; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_value_trgm; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_value_trgm ON public.entity_facts USING gin (lower(value) public.gin_trgm_ops);
 
 
 --
--- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_visibility ON public.entity_facts USING btree (visibility);
 
 
 --
--- Name: idx_entity_facts_vote_count; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_facts_vote_count; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_facts_vote_count ON public.entity_facts USING btree (vote_count DESC);
 
 
 --
--- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_rel_a ON public.entity_relationships USING btree (entity_a);
 
 
 --
--- Name: idx_entity_rel_b; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_entity_rel_b; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_entity_rel_b ON public.entity_relationships USING btree (entity_b);
 
 
 --
--- Name: idx_events_date; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_events_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_events_date ON public.events USING btree (event_date);
 
 
 --
--- Name: idx_events_search; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_events_search; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_events_search ON public.events USING gin (search_vector);
 
 
 --
--- Name: idx_gambling_entries_date; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_gambling_entries_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_gambling_entries_date ON public.gambling_entries USING btree (session_date);
 
 
 --
--- Name: idx_gambling_entries_log; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_gambling_entries_log; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_gambling_entries_log ON public.gambling_entries USING btree (log_id);
 
 
 --
--- Name: idx_gambling_logs_entity; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_gambling_logs_entity; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entity_id);
 
 
 --
--- Name: idx_job_messages; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_job_messages; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_job_messages ON public.job_messages USING btree (job_id, added_at);
 
 
 --
--- Name: idx_jobs_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_agent; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_jobs_agent ON public.agent_jobs USING btree (agent_name, status);
 
 
 --
--- Name: idx_jobs_parent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_parent; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_jobs_parent ON public.agent_jobs USING btree (parent_job_id);
 
 
 --
--- Name: idx_jobs_requester; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_requester; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_jobs_requester ON public.agent_jobs USING btree (requester_agent, status);
 
 
 --
--- Name: idx_jobs_root; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_root; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_jobs_root ON public.agent_jobs USING btree (root_job_id);
 
 
 --
--- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic) WHERE ((status)::text <> ALL ((ARRAY['completed'::character varying, 'cancelled'::character varying])::text[]));
 
 
 --
--- Name: idx_media_consumed_by; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_consumed_by; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_consumed_by ON public.media_consumed USING btree (consumed_by);
 
 
 --
--- Name: idx_media_queue_priority; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_queue_priority; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_queue_priority ON public.media_queue USING btree (priority, requested_at);
 
 
 --
--- Name: idx_media_queue_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_queue_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_queue_status ON public.media_queue USING btree (status);
 
 
 --
--- Name: idx_media_search; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_search; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_search ON public.media_consumed USING gin (search_vector);
 
 
 --
--- Name: idx_media_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_status ON public.media_consumed USING btree (status);
 
 
 --
--- Name: idx_media_tags_media; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_tags_media; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_tags_media ON public.media_tags USING btree (media_id);
 
 
 --
--- Name: idx_media_tags_tag; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_tags_tag; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_tags_tag ON public.media_tags USING btree (tag);
 
 
 --
--- Name: idx_media_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_media_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_media_type ON public.media_consumed USING btree (media_type);
 
 
 --
--- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_memory_embeddings_source ON public.memory_embeddings USING btree (source_type);
 
 
 --
--- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --
--- Name: idx_music_analysis_music; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_analysis_music; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_analysis_music ON public.music_analysis USING btree (music_id);
 
 
 --
--- Name: idx_music_analysis_search; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_analysis_search; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_analysis_search ON public.music_analysis USING gin (search_vector);
 
 
 --
--- Name: idx_music_analysis_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_analysis_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_analysis_type ON public.music_analysis USING btree (analysis_type);
 
 
 --
--- Name: idx_music_library_album; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_album; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_album ON public.music_library USING btree (musicbrainz_album_id);
 
 
 --
--- Name: idx_music_library_artist; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_artist; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_artist ON public.music_library USING btree (musicbrainz_artist_id);
 
 
 --
--- Name: idx_music_library_bpm; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_bpm; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_bpm ON public.music_library USING btree (bpm);
 
 
 --
--- Name: idx_music_library_genre; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_genre; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_genre ON public.music_library USING btree (genre);
 
 
 --
--- Name: idx_music_library_key; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_key ON public.music_library USING btree (key);
 
 
 --
--- Name: idx_music_library_media; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_media; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_media ON public.music_library USING btree (media_id);
 
 
 --
--- Name: idx_music_library_mood; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_mood; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_mood ON public.music_library USING btree (mood);
 
 
 --
--- Name: idx_music_library_year; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_library_year; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_library_year ON public.music_library USING btree (year);
 
 
 --
--- Name: idx_music_search; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_music_search; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_music_search ON public.music_library USING gin (search_vector);
 
 
 --
--- Name: idx_place_props_place; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_place_props_place; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_place_props_place ON public.place_properties USING btree (place_id);
 
 
 --
--- Name: idx_places_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_places_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_places_type ON public.places USING btree (type);
 
 
 --
--- Name: idx_positions_account; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_positions_account; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_positions_account ON public.positions USING btree (account_id) WHERE (sold_at IS NULL);
 
 
 --
--- Name: idx_positions_asset_class; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_positions_asset_class; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_positions_asset_class ON public.positions USING btree (asset_class) WHERE (sold_at IS NULL);
 
 
 --
--- Name: idx_positions_held; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_positions_held; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_positions_held ON public.portfolio_positions USING btree (sold_at) WHERE (sold_at IS NULL);
 
 
 --
--- Name: idx_positions_symbol; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_positions_symbol; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_positions_symbol ON public.portfolio_positions USING btree (symbol);
 
 
 --
--- Name: idx_preferences_entity; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_preferences_entity; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_preferences_entity ON public.preferences USING btree (entity_id);
 
 
 --
--- Name: idx_preferences_key; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_preferences_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_preferences_key ON public.preferences USING btree (key);
 
 
 --
--- Name: idx_price_cache_v2_lookup; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_price_cache_v2_lookup; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_price_cache_v2_lookup ON public.price_cache_v2 USING btree (symbol, asset_class, cached_at DESC);
 
 
 --
--- Name: idx_project_tasks_project; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_project_tasks_project; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_project_tasks_project ON public.project_tasks USING btree (project_id);
 
 
 --
--- Name: idx_project_tasks_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_project_tasks_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_project_tasks_status ON public.project_tasks USING btree (status);
 
 
 --
--- Name: idx_projects_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_projects_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_projects_status ON public.projects USING btree (status);
 
 
 --
--- Name: idx_publications_by; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_publications_by; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_publications_by ON public.publications USING btree (published_by);
 
 
 --
--- Name: idx_publications_date; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_publications_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_publications_date ON public.publications USING btree (published_at DESC);
 
 
 --
--- Name: idx_publications_type; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_publications_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_publications_type ON public.publications USING btree (publication_type);
 
 
 --
--- Name: idx_publications_work; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_publications_work; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_publications_work ON public.publications USING btree (work_id);
 
 
 --
--- Name: idx_ralph_series_latest; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_ralph_series_latest; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_ralph_series_latest ON public.ralph_sessions USING btree (session_series_id, iteration DESC);
 
 
 --
--- Name: idx_ralph_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_ralph_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_ralph_status ON public.ralph_sessions USING btree (status) WHERE (status = ANY (ARRAY['PENDING'::text, 'RUNNING'::text]));
 
 
 --
--- Name: idx_snapshots_date; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_snapshots_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_snapshots_date ON public.portfolio_snapshots USING btree (snapshot_at);
 
 
 --
--- Name: idx_snapshots_day; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_snapshots_day; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_snapshots_day ON public.portfolio_snapshots USING btree (((snapshot_at)::date));
 
 
 --
--- Name: idx_tags_category; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_tags_category; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tags_category ON public.tags USING btree (category);
 
 
 --
--- Name: idx_tags_name; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_tags_name; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tags_name ON public.tags USING btree (name);
 
 
 --
--- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tasks_due ON public.tasks USING btree (due_date);
 
 
 --
--- Name: idx_tasks_parent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_tasks_parent; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tasks_parent ON public.tasks USING btree (parent_task_id);
 
 
 --
--- Name: idx_tasks_priority; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_tasks_priority; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tasks_priority ON public.tasks USING btree (priority);
 
 
 --
--- Name: idx_tasks_project; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_tasks_project; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tasks_project ON public.tasks USING btree (project_id);
 
 
 --
--- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
 
 
 --
--- Name: idx_unsolved_problems_priority; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_unsolved_problems_priority; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_unsolved_problems_priority ON public.unsolved_problems USING btree (priority DESC);
 
 
 --
--- Name: idx_unsolved_problems_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_unsolved_problems_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_unsolved_problems_status ON public.unsolved_problems USING btree (status);
 
 
 --
--- Name: idx_vehicles_owner; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_vehicles_owner; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_vehicles_owner ON public.vehicles USING btree (owner_id);
 
 
 --
--- Name: idx_vehicles_vin; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_vehicles_vin; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
 
 
 --
--- Name: idx_vocabulary_vote_count; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_vocabulary_vote_count; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_vocabulary_vote_count ON public.vocabulary USING btree (vote_count DESC);
 
 
 --
--- Name: idx_work_tags_tag; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_work_tags_tag; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_work_tags_tag ON public.work_tags USING btree (tag_id);
 
 
 --
--- Name: idx_work_tags_work; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_work_tags_work; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_work_tags_work ON public.work_tags USING btree (work_id);
 
 
 --
--- Name: idx_works_created; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_works_created; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_works_created ON public.works USING btree (created_at DESC);
 
 
 --
--- Name: idx_works_language; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_works_language; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_works_language ON public.works USING btree (language);
 
 
 --
--- Name: idx_works_metadata; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_works_metadata; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_works_metadata ON public.works USING gin (metadata);
 
 
 --
--- Name: idx_works_status; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_works_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_works_status ON public.works USING btree (status);
 
 
 --
--- Name: idx_works_type; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_works_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_works_type ON public.works USING btree (work_type);
 
 
 --
--- Name: idx_works_updated; Type: INDEX; Schema: public; Owner: erato
+-- Name: idx_works_updated; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_works_updated ON public.works USING btree (updated_at DESC);
 
 
 --
--- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: public; Owner: nova
+-- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --
--- Name: memory_embeddings_archive_source_type_idx; Type: INDEX; Schema: public; Owner: nova
+-- Name: memory_embeddings_archive_source_type_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX memory_embeddings_archive_source_type_idx ON public.memory_embeddings_archive USING btree (source_type);
 
 
 --
--- Name: v_media_with_tags _RETURN; Type: RULE; Schema: public; Owner: nova
+-- Name: v_media_with_tags _RETURN; Type: RULE; Schema: public; Owner: -
 --
 
 CREATE OR REPLACE VIEW public.v_media_with_tags AS
@@ -5364,105 +5094,105 @@ CREATE OR REPLACE VIEW public.v_media_with_tags AS
 
 
 --
--- Name: agent_chat agent_chat_notify; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agent_chat agent_chat_notify; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER agent_chat_notify AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
 
 
 --
--- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.update_agents_timestamp();
 
 
 --
--- Name: projects enforce_project_lock; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: projects enforce_project_lock; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER enforce_project_lock BEFORE UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION public.prevent_locked_project_update();
 
 
 --
--- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER gambling_entries_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_entries FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
 
 
 --
--- Name: gambling_logs gambling_logs_notify; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: gambling_logs gambling_logs_notify; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_logs FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
 
 
 --
--- Name: media_consumed media_search_update; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: media_consumed media_search_update; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER media_search_update BEFORE INSERT OR UPDATE ON public.media_consumed FOR EACH ROW EXECUTE FUNCTION public.update_media_search_vector();
 
 
 --
--- Name: media_consumed media_search_vector_update; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: media_consumed media_search_vector_update; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER media_search_vector_update BEFORE INSERT OR UPDATE ON public.media_consumed FOR EACH ROW EXECUTE FUNCTION public.update_media_search_vector();
 
 
 --
--- Name: music_analysis music_analysis_search_update; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: music_analysis music_analysis_search_update; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER music_analysis_search_update BEFORE INSERT OR UPDATE ON public.music_analysis FOR EACH ROW EXECUTE FUNCTION public.update_music_analysis_search_vector();
 
 
 --
--- Name: music_library music_search_update; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: music_library music_search_update; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER music_search_update BEFORE INSERT OR UPDATE ON public.music_library FOR EACH ROW EXECUTE FUNCTION public.update_music_search_vector();
 
 
 --
--- Name: publications publication_status_update; Type: TRIGGER; Schema: public; Owner: erato
+-- Name: publications publication_status_update; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR EACH ROW EXECUTE FUNCTION public.update_work_status_on_publication();
 
 
 --
--- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.embed_chat_message();
 
 
 --
--- Name: agent_chat trg_notify_agent_chat; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agent_chat trg_notify_agent_chat; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
 
 
 --
--- Name: works works_calculate_counts; Type: TRIGGER; Schema: public; Owner: erato
+-- Name: works works_calculate_counts; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER works_calculate_counts BEFORE INSERT OR UPDATE OF content ON public.works FOR EACH ROW EXECUTE FUNCTION public.calculate_word_count();
 
 
 --
--- Name: works works_updated_at; Type: TRIGGER; Schema: public; Owner: erato
+-- Name: works works_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER works_updated_at BEFORE UPDATE ON public.works FOR EACH ROW EXECUTE FUNCTION public.update_works_timestamp();
 
 
 --
--- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -5470,7 +5200,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_actions agent_actions_related_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_related_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -5478,7 +5208,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_actions agent_actions_related_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_related_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -5486,7 +5216,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_chat_processed agent_chat_processed_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_chat_processed agent_chat_processed_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_chat_processed
@@ -5494,7 +5224,7 @@ ALTER TABLE ONLY public.agent_chat_processed
 
 
 --
--- Name: agent_chat agent_chat_reply_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_chat agent_chat_reply_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_chat
@@ -5502,7 +5232,7 @@ ALTER TABLE ONLY public.agent_chat
 
 
 --
--- Name: agent_domains agent_domains_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -5510,7 +5240,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_domains agent_domains_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -5518,7 +5248,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_jobs agent_jobs_parent_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_jobs agent_jobs_parent_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_jobs
@@ -5526,7 +5256,7 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
--- Name: agent_jobs agent_jobs_root_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_jobs agent_jobs_root_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.agent_jobs
@@ -5534,7 +5264,7 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
--- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.certificates
@@ -5542,7 +5272,7 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: entity_fact_conflicts entity_fact_conflicts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_fact_conflicts entity_fact_conflicts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_fact_conflicts
@@ -5550,7 +5280,7 @@ ALTER TABLE ONLY public.entity_fact_conflicts
 
 
 --
--- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_facts
@@ -5558,7 +5288,7 @@ ALTER TABLE ONLY public.entity_facts
 
 
 --
--- Name: entity_facts entity_facts_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_facts entity_facts_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_facts
@@ -5566,7 +5296,7 @@ ALTER TABLE ONLY public.entity_facts
 
 
 --
--- Name: entity_relationships entity_relationships_entity_a_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_relationships entity_relationships_entity_a_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -5574,7 +5304,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: entity_relationships entity_relationships_entity_b_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: entity_relationships entity_relationships_entity_b_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.entity_relationships
@@ -5582,7 +5312,7 @@ ALTER TABLE ONLY public.entity_relationships
 
 
 --
--- Name: event_entities event_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_entities event_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_entities
@@ -5590,7 +5320,7 @@ ALTER TABLE ONLY public.event_entities
 
 
 --
--- Name: event_entities event_entities_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_entities event_entities_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_entities
@@ -5598,7 +5328,7 @@ ALTER TABLE ONLY public.event_entities
 
 
 --
--- Name: event_places event_places_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_places event_places_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_places
@@ -5606,7 +5336,7 @@ ALTER TABLE ONLY public.event_places
 
 
 --
--- Name: event_places event_places_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_places event_places_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_places
@@ -5614,7 +5344,7 @@ ALTER TABLE ONLY public.event_places
 
 
 --
--- Name: event_projects event_projects_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_projects event_projects_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_projects
@@ -5622,7 +5352,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: event_projects event_projects_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: event_projects event_projects_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.event_projects
@@ -5630,7 +5360,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: gambling_entries gambling_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: gambling_entries gambling_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.gambling_entries
@@ -5638,7 +5368,7 @@ ALTER TABLE ONLY public.gambling_entries
 
 
 --
--- Name: gambling_logs gambling_logs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: gambling_logs gambling_logs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.gambling_logs
@@ -5646,7 +5376,7 @@ ALTER TABLE ONLY public.gambling_logs
 
 
 --
--- Name: job_messages job_messages_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: job_messages job_messages_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.job_messages
@@ -5654,7 +5384,7 @@ ALTER TABLE ONLY public.job_messages
 
 
 --
--- Name: job_messages job_messages_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: job_messages job_messages_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.job_messages
@@ -5662,7 +5392,7 @@ ALTER TABLE ONLY public.job_messages
 
 
 --
--- Name: media_consumed media_consumed_consumed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_consumed media_consumed_consumed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_consumed
@@ -5670,7 +5400,7 @@ ALTER TABLE ONLY public.media_consumed
 
 
 --
--- Name: media_consumed media_consumed_ingested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_consumed media_consumed_ingested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_consumed
@@ -5678,7 +5408,7 @@ ALTER TABLE ONLY public.media_consumed
 
 
 --
--- Name: media_queue media_queue_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_queue media_queue_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_queue
@@ -5686,7 +5416,7 @@ ALTER TABLE ONLY public.media_queue
 
 
 --
--- Name: media_queue media_queue_result_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_queue media_queue_result_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_queue
@@ -5694,7 +5424,7 @@ ALTER TABLE ONLY public.media_queue
 
 
 --
--- Name: media_tags media_tags_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: media_tags media_tags_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.media_tags
@@ -5702,7 +5432,7 @@ ALTER TABLE ONLY public.media_tags
 
 
 --
--- Name: music_analysis music_analysis_analyzed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: music_analysis music_analysis_analyzed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_analysis
@@ -5710,7 +5440,7 @@ ALTER TABLE ONLY public.music_analysis
 
 
 --
--- Name: music_analysis music_analysis_music_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: music_analysis music_analysis_music_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_analysis
@@ -5718,7 +5448,7 @@ ALTER TABLE ONLY public.music_analysis
 
 
 --
--- Name: music_library music_library_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: music_library music_library_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.music_library
@@ -5726,7 +5456,7 @@ ALTER TABLE ONLY public.music_library
 
 
 --
--- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.place_properties
@@ -5734,7 +5464,7 @@ ALTER TABLE ONLY public.place_properties
 
 
 --
--- Name: places places_parent_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: places places_parent_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.places
@@ -5742,7 +5472,7 @@ ALTER TABLE ONLY public.places
 
 
 --
--- Name: preferences preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: preferences preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.preferences
@@ -5750,7 +5480,7 @@ ALTER TABLE ONLY public.preferences
 
 
 --
--- Name: project_entities project_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: project_entities project_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.project_entities
@@ -5758,7 +5488,7 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_entities project_entities_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: project_entities project_entities_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.project_entities
@@ -5766,7 +5496,7 @@ ALTER TABLE ONLY public.project_entities
 
 
 --
--- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.project_tasks
@@ -5774,7 +5504,7 @@ ALTER TABLE ONLY public.project_tasks
 
 
 --
--- Name: publications publications_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+-- Name: publications publications_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.publications
@@ -5782,7 +5512,7 @@ ALTER TABLE ONLY public.publications
 
 
 --
--- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -5790,7 +5520,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_blocked_on_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: tasks tasks_blocked_on_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -5798,7 +5528,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -5806,7 +5536,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_parent_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: tasks tasks_parent_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -5814,7 +5544,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: tasks tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: tasks tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -5822,7 +5552,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: vehicles vehicles_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: vehicles vehicles_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vehicles
@@ -5830,7 +5560,7 @@ ALTER TABLE ONLY public.vehicles
 
 
 --
--- Name: work_tags work_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+-- Name: work_tags work_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.work_tags
@@ -5838,7 +5568,7 @@ ALTER TABLE ONLY public.work_tags
 
 
 --
--- Name: work_tags work_tags_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+-- Name: work_tags work_tags_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.work_tags
@@ -5846,7 +5576,7 @@ ALTER TABLE ONLY public.work_tags
 
 
 --
--- Name: works works_parent_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
+-- Name: works works_parent_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.works
@@ -5854,881 +5584,16 @@ ALTER TABLE ONLY public.works
 
 
 --
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
---
-
-GRANT USAGE ON SCHEMA public TO newhart;
-GRANT USAGE ON SCHEMA public TO gem;
-GRANT USAGE ON SCHEMA public TO coder;
-GRANT USAGE ON SCHEMA public TO scout;
-GRANT USAGE ON SCHEMA public TO iris;
-GRANT USAGE ON SCHEMA public TO gidget;
-GRANT USAGE ON SCHEMA public TO ticker;
-GRANT USAGE ON SCHEMA public TO athena;
-GRANT ALL ON SCHEMA public TO erato;
-
-
---
--- Name: FUNCTION chat(p_message text, p_sender character varying); Type: ACL; Schema: public; Owner: nova
---
-
-GRANT ALL ON FUNCTION public.chat(p_message text, p_sender character varying) TO newhart;
-
-
---
--- Name: FUNCTION send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: ACL; Schema: public; Owner: nova
---
-
-GRANT ALL ON FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) TO newhart;
-
-
---
--- Name: TABLE agent_actions; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.agent_actions TO newhart;
-GRANT SELECT ON TABLE public.agent_actions TO gem;
-GRANT SELECT ON TABLE public.agent_actions TO coder;
-GRANT SELECT ON TABLE public.agent_actions TO scout;
-GRANT SELECT ON TABLE public.agent_actions TO iris;
-GRANT SELECT ON TABLE public.agent_actions TO gidget;
-GRANT SELECT ON TABLE public.agent_actions TO ticker;
-GRANT SELECT ON TABLE public.agent_actions TO athena;
-
-
---
--- Name: TABLE agent_chat; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO newhart;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO gem;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO coder;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO scout;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO iris;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO gidget;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO ticker;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO athena;
-
-
---
--- Name: SEQUENCE agent_chat_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO newhart;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gem;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO coder;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO scout;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO iris;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gidget;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO ticker;
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO athena;
-
-
---
--- Name: TABLE agent_chat_processed; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,INSERT,UPDATE ON TABLE public.agent_chat_processed TO newhart;
-GRANT SELECT ON TABLE public.agent_chat_processed TO gem;
-GRANT SELECT ON TABLE public.agent_chat_processed TO coder;
-GRANT SELECT ON TABLE public.agent_chat_processed TO scout;
-GRANT SELECT ON TABLE public.agent_chat_processed TO iris;
-GRANT SELECT ON TABLE public.agent_chat_processed TO gidget;
-GRANT SELECT ON TABLE public.agent_chat_processed TO ticker;
-GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
-
-
---
--- Name: TABLE agent_jobs; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,INSERT,UPDATE ON TABLE public.agent_jobs TO newhart;
-GRANT SELECT ON TABLE public.agent_jobs TO gem;
-GRANT SELECT ON TABLE public.agent_jobs TO coder;
-GRANT SELECT ON TABLE public.agent_jobs TO scout;
-GRANT SELECT ON TABLE public.agent_jobs TO iris;
-GRANT SELECT ON TABLE public.agent_jobs TO gidget;
-GRANT SELECT ON TABLE public.agent_jobs TO ticker;
-GRANT SELECT ON TABLE public.agent_jobs TO athena;
-
-
---
--- Name: SEQUENCE agent_jobs_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
-
-
---
--- Name: TABLE agent_system_config; Type: ACL; Schema: public; Owner: nova
---
-
-REVOKE ALL ON TABLE public.agent_system_config FROM nova;
-GRANT SELECT ON TABLE public.agent_system_config TO nova;
-GRANT SELECT ON TABLE public.agent_system_config TO PUBLIC;
-GRANT INSERT,DELETE,UPDATE ON TABLE public.agent_system_config TO newhart;
-
-
---
--- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
---
-
-REVOKE ALL ON TABLE public.agents FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
-GRANT ALL ON TABLE public.agents TO newhart;
-GRANT SELECT ON TABLE public.agents TO gem;
-GRANT SELECT ON TABLE public.agents TO coder;
-GRANT SELECT ON TABLE public.agents TO scout;
-GRANT SELECT ON TABLE public.agents TO iris;
-GRANT SELECT ON TABLE public.agents TO gidget;
-GRANT SELECT ON TABLE public.agents TO ticker;
-GRANT SELECT ON TABLE public.agents TO athena;
-
-
---
--- Name: SEQUENCE agents_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
-
-
---
--- Name: TABLE ai_models; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.ai_models TO newhart;
-
-
---
--- Name: TABLE artwork; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.artwork TO newhart;
-GRANT SELECT ON TABLE public.artwork TO gem;
-GRANT SELECT ON TABLE public.artwork TO coder;
-GRANT SELECT ON TABLE public.artwork TO scout;
-GRANT SELECT ON TABLE public.artwork TO iris;
-GRANT SELECT ON TABLE public.artwork TO gidget;
-GRANT SELECT ON TABLE public.artwork TO ticker;
-GRANT SELECT ON TABLE public.artwork TO athena;
-
-
---
--- Name: TABLE asset_classes; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.asset_classes TO newhart;
-GRANT SELECT ON TABLE public.asset_classes TO gem;
-GRANT SELECT ON TABLE public.asset_classes TO coder;
-GRANT SELECT ON TABLE public.asset_classes TO scout;
-GRANT SELECT ON TABLE public.asset_classes TO iris;
-GRANT SELECT ON TABLE public.asset_classes TO gidget;
-GRANT SELECT ON TABLE public.asset_classes TO ticker;
-GRANT SELECT ON TABLE public.asset_classes TO athena;
-
-
---
--- Name: TABLE certificates; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.certificates TO newhart;
-GRANT SELECT ON TABLE public.certificates TO gem;
-GRANT SELECT ON TABLE public.certificates TO coder;
-GRANT SELECT ON TABLE public.certificates TO scout;
-GRANT SELECT ON TABLE public.certificates TO iris;
-GRANT SELECT ON TABLE public.certificates TO gidget;
-GRANT SELECT ON TABLE public.certificates TO ticker;
-GRANT SELECT ON TABLE public.certificates TO athena;
-
-
---
--- Name: TABLE conversations; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.conversations TO newhart;
-GRANT SELECT ON TABLE public.conversations TO gem;
-GRANT SELECT ON TABLE public.conversations TO coder;
-GRANT SELECT ON TABLE public.conversations TO scout;
-GRANT SELECT ON TABLE public.conversations TO iris;
-GRANT SELECT ON TABLE public.conversations TO gidget;
-GRANT SELECT ON TABLE public.conversations TO ticker;
-GRANT SELECT ON TABLE public.conversations TO athena;
-
-
---
--- Name: TABLE entity_facts; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.entity_facts TO newhart;
-GRANT SELECT ON TABLE public.entity_facts TO gem;
-GRANT SELECT ON TABLE public.entity_facts TO coder;
-GRANT SELECT ON TABLE public.entity_facts TO scout;
-GRANT SELECT ON TABLE public.entity_facts TO iris;
-GRANT SELECT ON TABLE public.entity_facts TO gidget;
-GRANT SELECT ON TABLE public.entity_facts TO ticker;
-GRANT SELECT ON TABLE public.entity_facts TO athena;
-
-
---
--- Name: TABLE entities; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.entities TO newhart;
-GRANT SELECT ON TABLE public.entities TO gem;
-GRANT SELECT ON TABLE public.entities TO coder;
-GRANT SELECT ON TABLE public.entities TO scout;
-GRANT SELECT ON TABLE public.entities TO iris;
-GRANT SELECT ON TABLE public.entities TO gidget;
-GRANT SELECT ON TABLE public.entities TO ticker;
-GRANT SELECT ON TABLE public.entities TO athena;
-
-
---
--- Name: TABLE entity_relationships; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.entity_relationships TO newhart;
-GRANT SELECT ON TABLE public.entity_relationships TO gem;
-GRANT SELECT ON TABLE public.entity_relationships TO coder;
-GRANT SELECT ON TABLE public.entity_relationships TO scout;
-GRANT SELECT ON TABLE public.entity_relationships TO iris;
-GRANT SELECT ON TABLE public.entity_relationships TO gidget;
-GRANT SELECT ON TABLE public.entity_relationships TO ticker;
-GRANT SELECT ON TABLE public.entity_relationships TO athena;
-
-
---
--- Name: TABLE event_entities; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.event_entities TO newhart;
-GRANT SELECT ON TABLE public.event_entities TO gem;
-GRANT SELECT ON TABLE public.event_entities TO coder;
-GRANT SELECT ON TABLE public.event_entities TO scout;
-GRANT SELECT ON TABLE public.event_entities TO iris;
-GRANT SELECT ON TABLE public.event_entities TO gidget;
-GRANT SELECT ON TABLE public.event_entities TO ticker;
-GRANT SELECT ON TABLE public.event_entities TO athena;
-
-
---
--- Name: TABLE event_places; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.event_places TO newhart;
-GRANT SELECT ON TABLE public.event_places TO gem;
-GRANT SELECT ON TABLE public.event_places TO coder;
-GRANT SELECT ON TABLE public.event_places TO scout;
-GRANT SELECT ON TABLE public.event_places TO iris;
-GRANT SELECT ON TABLE public.event_places TO gidget;
-GRANT SELECT ON TABLE public.event_places TO ticker;
-GRANT SELECT ON TABLE public.event_places TO athena;
-
-
---
--- Name: TABLE event_projects; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.event_projects TO newhart;
-GRANT SELECT ON TABLE public.event_projects TO gem;
-GRANT SELECT ON TABLE public.event_projects TO coder;
-GRANT SELECT ON TABLE public.event_projects TO scout;
-GRANT SELECT ON TABLE public.event_projects TO iris;
-GRANT SELECT ON TABLE public.event_projects TO gidget;
-GRANT SELECT ON TABLE public.event_projects TO ticker;
-GRANT SELECT ON TABLE public.event_projects TO athena;
-
-
---
--- Name: TABLE events; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.events TO newhart;
-GRANT SELECT ON TABLE public.events TO gem;
-GRANT SELECT ON TABLE public.events TO coder;
-GRANT SELECT ON TABLE public.events TO scout;
-GRANT SELECT ON TABLE public.events TO iris;
-GRANT SELECT ON TABLE public.events TO gidget;
-GRANT SELECT ON TABLE public.events TO ticker;
-GRANT SELECT ON TABLE public.events TO athena;
-
-
---
--- Name: TABLE gambling_entries; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.gambling_entries TO newhart;
-GRANT SELECT ON TABLE public.gambling_entries TO gem;
-GRANT SELECT ON TABLE public.gambling_entries TO coder;
-GRANT SELECT ON TABLE public.gambling_entries TO scout;
-GRANT SELECT ON TABLE public.gambling_entries TO iris;
-GRANT SELECT ON TABLE public.gambling_entries TO gidget;
-GRANT SELECT ON TABLE public.gambling_entries TO ticker;
-GRANT SELECT ON TABLE public.gambling_entries TO athena;
-
-
---
--- Name: TABLE gambling_logs; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.gambling_logs TO newhart;
-GRANT SELECT ON TABLE public.gambling_logs TO gem;
-GRANT SELECT ON TABLE public.gambling_logs TO coder;
-GRANT SELECT ON TABLE public.gambling_logs TO scout;
-GRANT SELECT ON TABLE public.gambling_logs TO iris;
-GRANT SELECT ON TABLE public.gambling_logs TO gidget;
-GRANT SELECT ON TABLE public.gambling_logs TO ticker;
-GRANT SELECT ON TABLE public.gambling_logs TO athena;
-
-
---
--- Name: TABLE job_messages; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,INSERT ON TABLE public.job_messages TO newhart;
-GRANT SELECT ON TABLE public.job_messages TO gem;
-GRANT SELECT ON TABLE public.job_messages TO coder;
-GRANT SELECT ON TABLE public.job_messages TO scout;
-GRANT SELECT ON TABLE public.job_messages TO iris;
-GRANT SELECT ON TABLE public.job_messages TO gidget;
-GRANT SELECT ON TABLE public.job_messages TO ticker;
-GRANT SELECT ON TABLE public.job_messages TO athena;
-
-
---
--- Name: SEQUENCE job_messages_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.job_messages_id_seq TO newhart;
-
-
---
--- Name: TABLE lessons; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.lessons TO newhart;
-GRANT SELECT ON TABLE public.lessons TO gem;
-GRANT SELECT ON TABLE public.lessons TO coder;
-GRANT SELECT ON TABLE public.lessons TO scout;
-GRANT SELECT ON TABLE public.lessons TO iris;
-GRANT SELECT ON TABLE public.lessons TO gidget;
-GRANT SELECT ON TABLE public.lessons TO ticker;
-GRANT SELECT ON TABLE public.lessons TO athena;
-
-
---
--- Name: TABLE media_consumed; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.media_consumed TO newhart;
-GRANT SELECT ON TABLE public.media_consumed TO gem;
-GRANT SELECT ON TABLE public.media_consumed TO coder;
-GRANT SELECT ON TABLE public.media_consumed TO scout;
-GRANT SELECT ON TABLE public.media_consumed TO iris;
-GRANT SELECT ON TABLE public.media_consumed TO gidget;
-GRANT SELECT ON TABLE public.media_consumed TO ticker;
-GRANT SELECT ON TABLE public.media_consumed TO athena;
-
-
---
--- Name: TABLE media_queue; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.media_queue TO newhart;
-GRANT SELECT ON TABLE public.media_queue TO gem;
-GRANT SELECT ON TABLE public.media_queue TO coder;
-GRANT SELECT ON TABLE public.media_queue TO scout;
-GRANT SELECT ON TABLE public.media_queue TO iris;
-GRANT SELECT ON TABLE public.media_queue TO gidget;
-GRANT SELECT ON TABLE public.media_queue TO ticker;
-GRANT SELECT ON TABLE public.media_queue TO athena;
-
-
---
--- Name: TABLE media_tags; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.media_tags TO newhart;
-GRANT SELECT ON TABLE public.media_tags TO gem;
-GRANT SELECT ON TABLE public.media_tags TO coder;
-GRANT SELECT ON TABLE public.media_tags TO scout;
-GRANT SELECT ON TABLE public.media_tags TO iris;
-GRANT SELECT ON TABLE public.media_tags TO gidget;
-GRANT SELECT ON TABLE public.media_tags TO ticker;
-GRANT SELECT ON TABLE public.media_tags TO athena;
-
-
---
--- Name: TABLE memory_embeddings; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO newhart;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gem;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO coder;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO scout;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO iris;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gidget;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO ticker;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO athena;
-
-
---
--- Name: SEQUENCE memory_embeddings_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
-
-
---
--- Name: TABLE place_properties; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.place_properties TO newhart;
-GRANT SELECT ON TABLE public.place_properties TO gem;
-GRANT SELECT ON TABLE public.place_properties TO coder;
-GRANT SELECT ON TABLE public.place_properties TO scout;
-GRANT SELECT ON TABLE public.place_properties TO iris;
-GRANT SELECT ON TABLE public.place_properties TO gidget;
-GRANT SELECT ON TABLE public.place_properties TO ticker;
-GRANT SELECT ON TABLE public.place_properties TO athena;
-
-
---
--- Name: TABLE places; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.places TO newhart;
-GRANT SELECT ON TABLE public.places TO gem;
-GRANT SELECT ON TABLE public.places TO coder;
-GRANT SELECT ON TABLE public.places TO scout;
-GRANT SELECT ON TABLE public.places TO iris;
-GRANT SELECT ON TABLE public.places TO gidget;
-GRANT SELECT ON TABLE public.places TO ticker;
-GRANT SELECT ON TABLE public.places TO athena;
-
-
---
--- Name: TABLE portfolio_positions; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.portfolio_positions TO newhart;
-GRANT SELECT ON TABLE public.portfolio_positions TO gem;
-GRANT SELECT ON TABLE public.portfolio_positions TO coder;
-GRANT SELECT ON TABLE public.portfolio_positions TO scout;
-GRANT SELECT ON TABLE public.portfolio_positions TO iris;
-GRANT SELECT ON TABLE public.portfolio_positions TO gidget;
-GRANT SELECT ON TABLE public.portfolio_positions TO ticker;
-GRANT SELECT ON TABLE public.portfolio_positions TO athena;
-
-
---
--- Name: TABLE portfolio_snapshots; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.portfolio_snapshots TO newhart;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO gem;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO coder;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO scout;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO iris;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO gidget;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO ticker;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO athena;
-
-
---
--- Name: TABLE positions; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.positions TO newhart;
-GRANT SELECT ON TABLE public.positions TO gem;
-GRANT SELECT ON TABLE public.positions TO coder;
-GRANT SELECT ON TABLE public.positions TO scout;
-GRANT SELECT ON TABLE public.positions TO iris;
-GRANT SELECT ON TABLE public.positions TO gidget;
-GRANT SELECT ON TABLE public.positions TO ticker;
-GRANT SELECT ON TABLE public.positions TO athena;
-
-
---
--- Name: TABLE preferences; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.preferences TO newhart;
-GRANT SELECT ON TABLE public.preferences TO gem;
-GRANT SELECT ON TABLE public.preferences TO coder;
-GRANT SELECT ON TABLE public.preferences TO scout;
-GRANT SELECT ON TABLE public.preferences TO iris;
-GRANT SELECT ON TABLE public.preferences TO gidget;
-GRANT SELECT ON TABLE public.preferences TO ticker;
-GRANT SELECT ON TABLE public.preferences TO athena;
-
-
---
--- Name: TABLE price_cache_v2; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.price_cache_v2 TO newhart;
-GRANT SELECT ON TABLE public.price_cache_v2 TO gem;
-GRANT SELECT ON TABLE public.price_cache_v2 TO coder;
-GRANT SELECT ON TABLE public.price_cache_v2 TO scout;
-GRANT SELECT ON TABLE public.price_cache_v2 TO iris;
-GRANT SELECT ON TABLE public.price_cache_v2 TO gidget;
-GRANT SELECT ON TABLE public.price_cache_v2 TO ticker;
-GRANT SELECT ON TABLE public.price_cache_v2 TO athena;
-
-
---
--- Name: TABLE project_entities; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.project_entities TO newhart;
-GRANT SELECT ON TABLE public.project_entities TO gem;
-GRANT SELECT ON TABLE public.project_entities TO coder;
-GRANT SELECT ON TABLE public.project_entities TO scout;
-GRANT SELECT ON TABLE public.project_entities TO iris;
-GRANT SELECT ON TABLE public.project_entities TO gidget;
-GRANT SELECT ON TABLE public.project_entities TO ticker;
-GRANT SELECT ON TABLE public.project_entities TO athena;
-
-
---
--- Name: TABLE project_tasks; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.project_tasks TO newhart;
-GRANT SELECT ON TABLE public.project_tasks TO gem;
-GRANT SELECT ON TABLE public.project_tasks TO coder;
-GRANT SELECT ON TABLE public.project_tasks TO scout;
-GRANT SELECT ON TABLE public.project_tasks TO iris;
-GRANT SELECT ON TABLE public.project_tasks TO gidget;
-GRANT SELECT ON TABLE public.project_tasks TO ticker;
-GRANT SELECT ON TABLE public.project_tasks TO athena;
-
-
---
--- Name: TABLE projects; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.projects TO newhart;
-GRANT SELECT ON TABLE public.projects TO gem;
-GRANT SELECT ON TABLE public.projects TO coder;
-GRANT SELECT ON TABLE public.projects TO scout;
-GRANT SELECT ON TABLE public.projects TO iris;
-GRANT SELECT ON TABLE public.projects TO gidget;
-GRANT SELECT ON TABLE public.projects TO ticker;
-GRANT SELECT ON TABLE public.projects TO athena;
-
-
---
--- Name: TABLE publications; Type: ACL; Schema: public; Owner: erato
---
-
-GRANT SELECT ON TABLE public.publications TO nova;
-
-
---
--- Name: TABLE sops; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT SELECT ON TABLE public.sops TO newhart;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sops TO erato;
-GRANT SELECT ON TABLE public.sops TO nova;
-
-
---
--- Name: SEQUENCE sops_id_seq; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.sops_id_seq TO erato;
-
-
---
--- Name: TABLE tags; Type: ACL; Schema: public; Owner: erato
---
-
-GRANT SELECT ON TABLE public.tags TO nova;
-
-
---
--- Name: TABLE tasks; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.tasks TO newhart;
-GRANT SELECT ON TABLE public.tasks TO gem;
-GRANT SELECT ON TABLE public.tasks TO coder;
-GRANT SELECT ON TABLE public.tasks TO scout;
-GRANT SELECT ON TABLE public.tasks TO iris;
-GRANT SELECT ON TABLE public.tasks TO gidget;
-GRANT SELECT ON TABLE public.tasks TO ticker;
-GRANT SELECT ON TABLE public.tasks TO athena;
-
-
---
--- Name: TABLE v_agent_chat_recent; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO newhart;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO gem;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO coder;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO scout;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO iris;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO gidget;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO ticker;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO athena;
-
-
---
--- Name: TABLE v_agent_chat_stats; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO newhart;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO gem;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO coder;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO scout;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO iris;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO gidget;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO ticker;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO athena;
-
-
---
--- Name: TABLE v_agents; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_agents TO newhart;
-GRANT SELECT ON TABLE public.v_agents TO gem;
-GRANT SELECT ON TABLE public.v_agents TO coder;
-GRANT SELECT ON TABLE public.v_agents TO scout;
-GRANT SELECT ON TABLE public.v_agents TO iris;
-GRANT SELECT ON TABLE public.v_agents TO gidget;
-GRANT SELECT ON TABLE public.v_agents TO ticker;
-GRANT SELECT ON TABLE public.v_agents TO athena;
-
-
---
--- Name: TABLE v_entity_facts; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_entity_facts TO newhart;
-GRANT SELECT ON TABLE public.v_entity_facts TO gem;
-GRANT SELECT ON TABLE public.v_entity_facts TO coder;
-GRANT SELECT ON TABLE public.v_entity_facts TO scout;
-GRANT SELECT ON TABLE public.v_entity_facts TO iris;
-GRANT SELECT ON TABLE public.v_entity_facts TO gidget;
-GRANT SELECT ON TABLE public.v_entity_facts TO ticker;
-GRANT SELECT ON TABLE public.v_entity_facts TO athena;
-
-
---
--- Name: TABLE v_event_timeline; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_event_timeline TO newhart;
-GRANT SELECT ON TABLE public.v_event_timeline TO gem;
-GRANT SELECT ON TABLE public.v_event_timeline TO coder;
-GRANT SELECT ON TABLE public.v_event_timeline TO scout;
-GRANT SELECT ON TABLE public.v_event_timeline TO iris;
-GRANT SELECT ON TABLE public.v_event_timeline TO gidget;
-GRANT SELECT ON TABLE public.v_event_timeline TO ticker;
-GRANT SELECT ON TABLE public.v_event_timeline TO athena;
-
-
---
--- Name: TABLE v_gambling_summary; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_gambling_summary TO newhart;
-GRANT SELECT ON TABLE public.v_gambling_summary TO gem;
-GRANT SELECT ON TABLE public.v_gambling_summary TO coder;
-GRANT SELECT ON TABLE public.v_gambling_summary TO scout;
-GRANT SELECT ON TABLE public.v_gambling_summary TO iris;
-GRANT SELECT ON TABLE public.v_gambling_summary TO gidget;
-GRANT SELECT ON TABLE public.v_gambling_summary TO ticker;
-GRANT SELECT ON TABLE public.v_gambling_summary TO athena;
-
-
---
--- Name: TABLE v_media_queue_pending; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_media_queue_pending TO newhart;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO gem;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO coder;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO scout;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO iris;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO gidget;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO ticker;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO athena;
-
-
---
--- Name: TABLE v_media_with_tags; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_media_with_tags TO newhart;
-GRANT SELECT ON TABLE public.v_media_with_tags TO gem;
-GRANT SELECT ON TABLE public.v_media_with_tags TO coder;
-GRANT SELECT ON TABLE public.v_media_with_tags TO scout;
-GRANT SELECT ON TABLE public.v_media_with_tags TO iris;
-GRANT SELECT ON TABLE public.v_media_with_tags TO gidget;
-GRANT SELECT ON TABLE public.v_media_with_tags TO ticker;
-GRANT SELECT ON TABLE public.v_media_with_tags TO athena;
-
-
---
--- Name: TABLE v_metamours; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_metamours TO newhart;
-GRANT SELECT ON TABLE public.v_metamours TO gem;
-GRANT SELECT ON TABLE public.v_metamours TO coder;
-GRANT SELECT ON TABLE public.v_metamours TO scout;
-GRANT SELECT ON TABLE public.v_metamours TO iris;
-GRANT SELECT ON TABLE public.v_metamours TO gidget;
-GRANT SELECT ON TABLE public.v_metamours TO ticker;
-GRANT SELECT ON TABLE public.v_metamours TO athena;
-
-
---
--- Name: TABLE v_pending_tasks; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_pending_tasks TO newhart;
-GRANT SELECT ON TABLE public.v_pending_tasks TO gem;
-GRANT SELECT ON TABLE public.v_pending_tasks TO coder;
-GRANT SELECT ON TABLE public.v_pending_tasks TO scout;
-GRANT SELECT ON TABLE public.v_pending_tasks TO iris;
-GRANT SELECT ON TABLE public.v_pending_tasks TO gidget;
-GRANT SELECT ON TABLE public.v_pending_tasks TO ticker;
-GRANT SELECT ON TABLE public.v_pending_tasks TO athena;
-
-
---
--- Name: TABLE v_portfolio_allocation; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO newhart;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO gem;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO coder;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO scout;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO iris;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO gidget;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO ticker;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO athena;
-
-
---
--- Name: TABLE v_relationships; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_relationships TO newhart;
-GRANT SELECT ON TABLE public.v_relationships TO gem;
-GRANT SELECT ON TABLE public.v_relationships TO coder;
-GRANT SELECT ON TABLE public.v_relationships TO scout;
-GRANT SELECT ON TABLE public.v_relationships TO iris;
-GRANT SELECT ON TABLE public.v_relationships TO gidget;
-GRANT SELECT ON TABLE public.v_relationships TO ticker;
-GRANT SELECT ON TABLE public.v_relationships TO athena;
-
-
---
--- Name: TABLE v_task_tree; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_task_tree TO newhart;
-GRANT SELECT ON TABLE public.v_task_tree TO gem;
-GRANT SELECT ON TABLE public.v_task_tree TO coder;
-GRANT SELECT ON TABLE public.v_task_tree TO scout;
-GRANT SELECT ON TABLE public.v_task_tree TO iris;
-GRANT SELECT ON TABLE public.v_task_tree TO gidget;
-GRANT SELECT ON TABLE public.v_task_tree TO ticker;
-GRANT SELECT ON TABLE public.v_task_tree TO athena;
-
-
---
--- Name: TABLE v_users; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.v_users TO newhart;
-GRANT SELECT ON TABLE public.v_users TO gem;
-GRANT SELECT ON TABLE public.v_users TO coder;
-GRANT SELECT ON TABLE public.v_users TO scout;
-GRANT SELECT ON TABLE public.v_users TO iris;
-GRANT SELECT ON TABLE public.v_users TO gidget;
-GRANT SELECT ON TABLE public.v_users TO ticker;
-GRANT SELECT ON TABLE public.v_users TO athena;
-
-
---
--- Name: TABLE vehicles; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.vehicles TO newhart;
-GRANT SELECT ON TABLE public.vehicles TO gem;
-GRANT SELECT ON TABLE public.vehicles TO coder;
-GRANT SELECT ON TABLE public.vehicles TO scout;
-GRANT SELECT ON TABLE public.vehicles TO iris;
-GRANT SELECT ON TABLE public.vehicles TO gidget;
-GRANT SELECT ON TABLE public.vehicles TO ticker;
-GRANT SELECT ON TABLE public.vehicles TO athena;
-
-
---
--- Name: TABLE vocabulary; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.vocabulary TO newhart;
-GRANT SELECT ON TABLE public.vocabulary TO gem;
-GRANT SELECT ON TABLE public.vocabulary TO coder;
-GRANT SELECT ON TABLE public.vocabulary TO scout;
-GRANT SELECT ON TABLE public.vocabulary TO iris;
-GRANT SELECT ON TABLE public.vocabulary TO gidget;
-GRANT SELECT ON TABLE public.vocabulary TO ticker;
-GRANT SELECT ON TABLE public.vocabulary TO athena;
-
-
---
--- Name: TABLE work_tags; Type: ACL; Schema: public; Owner: erato
---
-
-GRANT SELECT ON TABLE public.work_tags TO nova;
-
-
---
--- Name: TABLE works; Type: ACL; Schema: public; Owner: erato
---
-
-GRANT SELECT ON TABLE public.works TO nova;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: postgres
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO erato;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO newhart;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO erato;
-
-
---
--- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: postgres
+-- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: -
 --
 
 CREATE EVENT TRIGGER schema_change_trigger ON ddl_command_end
    EXECUTE FUNCTION public.notify_schema_change();
 
 
-ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
-
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SzPLTD9iKIuxcbGTNAUByaPMCVww8c740I737uTsNtbTP2bz3ENJt2OtYGRmXj4
+\unrestrict ft6e6VEhwIjHLqwKSzFuygOFIO1cXGO3Wra820aceqB9mDli6mmOOKVwko0fEzl
 
