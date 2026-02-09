@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict tFcPXpx1m7uzDp2vTA45io4EBVC6cAMMAOf74oqzXZ3PCvdxDql044mlLDCKz3I
+\restrict S4AGdMLmPLhzvSKSNuGvBJOclghBfBCFRkl6iSFgfb4I8m5gG1tJ89MZhe8tk2r
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1305,6 +1305,51 @@ ALTER SEQUENCE public.entities_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.entities_id_seq OWNED BY public.entities.id;
+
+
+--
+-- Name: entity_fact_conflicts; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.entity_fact_conflicts (
+    id integer NOT NULL,
+    entity_id integer,
+    key character varying(255),
+    fact_id_a integer,
+    fact_id_b integer,
+    value_a text,
+    value_b text,
+    confidence_a real,
+    confidence_b real,
+    resolution character varying(50),
+    resolved_at timestamp with time zone,
+    resolved_by character varying(50),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.entity_fact_conflicts OWNER TO nova;
+
+--
+-- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.entity_fact_conflicts_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNER TO nova;
+
+--
+-- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNED BY public.entity_fact_conflicts.id;
 
 
 --
@@ -3484,6 +3529,13 @@ ALTER TABLE ONLY public.entities ALTER COLUMN id SET DEFAULT nextval('public.ent
 
 
 --
+-- Name: entity_fact_conflicts id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_fact_conflicts ALTER COLUMN id SET DEFAULT nextval('public.entity_fact_conflicts_id_seq'::regclass);
+
+
+--
 -- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -3814,6 +3866,14 @@ ALTER TABLE ONLY public.entities
 
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entities_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: entity_fact_conflicts entity_fact_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_fact_conflicts
+    ADD CONSTRAINT entity_fact_conflicts_pkey PRIMARY KEY (id);
 
 
 --
@@ -5063,6 +5123,14 @@ ALTER TABLE ONLY public.certificates
 
 
 --
+-- Name: entity_fact_conflicts entity_fact_conflicts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.entity_fact_conflicts
+    ADD CONSTRAINT entity_fact_conflicts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
+
+--
 -- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -6203,5 +6271,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict tFcPXpx1m7uzDp2vTA45io4EBVC6cAMMAOf74oqzXZ3PCvdxDql044mlLDCKz3I
+\unrestrict S4AGdMLmPLhzvSKSNuGvBJOclghBfBCFRkl6iSFgfb4I8m5gG1tJ89MZhe8tk2r
 
