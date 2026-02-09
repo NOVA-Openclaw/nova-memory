@@ -123,6 +123,83 @@ To use in a Clawdbot installation:
 3. Ensure pgvector extension and memory_embeddings table exist
 4. Set OPENAI_API_KEY environment variable
 
+## OpenClaw Session Memory Indexing (2026.2.6+)
+
+OpenClaw 2026.2.6 includes native session memory indexing that complements the semantic recall system. This feature indexes session transcripts for semantic search, enabling recall of conversations across compactions.
+
+### Configuration
+
+Add to `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "memorySearch": {
+        "experimental": {
+          "sessionMemory": true
+        },
+        "sources": ["memory", "sessions"]
+      }
+    }
+  }
+}
+```
+
+### What It Does
+
+- **Session JSONL indexing**: Transcripts in `~/.openclaw/agents/<id>/sessions/*.jsonl` are indexed with embeddings
+- **Unified search**: `memory_search` queries both `memory/*.md` AND session transcripts
+- **Background sync**: Delta-based updates (~100KB or ~50 messages triggers re-index)
+- **Cross-compaction recall**: Ask "what did we discuss last week?" and get results
+
+### How It Works
+
+```
+Session Transcript (JSONL)
+    ↓
+Delta threshold reached (~100KB / ~50 msgs)
+    ↓
+Background indexing (embeddings generated)
+    ↓
+Stored in per-agent SQLite index
+    ↓
+memory_search queries both memory + sessions
+```
+
+### Relationship to NOVA Memory
+
+This OpenClaw feature is **complementary** to the NOVA Memory database:
+
+| Feature | NOVA Memory DB | OpenClaw Session Index |
+|---------|---------------|----------------------|
+| Storage | PostgreSQL + pgvector | SQLite + embeddings |
+| Content | Curated facts, entities, events | Raw session transcripts |
+| Extraction | Explicit (memory-extract hook) | Automatic (all turns) |
+| Query | `proactive-recall.py`, direct SQL | `memory_search` tool |
+
+**Best practice**: Use both. NOVA Memory for structured, curated knowledge. OpenClaw session indexing for conversational context and recall.
+
+### Enabling (NOVA Installation)
+
+Enabled 2026-02-08. Config applied via:
+
+```bash
+# Using gateway config.patch
+gateway config.patch '{
+  "agents": {
+    "defaults": {
+      "memorySearch": {
+        "experimental": { "sessionMemory": true },
+        "sources": ["memory", "sessions"]
+      }
+    }
+  }
+}'
+```
+
+Gateway restarts automatically after config patch.
+
 ---
 
 *Part of the NOVA Memory project — an agent-agnostic memory system.*
