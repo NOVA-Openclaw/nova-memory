@@ -14,7 +14,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const RECALL_SCRIPT = join(__dirname, '../../scripts/proactive-recall.py');
-const PYTHON_VENV = join(os.homedir(), "clawd/scripts/tts-venv/bin/python");
+const WORKSPACE = process.env.OPENCLAW_WORKSPACE || join(process.env.HOME || os.homedir(), '.openclaw');
+const PYTHON_VENV = join(WORKSPACE, 'scripts/tts-venv/bin/python');
 
 // Configurable via environment variables
 const TOKEN_BUDGET = parseInt(process.env.SEMANTIC_RECALL_TOKEN_BUDGET || "1000", 10);

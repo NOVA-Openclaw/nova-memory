@@ -4,7 +4,8 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as os from "os";
 
-const CONTEXT_FILE = join(os.homedir(), "clawd/SESSION_CONTEXT.md");
+const WORKSPACE = process.env.OPENCLAW_WORKSPACE || join(process.env.HOME || os.homedir(), '.openclaw');
+const CONTEXT_FILE = join(WORKSPACE, 'SESSION_CONTEXT.md');
 const STALE_MINUTES = 5;
 
 // Track current session participants
