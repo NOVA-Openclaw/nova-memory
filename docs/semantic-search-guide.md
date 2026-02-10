@@ -508,10 +508,13 @@ USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 
 -- IVFFlat for exact search (slower but precise)
-CREATE INDEX memory_embeddings_ivf_idx
-ON memory_embeddings  
-USING ivfflat (embedding vector_cosine_ops)
-WITH (lists = 100);
+-- WARNING: Only create IVFFlat index after you have > 1000 embeddings
+-- With < 1000 rows, IVFFlat breaks queries and returns wrong results
+-- See INSTALLATION.md for details
+-- CREATE INDEX memory_embeddings_ivf_idx
+-- ON memory_embeddings  
+-- USING ivfflat (embedding vector_cosine_ops)
+-- WITH (lists = 100);
 
 -- Composite indexes for filtered searches
 CREATE INDEX memory_embeddings_type_embedding_idx

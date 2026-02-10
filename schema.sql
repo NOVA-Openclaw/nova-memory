@@ -5350,8 +5350,12 @@ CREATE INDEX idx_memory_embeddings_source ON public.memory_embeddings USING btre
 --
 -- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: nova
 --
-
-CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+-- NOTE: IVFFlat index commented out by default - it breaks queries with < 1000 rows
+-- IVFFlat divides vectors into clusters (lists). With 100 lists and few rows, most
+-- lists are empty, causing ORDER BY queries to return 0-1 results instead of correct results.
+-- 
+-- Uncomment this index ONLY after you have > 1000 embeddings for better performance:
+-- CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --
@@ -5721,8 +5725,11 @@ CREATE INDEX idx_works_updated ON public.works USING btree (updated_at DESC);
 --
 -- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: public; Owner: nova
 --
-
-CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+-- NOTE: IVFFlat index commented out by default - it breaks queries with < 1000 rows
+-- See note on idx_memory_embeddings_vector above for explanation.
+-- 
+-- Uncomment this index ONLY after you have > 1000 archived embeddings:
+-- CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --

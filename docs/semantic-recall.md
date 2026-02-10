@@ -110,8 +110,11 @@ CREATE TABLE memory_embeddings (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_memory_embeddings_vector 
-ON memory_embeddings USING ivfflat (embedding vector_cosine_ops);
+-- IVFFlat index (optional, only for > 1000 embeddings)
+-- Do NOT create this on new installs - it breaks queries with < 1000 rows
+-- See INSTALLATION.md for details on when to add this
+-- CREATE INDEX idx_memory_embeddings_vector 
+-- ON memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists='100');
 ```
 
 ## Integration

@@ -259,6 +259,58 @@ tail -f ~/clawd/logs/memory-extract-hook.log
 tail -f ~/clawd/logs/openclaw-hooks.log
 ```
 
+## Performance Optimization
+
+### Vector Index for Large Datasets
+
+The schema includes **commented-out IVFFlat indexes** for semantic search performance. These are disabled by default because they break queries on new installations with few embeddings.
+
+#### Why Disabled by Default
+
+IVFFlat indexes divide vectors into clusters (lists). The default configuration uses 100 lists:
+
+```sql
+-- Currently commented out in schema.sql
+-- CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings 
+--   USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+```
+
+**Problem:** With < 1000 rows and 100 lists, most lists are empty. This causes ORDER BY queries to return 0-1 results instead of the correct results.
+
+**Solution:** Exact search (no index) is fast enough for small datasets. Only enable the index after you have > 1000 embeddings.
+
+#### When to Enable the Index
+
+After you have accumulated **> 1000 embeddings**, you can add the index for better performance:
+
+```sql
+-- Connect to your database
+psql -U $(whoami) -d $(whoami | tr '-' '_')_memory
+
+-- Add the index
+CREATE INDEX idx_memory_embeddings_vector ON memory_embeddings 
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists='100');
+
+-- Optional: Add index for archive table if you use it
+CREATE INDEX memory_embeddings_archive_embedding_idx ON memory_embeddings_archive 
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists='100');
+```
+
+#### Check Your Embedding Count
+
+```sql
+-- Check how many embeddings you have
+SELECT COUNT(*) FROM memory_embeddings;
+
+-- If > 1000, you can safely add the index
+```
+
+#### Performance Impact
+
+- **Without index (< 1000 rows):** Queries are fast enough (< 100ms)
+- **With index (> 1000 rows):** Significant speedup for semantic search
+- **With index (< 100 rows):** Queries break, return wrong results ❌
+
 ## Architecture
 
 ### Source Repository

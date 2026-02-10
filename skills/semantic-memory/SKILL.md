@@ -45,8 +45,12 @@ CREATE TABLE memory_embeddings (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_memory_embeddings_vector 
-ON memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- WARNING: Only create IVFFlat index after you have > 1000 embeddings
+-- With < 1000 rows, IVFFlat breaks queries and returns 0-1 results
+-- Exact search (no index) is fast enough for < 1000 rows
+-- See INSTALLATION.md for details on when to add this
+-- CREATE INDEX idx_memory_embeddings_vector 
+-- ON memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
 
 ## Embedding Content
