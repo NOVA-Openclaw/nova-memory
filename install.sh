@@ -14,8 +14,10 @@ WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace-claude-code}"
 # Parse arguments
 VERIFY_ONLY=0
 FORCE_INSTALL=0
-for arg in "$@"; do
-    case $arg in
+DB_NAME_OVERRIDE=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
         --verify-only)
             VERIFY_ONLY=1
             shift
@@ -24,17 +26,37 @@ for arg in "$@"; do
             FORCE_INSTALL=1
             shift
             ;;
+        --database|-d)
+            DB_NAME_OVERRIDE="$2"
+            shift 2
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --verify-only    Check installation without modifying anything"
-            echo "  --force          Force overwrite existing files (skip file verification)"
-            echo "  --help           Show this help message"
+            echo "  --verify-only         Check installation without modifying anything"
+            echo "  --force               Force overwrite existing files (skip file verification)"
+            echo "  --database, -d NAME   Override database name (default: \${USER}_memory)"
+            echo "  --help                Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                              # Use default database name"
+            echo "  $0 --database nova_memory       # Use specific database"
+            echo "  $0 -d nova_memory               # Short form"
             exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Run '$0 --help' for usage information"
+            exit 1
             ;;
     esac
 done
+
+# Apply database name override if provided
+if [ -n "$DB_NAME_OVERRIDE" ]; then
+    DB_NAME="$DB_NAME_OVERRIDE"
+fi
 
 # Color codes for output
 RED='\033[0;31m'
