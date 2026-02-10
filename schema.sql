@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict c5fWfCGg2jEjyo5V1YnpZntH84auF7zPK1kAbinodIg0zUtLoCIinpQAc2GUhai
+\restrict u14VyEhoZZlCasa3boVAhGUk8Enf3A8Kas91ywSgWhy8mWOxGTRqHzwAkVQAqwD
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -6300,6 +6300,14 @@ GRANT SELECT ON TABLE public.agent_actions TO iris;
 GRANT SELECT ON TABLE public.agent_actions TO gidget;
 GRANT SELECT ON TABLE public.agent_actions TO ticker;
 GRANT SELECT ON TABLE public.agent_actions TO athena;
+GRANT ALL ON TABLE public.agent_actions TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE agent_actions_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.agent_actions_id_seq TO "nova-staging";
 
 
 --
@@ -6314,6 +6322,7 @@ GRANT SELECT,INSERT ON TABLE public.agent_chat TO iris;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO gidget;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO ticker;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO athena;
+GRANT ALL ON TABLE public.agent_chat TO "nova-staging";
 
 
 --
@@ -6328,6 +6337,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO iris;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gidget;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO ticker;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO athena;
+GRANT ALL ON SEQUENCE public.agent_chat_id_seq TO "nova-staging";
 
 
 --
@@ -6342,6 +6352,22 @@ GRANT SELECT ON TABLE public.agent_chat_processed TO iris;
 GRANT SELECT ON TABLE public.agent_chat_processed TO gidget;
 GRANT SELECT ON TABLE public.agent_chat_processed TO ticker;
 GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
+GRANT ALL ON TABLE public.agent_chat_processed TO "nova-staging";
+
+
+--
+-- Name: TABLE agent_domains; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.agent_domains TO newhart;
+GRANT ALL ON TABLE public.agent_domains TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE agent_domains_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.agent_domains_id_seq TO "nova-staging";
 
 
 --
@@ -6356,6 +6382,7 @@ GRANT SELECT ON TABLE public.agent_jobs TO iris;
 GRANT SELECT ON TABLE public.agent_jobs TO gidget;
 GRANT SELECT ON TABLE public.agent_jobs TO ticker;
 GRANT SELECT ON TABLE public.agent_jobs TO athena;
+GRANT ALL ON TABLE public.agent_jobs TO "nova-staging";
 
 
 --
@@ -6363,6 +6390,21 @@ GRANT SELECT ON TABLE public.agent_jobs TO athena;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.agent_jobs_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE agent_modifications; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.agent_modifications TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE agent_modifications_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.agent_modifications_id_seq TO "nova-staging";
 
 
 --
@@ -6373,6 +6415,7 @@ REVOKE ALL ON TABLE public.agent_system_config FROM nova;
 GRANT SELECT ON TABLE public.agent_system_config TO nova;
 GRANT SELECT ON TABLE public.agent_system_config TO PUBLIC;
 GRANT INSERT,DELETE,UPDATE ON TABLE public.agent_system_config TO newhart;
+GRANT ALL ON TABLE public.agent_system_config TO "nova-staging";
 
 
 --
@@ -6389,6 +6432,7 @@ GRANT SELECT ON TABLE public.agents TO iris;
 GRANT SELECT ON TABLE public.agents TO gidget;
 GRANT SELECT ON TABLE public.agents TO ticker;
 GRANT SELECT ON TABLE public.agents TO athena;
+GRANT ALL ON TABLE public.agents TO "nova-staging";
 
 
 --
@@ -6396,6 +6440,7 @@ GRANT SELECT ON TABLE public.agents TO athena;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.agents_id_seq TO "nova-staging";
 
 
 --
@@ -6403,6 +6448,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
 --
 
 GRANT SELECT ON TABLE public.ai_models TO newhart;
+GRANT ALL ON TABLE public.ai_models TO "nova-staging";
 
 
 --
@@ -6417,6 +6463,14 @@ GRANT SELECT ON TABLE public.artwork TO iris;
 GRANT SELECT ON TABLE public.artwork TO gidget;
 GRANT SELECT ON TABLE public.artwork TO ticker;
 GRANT SELECT ON TABLE public.artwork TO athena;
+GRANT ALL ON TABLE public.artwork TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE artwork_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.artwork_id_seq TO "nova-staging";
 
 
 --
@@ -6431,6 +6485,7 @@ GRANT SELECT ON TABLE public.asset_classes TO iris;
 GRANT SELECT ON TABLE public.asset_classes TO gidget;
 GRANT SELECT ON TABLE public.asset_classes TO ticker;
 GRANT SELECT ON TABLE public.asset_classes TO athena;
+GRANT ALL ON TABLE public.asset_classes TO "nova-staging";
 
 
 --
@@ -6445,6 +6500,14 @@ GRANT SELECT ON TABLE public.certificates TO iris;
 GRANT SELECT ON TABLE public.certificates TO gidget;
 GRANT SELECT ON TABLE public.certificates TO ticker;
 GRANT SELECT ON TABLE public.certificates TO athena;
+GRANT ALL ON TABLE public.certificates TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE certificates_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.certificates_id_seq TO "nova-staging";
 
 
 --
@@ -6459,6 +6522,14 @@ GRANT SELECT ON TABLE public.conversations TO iris;
 GRANT SELECT ON TABLE public.conversations TO gidget;
 GRANT SELECT ON TABLE public.conversations TO ticker;
 GRANT SELECT ON TABLE public.conversations TO athena;
+GRANT ALL ON TABLE public.conversations TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE conversations_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.conversations_id_seq TO "nova-staging";
 
 
 --
@@ -6473,6 +6544,14 @@ GRANT SELECT ON TABLE public.entity_facts TO iris;
 GRANT SELECT ON TABLE public.entity_facts TO gidget;
 GRANT SELECT ON TABLE public.entity_facts TO ticker;
 GRANT SELECT ON TABLE public.entity_facts TO athena;
+GRANT ALL ON TABLE public.entity_facts TO "nova-staging";
+
+
+--
+-- Name: TABLE delegation_knowledge; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.delegation_knowledge TO "nova-staging";
 
 
 --
@@ -6487,6 +6566,42 @@ GRANT SELECT ON TABLE public.entities TO iris;
 GRANT SELECT ON TABLE public.entities TO gidget;
 GRANT SELECT ON TABLE public.entities TO ticker;
 GRANT SELECT ON TABLE public.entities TO athena;
+GRANT ALL ON TABLE public.entities TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE entities_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.entities_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE entity_fact_conflicts; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.entity_fact_conflicts TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE entity_fact_conflicts_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.entity_fact_conflicts_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE entity_facts_archive; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.entity_facts_archive TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE entity_facts_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.entity_facts_id_seq TO "nova-staging";
 
 
 --
@@ -6501,6 +6616,14 @@ GRANT SELECT ON TABLE public.entity_relationships TO iris;
 GRANT SELECT ON TABLE public.entity_relationships TO gidget;
 GRANT SELECT ON TABLE public.entity_relationships TO ticker;
 GRANT SELECT ON TABLE public.entity_relationships TO athena;
+GRANT ALL ON TABLE public.entity_relationships TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE entity_relationships_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.entity_relationships_id_seq TO "nova-staging";
 
 
 --
@@ -6515,6 +6638,7 @@ GRANT SELECT ON TABLE public.event_entities TO iris;
 GRANT SELECT ON TABLE public.event_entities TO gidget;
 GRANT SELECT ON TABLE public.event_entities TO ticker;
 GRANT SELECT ON TABLE public.event_entities TO athena;
+GRANT ALL ON TABLE public.event_entities TO "nova-staging";
 
 
 --
@@ -6529,6 +6653,7 @@ GRANT SELECT ON TABLE public.event_places TO iris;
 GRANT SELECT ON TABLE public.event_places TO gidget;
 GRANT SELECT ON TABLE public.event_places TO ticker;
 GRANT SELECT ON TABLE public.event_places TO athena;
+GRANT ALL ON TABLE public.event_places TO "nova-staging";
 
 
 --
@@ -6543,6 +6668,7 @@ GRANT SELECT ON TABLE public.event_projects TO iris;
 GRANT SELECT ON TABLE public.event_projects TO gidget;
 GRANT SELECT ON TABLE public.event_projects TO ticker;
 GRANT SELECT ON TABLE public.event_projects TO athena;
+GRANT ALL ON TABLE public.event_projects TO "nova-staging";
 
 
 --
@@ -6557,6 +6683,21 @@ GRANT SELECT ON TABLE public.events TO iris;
 GRANT SELECT ON TABLE public.events TO gidget;
 GRANT SELECT ON TABLE public.events TO ticker;
 GRANT SELECT ON TABLE public.events TO athena;
+GRANT ALL ON TABLE public.events TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE events_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.events_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE events_archive; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.events_archive TO "nova-staging";
 
 
 --
@@ -6571,6 +6712,14 @@ GRANT SELECT ON TABLE public.gambling_entries TO iris;
 GRANT SELECT ON TABLE public.gambling_entries TO gidget;
 GRANT SELECT ON TABLE public.gambling_entries TO ticker;
 GRANT SELECT ON TABLE public.gambling_entries TO athena;
+GRANT ALL ON TABLE public.gambling_entries TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE gambling_entries_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.gambling_entries_id_seq TO "nova-staging";
 
 
 --
@@ -6585,6 +6734,14 @@ GRANT SELECT ON TABLE public.gambling_logs TO iris;
 GRANT SELECT ON TABLE public.gambling_logs TO gidget;
 GRANT SELECT ON TABLE public.gambling_logs TO ticker;
 GRANT SELECT ON TABLE public.gambling_logs TO athena;
+GRANT ALL ON TABLE public.gambling_logs TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE gambling_logs_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.gambling_logs_id_seq TO "nova-staging";
 
 
 --
@@ -6599,6 +6756,7 @@ GRANT SELECT ON TABLE public.job_messages TO iris;
 GRANT SELECT ON TABLE public.job_messages TO gidget;
 GRANT SELECT ON TABLE public.job_messages TO ticker;
 GRANT SELECT ON TABLE public.job_messages TO athena;
+GRANT ALL ON TABLE public.job_messages TO "nova-staging";
 
 
 --
@@ -6606,6 +6764,7 @@ GRANT SELECT ON TABLE public.job_messages TO athena;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.job_messages_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.job_messages_id_seq TO "nova-staging";
 
 
 --
@@ -6620,6 +6779,21 @@ GRANT SELECT ON TABLE public.lessons TO iris;
 GRANT SELECT ON TABLE public.lessons TO gidget;
 GRANT SELECT ON TABLE public.lessons TO ticker;
 GRANT SELECT ON TABLE public.lessons TO athena;
+GRANT ALL ON TABLE public.lessons TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE lessons_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.lessons_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE lessons_archive; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.lessons_archive TO "nova-staging";
 
 
 --
@@ -6634,6 +6808,14 @@ GRANT SELECT ON TABLE public.media_consumed TO iris;
 GRANT SELECT ON TABLE public.media_consumed TO gidget;
 GRANT SELECT ON TABLE public.media_consumed TO ticker;
 GRANT SELECT ON TABLE public.media_consumed TO athena;
+GRANT ALL ON TABLE public.media_consumed TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE media_consumed_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.media_consumed_id_seq TO "nova-staging";
 
 
 --
@@ -6648,6 +6830,14 @@ GRANT SELECT ON TABLE public.media_queue TO iris;
 GRANT SELECT ON TABLE public.media_queue TO gidget;
 GRANT SELECT ON TABLE public.media_queue TO ticker;
 GRANT SELECT ON TABLE public.media_queue TO athena;
+GRANT ALL ON TABLE public.media_queue TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE media_queue_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.media_queue_id_seq TO "nova-staging";
 
 
 --
@@ -6662,6 +6852,14 @@ GRANT SELECT ON TABLE public.media_tags TO iris;
 GRANT SELECT ON TABLE public.media_tags TO gidget;
 GRANT SELECT ON TABLE public.media_tags TO ticker;
 GRANT SELECT ON TABLE public.media_tags TO athena;
+GRANT ALL ON TABLE public.media_tags TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE media_tags_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.media_tags_id_seq TO "nova-staging";
 
 
 --
@@ -6676,6 +6874,7 @@ GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO iris;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gidget;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO ticker;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO athena;
+GRANT ALL ON TABLE public.memory_embeddings TO "nova-staging";
 
 
 --
@@ -6683,6 +6882,49 @@ GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO athena;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.memory_embeddings_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE memory_embeddings_archive; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.memory_embeddings_archive TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE models_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.models_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE music_analysis; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.music_analysis TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE music_analysis_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.music_analysis_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE music_library; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.music_library TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE music_library_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.music_library_id_seq TO "nova-staging";
 
 
 --
@@ -6697,6 +6939,14 @@ GRANT SELECT ON TABLE public.place_properties TO iris;
 GRANT SELECT ON TABLE public.place_properties TO gidget;
 GRANT SELECT ON TABLE public.place_properties TO ticker;
 GRANT SELECT ON TABLE public.place_properties TO athena;
+GRANT ALL ON TABLE public.place_properties TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE place_properties_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.place_properties_id_seq TO "nova-staging";
 
 
 --
@@ -6711,6 +6961,14 @@ GRANT SELECT ON TABLE public.places TO iris;
 GRANT SELECT ON TABLE public.places TO gidget;
 GRANT SELECT ON TABLE public.places TO ticker;
 GRANT SELECT ON TABLE public.places TO athena;
+GRANT ALL ON TABLE public.places TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE places_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.places_id_seq TO "nova-staging";
 
 
 --
@@ -6725,6 +6983,14 @@ GRANT SELECT ON TABLE public.portfolio_positions TO iris;
 GRANT SELECT ON TABLE public.portfolio_positions TO gidget;
 GRANT SELECT ON TABLE public.portfolio_positions TO ticker;
 GRANT SELECT ON TABLE public.portfolio_positions TO athena;
+GRANT ALL ON TABLE public.portfolio_positions TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE portfolio_positions_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.portfolio_positions_id_seq TO "nova-staging";
 
 
 --
@@ -6739,6 +7005,14 @@ GRANT SELECT ON TABLE public.portfolio_snapshots TO iris;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO gidget;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO ticker;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO athena;
+GRANT ALL ON TABLE public.portfolio_snapshots TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE portfolio_snapshots_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.portfolio_snapshots_id_seq TO "nova-staging";
 
 
 --
@@ -6753,6 +7027,14 @@ GRANT SELECT ON TABLE public.positions TO iris;
 GRANT SELECT ON TABLE public.positions TO gidget;
 GRANT SELECT ON TABLE public.positions TO ticker;
 GRANT SELECT ON TABLE public.positions TO athena;
+GRANT ALL ON TABLE public.positions TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE positions_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.positions_id_seq TO "nova-staging";
 
 
 --
@@ -6767,6 +7049,14 @@ GRANT SELECT ON TABLE public.preferences TO iris;
 GRANT SELECT ON TABLE public.preferences TO gidget;
 GRANT SELECT ON TABLE public.preferences TO ticker;
 GRANT SELECT ON TABLE public.preferences TO athena;
+GRANT ALL ON TABLE public.preferences TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE preferences_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.preferences_id_seq TO "nova-staging";
 
 
 --
@@ -6781,6 +7071,7 @@ GRANT SELECT ON TABLE public.price_cache_v2 TO iris;
 GRANT SELECT ON TABLE public.price_cache_v2 TO gidget;
 GRANT SELECT ON TABLE public.price_cache_v2 TO ticker;
 GRANT SELECT ON TABLE public.price_cache_v2 TO athena;
+GRANT ALL ON TABLE public.price_cache_v2 TO "nova-staging";
 
 
 --
@@ -6795,6 +7086,7 @@ GRANT SELECT ON TABLE public.project_entities TO iris;
 GRANT SELECT ON TABLE public.project_entities TO gidget;
 GRANT SELECT ON TABLE public.project_entities TO ticker;
 GRANT SELECT ON TABLE public.project_entities TO athena;
+GRANT ALL ON TABLE public.project_entities TO "nova-staging";
 
 
 --
@@ -6809,6 +7101,14 @@ GRANT SELECT ON TABLE public.project_tasks TO iris;
 GRANT SELECT ON TABLE public.project_tasks TO gidget;
 GRANT SELECT ON TABLE public.project_tasks TO ticker;
 GRANT SELECT ON TABLE public.project_tasks TO athena;
+GRANT ALL ON TABLE public.project_tasks TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE project_tasks_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.project_tasks_id_seq TO "nova-staging";
 
 
 --
@@ -6823,6 +7123,14 @@ GRANT SELECT ON TABLE public.projects TO iris;
 GRANT SELECT ON TABLE public.projects TO gidget;
 GRANT SELECT ON TABLE public.projects TO ticker;
 GRANT SELECT ON TABLE public.projects TO athena;
+GRANT ALL ON TABLE public.projects TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE projects_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.projects_id_seq TO "nova-staging";
 
 
 --
@@ -6830,6 +7138,28 @@ GRANT SELECT ON TABLE public.projects TO athena;
 --
 
 GRANT SELECT ON TABLE public.publications TO nova;
+GRANT ALL ON TABLE public.publications TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE publications_id_seq; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT ALL ON SEQUENCE public.publications_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE ralph_sessions; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.ralph_sessions TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE ralph_sessions_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.ralph_sessions_id_seq TO "nova-staging";
 
 
 --
@@ -6839,6 +7169,7 @@ GRANT SELECT ON TABLE public.publications TO nova;
 GRANT SELECT ON TABLE public.sops TO newhart;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sops TO erato;
 GRANT SELECT ON TABLE public.sops TO nova;
+GRANT ALL ON TABLE public.sops TO "nova-staging";
 
 
 --
@@ -6846,6 +7177,7 @@ GRANT SELECT ON TABLE public.sops TO nova;
 --
 
 GRANT SELECT,USAGE ON SEQUENCE public.sops_id_seq TO erato;
+GRANT ALL ON SEQUENCE public.sops_id_seq TO "nova-staging";
 
 
 --
@@ -6853,6 +7185,14 @@ GRANT SELECT,USAGE ON SEQUENCE public.sops_id_seq TO erato;
 --
 
 GRANT SELECT ON TABLE public.tags TO nova;
+GRANT ALL ON TABLE public.tags TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE tags_id_seq; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT ALL ON SEQUENCE public.tags_id_seq TO "nova-staging";
 
 
 --
@@ -6867,6 +7207,28 @@ GRANT SELECT ON TABLE public.tasks TO iris;
 GRANT SELECT ON TABLE public.tasks TO gidget;
 GRANT SELECT ON TABLE public.tasks TO ticker;
 GRANT SELECT ON TABLE public.tasks TO athena;
+GRANT ALL ON TABLE public.tasks TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE tasks_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.tasks_id_seq TO "nova-staging";
+
+
+--
+-- Name: TABLE unsolved_problems; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.unsolved_problems TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE unsolved_problems_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.unsolved_problems_id_seq TO "nova-staging";
 
 
 --
@@ -6881,6 +7243,7 @@ GRANT SELECT ON TABLE public.v_agent_chat_recent TO iris;
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO gidget;
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO ticker;
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO athena;
+GRANT ALL ON TABLE public.v_agent_chat_recent TO "nova-staging";
 
 
 --
@@ -6895,6 +7258,7 @@ GRANT SELECT ON TABLE public.v_agent_chat_stats TO iris;
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO gidget;
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO ticker;
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO athena;
+GRANT ALL ON TABLE public.v_agent_chat_stats TO "nova-staging";
 
 
 --
@@ -6909,6 +7273,7 @@ GRANT SELECT ON TABLE public.v_agents TO iris;
 GRANT SELECT ON TABLE public.v_agents TO gidget;
 GRANT SELECT ON TABLE public.v_agents TO ticker;
 GRANT SELECT ON TABLE public.v_agents TO athena;
+GRANT ALL ON TABLE public.v_agents TO "nova-staging";
 
 
 --
@@ -6923,6 +7288,7 @@ GRANT SELECT ON TABLE public.v_entity_facts TO iris;
 GRANT SELECT ON TABLE public.v_entity_facts TO gidget;
 GRANT SELECT ON TABLE public.v_entity_facts TO ticker;
 GRANT SELECT ON TABLE public.v_entity_facts TO athena;
+GRANT ALL ON TABLE public.v_entity_facts TO "nova-staging";
 
 
 --
@@ -6937,6 +7303,7 @@ GRANT SELECT ON TABLE public.v_event_timeline TO iris;
 GRANT SELECT ON TABLE public.v_event_timeline TO gidget;
 GRANT SELECT ON TABLE public.v_event_timeline TO ticker;
 GRANT SELECT ON TABLE public.v_event_timeline TO athena;
+GRANT ALL ON TABLE public.v_event_timeline TO "nova-staging";
 
 
 --
@@ -6951,6 +7318,7 @@ GRANT SELECT ON TABLE public.v_gambling_summary TO iris;
 GRANT SELECT ON TABLE public.v_gambling_summary TO gidget;
 GRANT SELECT ON TABLE public.v_gambling_summary TO ticker;
 GRANT SELECT ON TABLE public.v_gambling_summary TO athena;
+GRANT ALL ON TABLE public.v_gambling_summary TO "nova-staging";
 
 
 --
@@ -6965,6 +7333,7 @@ GRANT SELECT ON TABLE public.v_media_queue_pending TO iris;
 GRANT SELECT ON TABLE public.v_media_queue_pending TO gidget;
 GRANT SELECT ON TABLE public.v_media_queue_pending TO ticker;
 GRANT SELECT ON TABLE public.v_media_queue_pending TO athena;
+GRANT ALL ON TABLE public.v_media_queue_pending TO "nova-staging";
 
 
 --
@@ -6979,6 +7348,7 @@ GRANT SELECT ON TABLE public.v_media_with_tags TO iris;
 GRANT SELECT ON TABLE public.v_media_with_tags TO gidget;
 GRANT SELECT ON TABLE public.v_media_with_tags TO ticker;
 GRANT SELECT ON TABLE public.v_media_with_tags TO athena;
+GRANT ALL ON TABLE public.v_media_with_tags TO "nova-staging";
 
 
 --
@@ -6993,6 +7363,7 @@ GRANT SELECT ON TABLE public.v_metamours TO iris;
 GRANT SELECT ON TABLE public.v_metamours TO gidget;
 GRANT SELECT ON TABLE public.v_metamours TO ticker;
 GRANT SELECT ON TABLE public.v_metamours TO athena;
+GRANT ALL ON TABLE public.v_metamours TO "nova-staging";
 
 
 --
@@ -7007,6 +7378,7 @@ GRANT SELECT ON TABLE public.v_pending_tasks TO iris;
 GRANT SELECT ON TABLE public.v_pending_tasks TO gidget;
 GRANT SELECT ON TABLE public.v_pending_tasks TO ticker;
 GRANT SELECT ON TABLE public.v_pending_tasks TO athena;
+GRANT ALL ON TABLE public.v_pending_tasks TO "nova-staging";
 
 
 --
@@ -7021,6 +7393,14 @@ GRANT SELECT ON TABLE public.v_portfolio_allocation TO iris;
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO gidget;
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO ticker;
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO athena;
+GRANT ALL ON TABLE public.v_portfolio_allocation TO "nova-staging";
+
+
+--
+-- Name: TABLE v_ralph_active; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.v_ralph_active TO "nova-staging";
 
 
 --
@@ -7035,6 +7415,7 @@ GRANT SELECT ON TABLE public.v_relationships TO iris;
 GRANT SELECT ON TABLE public.v_relationships TO gidget;
 GRANT SELECT ON TABLE public.v_relationships TO ticker;
 GRANT SELECT ON TABLE public.v_relationships TO athena;
+GRANT ALL ON TABLE public.v_relationships TO "nova-staging";
 
 
 --
@@ -7049,6 +7430,7 @@ GRANT SELECT ON TABLE public.v_task_tree TO iris;
 GRANT SELECT ON TABLE public.v_task_tree TO gidget;
 GRANT SELECT ON TABLE public.v_task_tree TO ticker;
 GRANT SELECT ON TABLE public.v_task_tree TO athena;
+GRANT ALL ON TABLE public.v_task_tree TO "nova-staging";
 
 
 --
@@ -7063,6 +7445,7 @@ GRANT SELECT ON TABLE public.v_users TO iris;
 GRANT SELECT ON TABLE public.v_users TO gidget;
 GRANT SELECT ON TABLE public.v_users TO ticker;
 GRANT SELECT ON TABLE public.v_users TO athena;
+GRANT ALL ON TABLE public.v_users TO "nova-staging";
 
 
 --
@@ -7077,6 +7460,14 @@ GRANT SELECT ON TABLE public.vehicles TO iris;
 GRANT SELECT ON TABLE public.vehicles TO gidget;
 GRANT SELECT ON TABLE public.vehicles TO ticker;
 GRANT SELECT ON TABLE public.vehicles TO athena;
+GRANT ALL ON TABLE public.vehicles TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE vehicles_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.vehicles_id_seq TO "nova-staging";
 
 
 --
@@ -7091,6 +7482,14 @@ GRANT SELECT ON TABLE public.vocabulary TO iris;
 GRANT SELECT ON TABLE public.vocabulary TO gidget;
 GRANT SELECT ON TABLE public.vocabulary TO ticker;
 GRANT SELECT ON TABLE public.vocabulary TO athena;
+GRANT ALL ON TABLE public.vocabulary TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE vocabulary_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON SEQUENCE public.vocabulary_id_seq TO "nova-staging";
 
 
 --
@@ -7098,6 +7497,7 @@ GRANT SELECT ON TABLE public.vocabulary TO athena;
 --
 
 GRANT SELECT ON TABLE public.work_tags TO nova;
+GRANT ALL ON TABLE public.work_tags TO "nova-staging";
 
 
 --
@@ -7105,6 +7505,14 @@ GRANT SELECT ON TABLE public.work_tags TO nova;
 --
 
 GRANT SELECT ON TABLE public.works TO nova;
+GRANT ALL ON TABLE public.works TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE works_id_seq; Type: ACL; Schema: public; Owner: erato
+--
+
+GRANT ALL ON SEQUENCE public.works_id_seq TO "nova-staging";
 
 
 --
@@ -7136,5 +7544,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict c5fWfCGg2jEjyo5V1YnpZntH84auF7zPK1kAbinodIg0zUtLoCIinpQAc2GUhai
+\unrestrict u14VyEhoZZlCasa3boVAhGUk8Enf3A8Kas91ywSgWhy8mWOxGTRqHzwAkVQAqwD
 
