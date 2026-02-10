@@ -674,18 +674,16 @@ else
     exit 1
 fi
 
-# Check if virtualenv is installed
-if python3 -m virtualenv --version &> /dev/null 2>&1; then
-    echo -e "  ${CHECK_MARK} virtualenv available"
+# Check if python3-venv is available
+if python3 -m venv --help &> /dev/null; then
+    echo -e "  ${CHECK_MARK} python3-venv available"
 else
-    echo "  Installing virtualenv..."
-    if pip3 install --user virtualenv &> /dev/null; then
-        echo -e "  ${CHECK_MARK} virtualenv installed"
-    else
-        echo -e "  ${CROSS_MARK} Failed to install virtualenv"
-        echo "      Try: pip3 install --user virtualenv"
-        exit 1
-    fi
+    echo -e "  ${CROSS_MARK} python3-venv module not found"
+    echo "      Install: sudo apt install python3-venv"
+    echo ""
+    echo "      Note: PEP 668 restricts pip on system Python in Ubuntu 24.04+"
+    echo "            Using python3-venv instead of pip virtualenv"
+    exit 1
 fi
 
 # Create venv if it doesn't exist
@@ -696,11 +694,11 @@ else
     # Create parent directories if needed
     mkdir -p "$(dirname "$VENV_DIR")"
     
-    if python3 -m virtualenv "$VENV_DIR" &> /dev/null; then
+    if python3 -m venv "$VENV_DIR" &> /dev/null; then
         echo -e "  ${CHECK_MARK} Virtual environment created"
     else
         echo -e "  ${CROSS_MARK} Failed to create virtual environment"
-        echo "      Try: python3 -m virtualenv $VENV_DIR"
+        echo "      Try: python3 -m venv $VENV_DIR"
         exit 1
     fi
 fi
