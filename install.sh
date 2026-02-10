@@ -335,6 +335,22 @@ verify_config() {
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
     fi
     
+    # Check cron job installation
+    CRON_FILE="/etc/cron.d/nova-memory-maintenance"
+    if [ -f "$CRON_FILE" ]; then
+        echo -e "  ${CHECK_MARK} Cron job installed at $CRON_FILE"
+        # Verify it has correct content
+        if grep -q "memory-maintenance.py" "$CRON_FILE"; then
+            echo -e "  ${CHECK_MARK} Cron job configured correctly"
+        else
+            echo -e "  ${WARNING} Cron job exists but may need updating"
+            VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+        fi
+    else
+        echo -e "  ${WARNING} Cron job not installed (requires manual setup)"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    fi
+    
     return 0
 }
 
@@ -638,7 +654,68 @@ if ls "$SCRIPTS_TARGET"/*.py &> /dev/null; then
 fi
 
 # ============================================
-# Part 5: Verification
+# Part 5: Cron Job Setup (Memory Maintenance)
+# ============================================
+echo ""
+echo "Cron job setup (memory maintenance)..."
+
+CRON_FILE="/etc/cron.d/nova-memory-maintenance"
+CRON_USER="${DB_USER//-/_}"  # Use same user as database
+SCRIPT_PATH="$SCRIPTS_TARGET/memory-maintenance.py"
+
+# Check if script exists
+if [ ! -f "$SCRIPT_PATH" ]; then
+    echo -e "  ${WARNING} memory-maintenance.py not found at $SCRIPT_PATH"
+    echo "      Cron job setup skipped"
+else
+    # Create cron file content
+    CRON_CONTENT="# nova-memory daily maintenance - added by install.sh
+# Runs memory confidence decay, duplicate merging, and archival
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+PGDATABASE=$DB_NAME
+
+# Run at 6:00 AM daily
+0 6 * * * $CRON_USER $SCRIPT_PATH >> /var/log/nova-memory-maintenance.log 2>&1
+"
+
+    # Check if we have sudo access
+    if sudo -n true 2>/dev/null; then
+        # We have passwordless sudo, install directly
+        echo "$CRON_CONTENT" | sudo tee "$CRON_FILE" > /dev/null
+        sudo chmod 644 "$CRON_FILE"
+        echo -e "  ${CHECK_MARK} Cron job installed at $CRON_FILE"
+        echo "      Schedule: Daily at 6:00 AM"
+        echo "      Script: $SCRIPT_PATH"
+        echo "      Database: $DB_NAME"
+        echo "      Log: /var/log/nova-memory-maintenance.log"
+    else
+        # Need password or don't have sudo
+        echo -e "  ${INFO} Cron job requires sudo access to install"
+        echo ""
+        echo "      To complete installation, run:"
+        echo ""
+        echo "      sudo tee $CRON_FILE > /dev/null << 'EOF'"
+        echo "$CRON_CONTENT"
+        echo "EOF"
+        echo "      sudo chmod 644 $CRON_FILE"
+        echo ""
+        echo "      Or manually create $CRON_FILE with the above content"
+        echo ""
+        
+        # Try to save to a temp file for easy installation
+        TEMP_CRON="/tmp/nova-memory-cron-$(date +%s)"
+        echo "$CRON_CONTENT" > "$TEMP_CRON"
+        echo "      Temp cron file created at: $TEMP_CRON"
+        echo "      Run: sudo cp $TEMP_CRON $CRON_FILE && sudo chmod 644 $CRON_FILE"
+        echo ""
+        
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    fi
+fi
+
+# ============================================
+# Part 6: Verification
 # ============================================
 echo ""
 verify_schema

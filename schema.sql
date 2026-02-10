@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict DL5BLliozNxgkw9q3q3NmXKHaV8PZDdFDDq54ClC3zolTBTJDCsFSN7gzFJ5cdR
+\restrict QkJuhvZr9xqldLWglahndcfBE5TJcRO8fhmQRUvpfLE2C4uf931g2U17uiTjHjw
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1294,7 +1294,7 @@ COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_comman
 -- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or openclaw config path for credentials';
+COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
 
 
 --
@@ -4040,6 +4040,105 @@ CREATE TABLE public.work_tags (
 ALTER TABLE public.work_tags OWNER TO erato;
 
 --
+-- Name: workflow_steps; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.workflow_steps (
+    id integer NOT NULL,
+    workflow_id integer NOT NULL,
+    step_order integer NOT NULL,
+    agent_id integer NOT NULL,
+    description text NOT NULL,
+    produces_deliverable boolean DEFAULT false,
+    deliverable_type text,
+    deliverable_description text,
+    handoff_to_step integer,
+    required boolean DEFAULT true,
+    estimated_duration_minutes integer,
+    CONSTRAINT workflow_steps_check CHECK ((((produces_deliverable = true) AND (deliverable_type IS NOT NULL)) OR (produces_deliverable = false)))
+);
+
+
+ALTER TABLE public.workflow_steps OWNER TO nova;
+
+--
+-- Name: TABLE workflow_steps; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.workflow_steps IS 'Ordered steps in a workflow with agent assignments and deliverable specifications';
+
+
+--
+-- Name: workflow_steps_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.workflow_steps_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflow_steps_id_seq OWNER TO nova;
+
+--
+-- Name: workflow_steps_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.workflow_steps_id_seq OWNED BY public.workflow_steps.id;
+
+
+--
+-- Name: workflows; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.workflows (
+    id integer NOT NULL,
+    name text NOT NULL,
+    description text NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    created_by text DEFAULT 'newhart'::text,
+    status text DEFAULT 'active'::text,
+    tags text[] DEFAULT '{}'::text[],
+    CONSTRAINT workflows_status_check CHECK ((status = ANY (ARRAY['active'::text, 'deprecated'::text, 'archived'::text])))
+);
+
+
+ALTER TABLE public.workflows OWNER TO nova;
+
+--
+-- Name: TABLE workflows; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.workflows IS 'Defines multi-agent workflows with ordered steps and deliverable handoffs';
+
+
+--
+-- Name: workflows_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.workflows_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflows_id_seq OWNER TO nova;
+
+--
+-- Name: workflows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.workflows_id_seq OWNED BY public.workflows.id;
+
+
+--
 -- Name: works; Type: TABLE; Schema: public; Owner: erato
 --
 
@@ -4373,6 +4472,20 @@ ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.veh
 --
 
 ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
+
+
+--
+-- Name: workflow_steps id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflow_steps ALTER COLUMN id SET DEFAULT nextval('public.workflow_steps_id_seq'::regclass);
+
+
+--
+-- Name: workflows id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflows ALTER COLUMN id SET DEFAULT nextval('public.workflows_id_seq'::regclass);
 
 
 --
@@ -4927,6 +5040,38 @@ ALTER TABLE ONLY public.work_tags
 
 
 --
+-- Name: workflow_steps workflow_steps_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflow_steps
+    ADD CONSTRAINT workflow_steps_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: workflow_steps workflow_steps_workflow_id_step_order_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflow_steps
+    ADD CONSTRAINT workflow_steps_workflow_id_step_order_key UNIQUE (workflow_id, step_order);
+
+
+--
+-- Name: workflows workflows_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflows
+    ADD CONSTRAINT workflows_name_key UNIQUE (name);
+
+
+--
+-- Name: workflows workflows_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflows
+    ADD CONSTRAINT workflows_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: works works_pkey; Type: CONSTRAINT; Schema: public; Owner: erato
 --
 
@@ -5350,12 +5495,8 @@ CREATE INDEX idx_memory_embeddings_source ON public.memory_embeddings USING btre
 --
 -- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: nova
 --
--- NOTE: IVFFlat index commented out by default - it breaks queries with < 1000 rows
--- IVFFlat divides vectors into clusters (lists). With 100 lists and few rows, most
--- lists are empty, causing ORDER BY queries to return 0-1 results instead of correct results.
--- 
--- Uncomment this index ONLY after you have > 1000 embeddings for better performance:
--- CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+
+CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --
@@ -5681,6 +5822,41 @@ CREATE INDEX idx_work_tags_work ON public.work_tags USING btree (work_id);
 
 
 --
+-- Name: idx_workflow_steps_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflow_steps_agent ON public.workflow_steps USING btree (agent_id);
+
+
+--
+-- Name: idx_workflow_steps_order; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflow_steps_order ON public.workflow_steps USING btree (workflow_id, step_order);
+
+
+--
+-- Name: idx_workflow_steps_workflow; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflow_steps_workflow ON public.workflow_steps USING btree (workflow_id);
+
+
+--
+-- Name: idx_workflows_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflows_name ON public.workflows USING btree (name);
+
+
+--
+-- Name: idx_workflows_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflows_status ON public.workflows USING btree (status);
+
+
+--
 -- Name: idx_works_created; Type: INDEX; Schema: public; Owner: erato
 --
 
@@ -5725,11 +5901,8 @@ CREATE INDEX idx_works_updated ON public.works USING btree (updated_at DESC);
 --
 -- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: public; Owner: nova
 --
--- NOTE: IVFFlat index commented out by default - it breaks queries with < 1000 rows
--- See note on idx_memory_embeddings_vector above for explanation.
--- 
--- Uncomment this index ONLY after you have > 1000 archived embeddings:
--- CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
+
+CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 
 
 --
@@ -6256,6 +6429,30 @@ ALTER TABLE ONLY public.work_tags
 
 ALTER TABLE ONLY public.work_tags
     ADD CONSTRAINT work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
+
+
+--
+-- Name: workflow_steps workflow_steps_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflow_steps
+    ADD CONSTRAINT workflow_steps_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id);
+
+
+--
+-- Name: workflow_steps workflow_steps_handoff_to_step_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflow_steps
+    ADD CONSTRAINT workflow_steps_handoff_to_step_fkey FOREIGN KEY (handoff_to_step) REFERENCES public.workflow_steps(id);
+
+
+--
+-- Name: workflow_steps workflow_steps_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflow_steps
+    ADD CONSTRAINT workflow_steps_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES public.workflows(id) ON DELETE CASCADE;
 
 
 --
@@ -7508,6 +7705,34 @@ GRANT ALL ON TABLE public.work_tags TO "nova-staging";
 
 
 --
+-- Name: TABLE workflow_steps; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.workflow_steps TO newhart;
+
+
+--
+-- Name: SEQUENCE workflow_steps_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.workflow_steps_id_seq TO newhart;
+
+
+--
+-- Name: TABLE workflows; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,UPDATE ON TABLE public.workflows TO newhart;
+
+
+--
+-- Name: SEQUENCE workflows_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.workflows_id_seq TO newhart;
+
+
+--
 -- Name: TABLE works; Type: ACL; Schema: public; Owner: erato
 --
 
@@ -7551,5 +7776,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict DL5BLliozNxgkw9q3q3NmXKHaV8PZDdFDDq54ClC3zolTBTJDCsFSN7gzFJ5cdR
+\unrestrict QkJuhvZr9xqldLWglahndcfBE5TJcRO8fhmQRUvpfLE2C4uf931g2U17uiTjHjw
 
