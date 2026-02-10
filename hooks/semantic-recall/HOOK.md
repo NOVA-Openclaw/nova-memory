@@ -1,7 +1,7 @@
 ---
 name: semantic-recall
 description: "Runs semantic search on incoming messages and loads entity context before processing"
-metadata: {"clawdbot":{"emoji":"🧠","events":["message:received"],"requires":{"bins":["python3"],"env":["OPENAI_API_KEY"]}}}
+metadata: {"openclaw":{"emoji":"🧠","events":["message:received"],"requires":{"bins":["python3"],"env":["OPENAI_API_KEY"]}}}
 ---
 
 # Semantic Recall Hook

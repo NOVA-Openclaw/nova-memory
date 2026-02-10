@@ -1,8 +1,6 @@
 import { exec } from "child_process";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "fs";
-
-const ACTIVITY_STATE = "/home/nova/clawd/logs/activity-state.json";
-const ACTIVITY_LOG = "/home/nova/clawd/logs/session-activity.jsonl";
+import * as path from "path";
+import * as os from "os";
 
 interface ActivityState {
   activeMinutesToday: number;
@@ -12,80 +10,122 @@ interface ActivityState {
   heartbeats: number;
 }
 
-function updateActivityState(isUserMessage: boolean) {
-  let state: ActivityState = {
-    activeMinutesToday: 0,
-    lastActiveAt: null,
-    todayDate: null,
-    userMessages: 0,
-    heartbeats: 0
-  };
-  
-  try {
-    if (existsSync(ACTIVITY_STATE)) {
-      state = JSON.parse(readFileSync(ACTIVITY_STATE, 'utf8'));
-    }
-  } catch (e) {}
-  
+// In-memory activity tracking (no longer persisted to file)
+let activityState: ActivityState = {
+  activeMinutesToday: 0,
+  lastActiveAt: null,
+  todayDate: null,
+  userMessages: 0,
+  heartbeats: 0
+};
+
+function logActivity(isUserMessage: boolean) {
   const today = new Date().toISOString().split('T')[0];
   const now = Date.now();
   
   // Reset if new day
-  if (state.todayDate !== today) {
-    state = { activeMinutesToday: 0, lastActiveAt: null, todayDate: today, userMessages: 0, heartbeats: 0 };
+  if (activityState.todayDate !== today) {
+    console.info('[memory-extract] New day detected, resetting activity counters', {
+      previousDate: activityState.todayDate,
+      newDate: today,
+      previousUserMessages: activityState.userMessages,
+      previousHeartbeats: activityState.heartbeats,
+      previousActiveMinutes: activityState.activeMinutesToday
+    });
+    activityState = { 
+      activeMinutesToday: 0, 
+      lastActiveAt: null, 
+      todayDate: today, 
+      userMessages: 0, 
+      heartbeats: 0 
+    };
   }
   
   if (isUserMessage) {
-    state.userMessages++;
-    if (state.lastActiveAt) {
-      const gap = (now - state.lastActiveAt) / 60000;
-      if (gap <= 5) state.activeMinutesToday += gap;
+    activityState.userMessages++;
+    if (activityState.lastActiveAt) {
+      const gap = (now - activityState.lastActiveAt) / 60000;
+      if (gap <= 5) {
+        activityState.activeMinutesToday += gap;
+      }
     }
-    state.lastActiveAt = now;
+    activityState.lastActiveAt = now;
   } else {
-    state.heartbeats++;
+    activityState.heartbeats++;
   }
   
-  writeFileSync(ACTIVITY_STATE, JSON.stringify(state, null, 2));
-  appendFileSync(ACTIVITY_LOG, JSON.stringify({ timestamp: new Date().toISOString(), isUserMessage, activeMinutes: state.activeMinutesToday }) + '\n');
+  console.debug('[memory-extract] Activity update', {
+    isUserMessage,
+    activeMinutesToday: activityState.activeMinutesToday.toFixed(2),
+    userMessages: activityState.userMessages,
+    heartbeats: activityState.heartbeats,
+    date: activityState.todayDate
+  });
 }
 
 const handler = async (event) => {
-  const LOG = "/home/nova/clawd/logs/memory-extract-hook.log";
-  const ts = new Date().toISOString();
-  
-  appendFileSync(LOG, `${ts} | Event: ${event.type}:${event.action}\n`);
+  console.info('[memory-extract] Hook triggered', {
+    eventType: event.type,
+    eventAction: event.action
+  });
   
   // Track activity for cost/hour calculations
   if (event.type === "message") {
     const ctx = event.context ?? {};
     const rawBody = ctx.rawBody ?? ctx.message ?? "";
     const isHeartbeat = rawBody.includes("HEARTBEAT") || rawBody.includes("DASHBOARD UPDATE") || rawBody.startsWith("System: [");
-    updateActivityState(!isHeartbeat);
+    logActivity(!isHeartbeat);
   }
   
-  if (event.type !== "message" || event.action !== "received") return;
+  if (event.type !== "message" || event.action !== "received") {
+    console.debug('[memory-extract] Skipping non-received message event');
+    return;
+  }
   
   const ctx = event.context ?? {};
   const rawBody = ctx.rawBody ?? ctx.message ?? "";
-  if (!rawBody || rawBody.trim().length < 10) return;
+  
+  if (!rawBody || rawBody.trim().length < 10) {
+    console.debug('[memory-extract] Skipping short or empty message');
+    return;
+  }
   
   // Skip commands
-  if (rawBody.startsWith("/")) return;
+  if (rawBody.startsWith("/")) {
+    console.debug('[memory-extract] Skipping command message');
+    return;
+  }
   
   // Get sender info for attribution
   const senderName = ctx.senderName ?? "unknown";
   const senderId = ctx.senderId ?? "";  // Phone number or UUID for unique matching
   const isGroup = ctx.isGroup ?? false;
   
-  appendFileSync(LOG, `${ts} | From: ${senderName} (${senderId}) (group: ${isGroup}) | Message: ${rawBody.substring(0, 80)}...\n`);
+  console.info('[memory-extract] Processing message', {
+    sender: senderName,
+    senderId: senderId ? senderId.substring(0, 8) + '...' : 'none',
+    isGroup,
+    messageLength: rawBody.length,
+    messagePreview: rawBody.substring(0, 80) + (rawBody.length > 80 ? '...' : '')
+  });
   
   // Run extraction with attribution env vars (include senderId for unique matching)
   const escaped = rawBody.replace(/'/g, "'\\''");
   const envVars = `SENDER_NAME='${senderName}' SENDER_ID='${senderId}' IS_GROUP='${isGroup}'`;
+  const scriptPath = path.join(os.homedir(), "clawd/scripts/process-input.sh");
   
-  exec(`${envVars} /home/nova/clawd/scripts/process-input.sh '${escaped}'`, (err) => {
-    appendFileSync(LOG, `${ts} | ${err ? 'Error: ' + err.message : 'Extraction complete for ' + senderName}\n`);
+  exec(`${envVars} ${scriptPath} '${escaped}'`, (err) => {
+    if (err) {
+      console.error('[memory-extract] Extraction failed', {
+        sender: senderName,
+        error: err.message,
+        code: err.code
+      });
+    } else {
+      console.info('[memory-extract] Extraction complete', {
+        sender: senderName
+      });
+    }
   });
 };
 

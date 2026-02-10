@@ -1,9 +1,9 @@
 import { execSync, exec } from "child_process";
-import { existsSync, statSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { existsSync, statSync } from "fs";
+import * as path from "path";
+import * as os from "os";
 
-const CONTEXT_FILE = join(process.env.HOME || "", "clawd", "SESSION_CONTEXT.md");
-const SCRIPTS_DIR = join(process.env.HOME || "", "clawd", "scripts");
+const CONTEXT_FILE = path.join(os.homedir(), "clawd/SESSION_CONTEXT.md");
 const STALE_MINUTES = 5;
 
 // Track current session participants
@@ -49,7 +49,7 @@ const handler = async (event) => {
   currentParticipantHash = participantHash;
   
   // Generate new context (async to not block message processing)
-  const scriptPath = join(SCRIPTS_DIR, "generate-session-context.sh");
+  const scriptPath = path.join(os.homedir(), "clawd/scripts/generate-session-context.sh");
   const args = participants.map(p => `"${p}"`).join(" ");
   
   exec(`"${scriptPath}" "${CONTEXT_FILE}" ${args}`, (err) => {
