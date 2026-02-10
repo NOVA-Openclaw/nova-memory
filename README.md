@@ -669,6 +669,22 @@ git push
 
 The `hooks/` directory contains OpenClaw hooks that automatically extract and manage memories.
 
+### Prerequisites
+
+The hooks require **nova-relationships** for entity resolution. The hooks import via:
+```typescript
+import { resolveEntity } from "../../../nova-relationships/lib/entity-resolver/index.ts";
+```
+
+This expects `~/nova-relationships` to be a symlink to the nova-relationships repo. Install it:
+
+```bash
+cd ~/clawd/nova-relationships
+./agent-install.sh
+```
+
+The installer creates the required `~/nova-relationships` symlink automatically.
+
 ### Available Hooks
 
 - **memory-extract** - Extracts structured memories from incoming messages
