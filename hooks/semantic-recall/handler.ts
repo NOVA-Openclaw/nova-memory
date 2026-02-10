@@ -15,7 +15,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const RECALL_SCRIPT = join(__dirname, '../../scripts/proactive-recall.py');
 const WORKSPACE = process.env.OPENCLAW_WORKSPACE || join(process.env.HOME || os.homedir(), '.openclaw');
-const PYTHON_VENV = join(WORKSPACE, 'scripts/tts-venv/bin/python');
+
+// Standard venv location (installed by nova-memory installer)
+const STANDARD_VENV = join(process.env.HOME || os.homedir(), '.local/share', os.userInfo().username, 'venv/bin/python');
+// Fallback to workspace venv for backward compatibility
+const WORKSPACE_VENV = join(WORKSPACE, 'scripts/tts-venv/bin/python');
+
+// Use standard venv if it exists, otherwise fall back to workspace venv
+import { existsSync } from 'fs';
+const PYTHON_VENV = existsSync(STANDARD_VENV) ? STANDARD_VENV : WORKSPACE_VENV;
 
 // Configurable via environment variables
 const TOKEN_BUDGET = parseInt(process.env.SEMANTIC_RECALL_TOKEN_BUDGET || "1000", 10);
