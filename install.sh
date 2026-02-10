@@ -181,7 +181,7 @@ verify_files() {
         fi
         
         hook_name=$(basename "$hook_dir")
-        target_dir="$WORKSPACE/hooks/$hook_name"
+        target_dir="$HOME/.openclaw/hooks/$hook_name"
         
         if [ ! -d "$target_dir" ]; then
             echo -e "  ${WARNING} Hook '$hook_name' not installed"
@@ -492,12 +492,14 @@ echo ""
 echo "Hooks installation..."
 
 HOOKS_SOURCE="$SCRIPT_DIR/hooks"
-HOOKS_TARGET="$WORKSPACE/hooks"
+HOOKS_TARGET="$HOME/.openclaw/hooks"
 
 # Create hooks directory if needed
 if [ ! -d "$HOOKS_TARGET" ]; then
     mkdir -p "$HOOKS_TARGET"
-    echo "  Created hooks directory: $HOOKS_TARGET"
+    echo -e "  ${CHECK_MARK} Created hooks directory: $HOOKS_TARGET"
+else
+    echo "  Hooks directory exists: $HOOKS_TARGET"
 fi
 
 # Function to install a hook (copy, not symlink)
@@ -760,9 +762,12 @@ for hook in "${INSTALLED_HOOKS[@]}"; do
     echo "   openclaw hooks enable $hook"
 done
 echo ""
-echo "2. Verify installation:"
+echo "2. List available hooks:"
+echo "   openclaw hooks list"
+echo ""
+echo "3. Verify installation:"
 echo "   $0 --verify-only"
 echo ""
-echo "3. Check logs:"
+echo "4. Check logs:"
 echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
 echo ""
