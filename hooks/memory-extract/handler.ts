@@ -1,6 +1,6 @@
 import { exec } from "child_process";
-import * as path from "path";
-import * as os from "os";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 interface ActivityState {
   activeMinutesToday: number;
@@ -112,7 +112,9 @@ const handler = async (event) => {
   // Run extraction with attribution env vars (include senderId for unique matching)
   const escaped = rawBody.replace(/'/g, "'\\''");
   const envVars = `SENDER_NAME='${senderName}' SENDER_ID='${senderId}' IS_GROUP='${isGroup}'`;
-  const scriptPath = path.join(os.homedir(), "clawd/scripts/process-input.sh");
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const scriptPath = join(__dirname, '../../scripts/process-input.sh');
   
   exec(`${envVars} ${scriptPath} '${escaped}'`, (err) => {
     if (err) {

@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
-import * as path from "path";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import * as os from "os";
 import {
   resolveEntity,
@@ -10,8 +11,10 @@ import {
   type EntityFacts,
 } from "../../projects/nova-relationships/lib/entity-resolver";
 
-const RECALL_SCRIPT = path.join(os.homedir(), "clawd/scripts/proactive-recall.py");
-const PYTHON_VENV = path.join(os.homedir(), "clawd/scripts/tts-venv/bin/python");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const RECALL_SCRIPT = join(__dirname, '../../scripts/proactive-recall.py');
+const PYTHON_VENV = join(os.homedir(), "clawd/scripts/tts-venv/bin/python");
 
 // Configurable via environment variables
 const TOKEN_BUDGET = parseInt(process.env.SEMANTIC_RECALL_TOKEN_BUDGET || "1000", 10);
