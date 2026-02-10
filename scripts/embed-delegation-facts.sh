@@ -12,19 +12,10 @@ DB_USER="${PGUSER:-$(whoami)}"
 DB_NAME="${DB_USER//-/_}_memory"
 DB_HOST="localhost"
 
-# OpenAI API key
-OPENAI_API_KEY="${OPENAI_API_KEY:-}"
+# API key must be set in environment (inherited from OpenClaw)
 if [ -z "$OPENAI_API_KEY" ]; then
-    if [ -f ~/.secrets/openai-api-key ]; then
-        OPENAI_API_KEY=$(cat ~/.secrets/openai-api-key)
-    elif [ -f ~/.openclaw/openclaw.json ]; then
-        OPENAI_API_KEY=$(jq -r '.skills.entries."openai-image-gen".apiKey // empty' ~/.openclaw/openclaw.json 2>/dev/null)
-    fi
-fi
-
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo "ERROR: OPENAI_API_KEY not found"
-    echo "Set it in environment or ~/.secrets/openai-api-key"
+    echo "ERROR: OPENAI_API_KEY not set in environment" >&2
+    echo "This script should be run from OpenClaw hooks which inherit the API key" >&2
     exit 1
 fi
 

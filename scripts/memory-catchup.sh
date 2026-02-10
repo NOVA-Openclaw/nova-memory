@@ -197,8 +197,12 @@ while IFS= read -r line; do
         # SENDER_ID should come from the hook for user messages
     fi
     
-    # Run extraction
-    export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(grep ANTHROPIC_API_KEY ~/.bashrc | cut -d= -f2 | tr -d \"\'\" | head -1)}"
+    # Run extraction (API key must be in environment, inherited from OpenClaw)
+    if [ -z "$ANTHROPIC_API_KEY" ]; then
+        echo "ERROR: ANTHROPIC_API_KEY not set in environment" >&2
+        echo "This script should be run from OpenClaw hooks which inherit the API key" >&2
+        exit 1
+    fi
     
     if [ "$VERBOSE_LOG" = true ]; then
         EXTRACT_LOG="${HOME}/.openclaw/logs/memory-extractions.log"

@@ -14,7 +14,6 @@ WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace-claude-code}"
 # Parse arguments
 VERIFY_ONLY=0
 FORCE_INSTALL=0
-NO_PROMPT=0
 DB_NAME_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
@@ -27,10 +26,6 @@ while [[ $# -gt 0 ]]; do
             FORCE_INSTALL=1
             shift
             ;;
-        --no-prompt)
-            NO_PROMPT=1
-            shift
-            ;;
         --database|-d)
             DB_NAME_OVERRIDE="$2"
             shift 2
@@ -41,7 +36,6 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --verify-only         Check installation without modifying anything"
             echo "  --force               Force overwrite existing files (skip file verification)"
-            echo "  --no-prompt           Skip interactive prompts (for automated installs)"
             echo "  --database, -d NAME   Override database name (default: \${USER}_memory)"
             echo "  --help                Show this help message"
             echo ""
@@ -49,7 +43,6 @@ while [[ $# -gt 0 ]]; do
             echo "  $0                              # Use default database name"
             echo "  $0 --database nova_memory       # Use specific database"
             echo "  $0 -d nova_memory               # Short form"
-            echo "  $0 --no-prompt                  # Skip API key prompts"
             exit 0
             ;;
         *)
@@ -92,90 +85,6 @@ else
 fi
 echo "═══════════════════════════════════════════"
 echo ""
-
-# ============================================
-# API Key Setup Functions
-# ============================================
-
-# Determine shell profile file
-get_shell_profile() {
-    if [ -f "$HOME/.bashrc" ]; then
-        echo "$HOME/.bashrc"
-    elif [ -f "$HOME/.bash_profile" ]; then
-        echo "$HOME/.bash_profile"
-    elif [ -f "$HOME/.profile" ]; then
-        echo "$HOME/.profile"
-    else
-        # Default to .bashrc even if it doesn't exist yet
-        echo "$HOME/.bashrc"
-    fi
-}
-
-# Prompt for and save API key
-prompt_and_save_key() {
-    local var_name="$1"
-    local prompt_message="$2"
-    local feature_description="$3"
-    
-    # Skip if --no-prompt flag is set
-    if [ $NO_PROMPT -eq 1 ]; then
-        return 0
-    fi
-    
-    # Skip if already set
-    if [ -n "${!var_name}" ]; then
-        return 0
-    fi
-    
-    echo ""
-    echo -e "${YELLOW}${var_name} not set${NC}"
-    echo -n "$prompt_message"
-    
-    # Read API key (hide input if possible)
-    if [ -t 0 ]; then
-        read -s api_key
-        echo ""  # New line after hidden input
-    else
-        read api_key
-    fi
-    
-    # If user pressed Enter without input, skip
-    if [ -z "$api_key" ]; then
-        echo -e "  ${WARNING} Skipped - $feature_description won't work without this key"
-        return 0
-    fi
-    
-    # Validate key format (basic check)
-    if [[ ! "$api_key" =~ ^sk- ]]; then
-        echo -e "  ${WARNING} Key doesn't start with 'sk-', but saving anyway..."
-    fi
-    
-    # Get shell profile
-    SHELL_PROFILE=$(get_shell_profile)
-    
-    # Check if already in profile
-    if grep -q "export $var_name=" "$SHELL_PROFILE" 2>/dev/null; then
-        # Update existing line
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS sed requires empty string after -i
-            sed -i "" "s|export $var_name=.*|export $var_name=\"$api_key\"|" "$SHELL_PROFILE"
-        else
-            sed -i "s|export $var_name=.*|export $var_name=\"$api_key\"|" "$SHELL_PROFILE"
-        fi
-    else
-        # Add new line
-        echo "" >> "$SHELL_PROFILE"
-        echo "# Added by nova-memory installer" >> "$SHELL_PROFILE"
-        echo "export $var_name=\"$api_key\"" >> "$SHELL_PROFILE"
-    fi
-    
-    # Export for current session
-    export "$var_name=$api_key"
-    
-    echo -e "  ${CHECK_MARK} $var_name saved to $SHELL_PROFILE"
-    
-    return 0
-}
 
 # ============================================
 # Verification Functions
@@ -360,34 +269,37 @@ verify_config() {
     echo "Config verification..."
     
     # Check environment variables
-    local required_vars=("PGUSER" "ANTHROPIC_API_KEY")
-    local optional_vars=("OPENAI_API_KEY" "OPENCLAW_WORKSPACE")
+    # Note: Hooks run as child processes of OpenClaw and inherit its environment
+    # API keys should be configured in OpenClaw, not separately for nova-memory
     
-    for var in "${required_vars[@]}"; do
-        if [ -z "${!var}" ]; then
-            echo -e "  ${WARNING} $var not set"
-            VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
-        else
-            # Don't print full value for API keys
-            if [[ "$var" == *"KEY"* ]]; then
-                echo -e "  ${CHECK_MARK} $var set: ${!var:0:8}..."
-            else
-                echo -e "  ${CHECK_MARK} $var set: ${!var}"
-            fi
-        fi
-    done
+    if [ -z "$PGUSER" ]; then
+        echo -e "  ${WARNING} PGUSER not set (using current user: $(whoami))"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    else
+        echo -e "  ${CHECK_MARK} PGUSER set: $PGUSER"
+    fi
     
-    for var in "${optional_vars[@]}"; do
-        if [ -z "${!var}" ]; then
-            echo -e "  ${INFO} $var not set (optional)"
-        else
-            if [[ "$var" == *"KEY"* ]]; then
-                echo -e "  ${CHECK_MARK} $var set: ${!var:0:8}..."
-            else
-                echo -e "  ${CHECK_MARK} $var set: ${!var}"
-            fi
-        fi
-    done
+    if [ -z "$ANTHROPIC_API_KEY" ]; then
+        echo -e "  ${WARNING} ANTHROPIC_API_KEY not set in environment"
+        echo -e "      Hooks will inherit from OpenClaw's environment"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    else
+        echo -e "  ${CHECK_MARK} ANTHROPIC_API_KEY set: ${ANTHROPIC_API_KEY:0:8}..."
+    fi
+    
+    if [ -z "$OPENAI_API_KEY" ]; then
+        echo -e "  ${WARNING} OPENAI_API_KEY not set in environment"
+        echo -e "      Hooks will inherit from OpenClaw's environment"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    else
+        echo -e "  ${CHECK_MARK} OPENAI_API_KEY set: ${OPENAI_API_KEY:0:8}..."
+    fi
+    
+    if [ -z "$OPENCLAW_WORKSPACE" ]; then
+        echo -e "  ${INFO} OPENCLAW_WORKSPACE not set (using default: $WORKSPACE)"
+    else
+        echo -e "  ${CHECK_MARK} OPENCLAW_WORKSPACE set: $OPENCLAW_WORKSPACE"
+    fi
     
     # Check database connection
     if psql -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; then
@@ -495,37 +407,6 @@ if [ $VERIFY_ONLY -eq 1 ]; then
         echo -e "  ${CHECK_MARK} All checks passed"
         exit 0
     fi
-fi
-
-# ============================================
-# Part 1.5: API Key Configuration
-# ============================================
-echo ""
-echo "Config setup..."
-
-# Prompt for OpenAI API key (required for semantic-recall hook)
-prompt_and_save_key \
-    "OPENAI_API_KEY" \
-    "Enter your OpenAI API key (required for semantic recall) [or press Enter to skip]: " \
-    "semantic recall"
-
-# Prompt for Anthropic API key (required for memory-extract hook)
-prompt_and_save_key \
-    "ANTHROPIC_API_KEY" \
-    "Enter your Anthropic API key (required for memory extraction) [or press Enter to skip]: " \
-    "memory extraction"
-
-# Check current status
-if [ -n "$OPENAI_API_KEY" ]; then
-    echo -e "  ${CHECK_MARK} OPENAI_API_KEY configured"
-else
-    echo -e "  ${WARNING} OPENAI_API_KEY not set (semantic recall won't work)"
-fi
-
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-    echo -e "  ${CHECK_MARK} ANTHROPIC_API_KEY configured"
-else
-    echo -e "  ${WARNING} ANTHROPIC_API_KEY not set (memory extraction won't work)"
 fi
 
 # ============================================

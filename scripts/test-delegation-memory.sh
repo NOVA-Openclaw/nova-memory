@@ -52,17 +52,9 @@ echo ""
 if [ -f ~/clawd/nova-memory/scripts/proactive-recall.py ]; then
     echo "📊 Test 4: Semantic search for delegation"
     
-    OPENAI_API_KEY="${OPENAI_API_KEY:-}"
     if [ -z "$OPENAI_API_KEY" ]; then
-        if [ -f ~/.secrets/openai-api-key ]; then
-            OPENAI_API_KEY=$(cat ~/.secrets/openai-api-key)
-        elif [ -f ~/.openclaw/openclaw.json ]; then
-            OPENAI_API_KEY=$(jq -r '.skills.entries."openai-image-gen".apiKey // empty' ~/.openclaw/openclaw.json 2>/dev/null)
-        fi
-    fi
-    
-    if [ -z "$OPENAI_API_KEY" ]; then
-        echo "   ⚠️  OPENAI_API_KEY not found, skipping semantic search test"
+        echo "   ⚠️  OPENAI_API_KEY not set in environment, skipping semantic search test"
+        echo "      Set OPENAI_API_KEY environment variable to run this test"
     else
         export OPENAI_API_KEY
         echo "   Query: 'help me debug this Python code'"

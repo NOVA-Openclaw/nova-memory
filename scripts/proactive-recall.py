@@ -54,16 +54,15 @@ CONTENT_LIMITS = {
 }
 
 def get_openai_client():
-    """Get OpenAI client with API key."""
+    """Get OpenAI client with API key from environment.
+    
+    API key must be set in environment (inherited from OpenClaw).
+    """
     api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        config_path = Path.home() / ".openclaw" / "openclaw.json"
-        if config_path.exists():
-            with open(config_path) as f:
-                config = json.load(f)
-                api_key = config.get("skills", {}).get("entries", {}).get("openai-image-gen", {}).get("apiKey")
     
     if not api_key:
+        print("ERROR: OPENAI_API_KEY not set in environment", file=sys.stderr)
+        print("This script should be run from OpenClaw hooks which inherit the API key", file=sys.stderr)
         return None
     
     return openai.OpenAI(api_key=api_key)

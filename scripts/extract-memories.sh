@@ -9,8 +9,12 @@ SENDER="${SENDER_NAME:-unknown}"
 SENDER_ID="${SENDER_ID:-}"
 IS_GROUP="${IS_GROUP:-false}"
 
-[ -z "$ANTHROPIC_API_KEY" ] && [ -f ~/.secrets/anthropic-api-key ] && ANTHROPIC_API_KEY=$(cat ~/.secrets/anthropic-api-key)
-[ -z "$ANTHROPIC_API_KEY" ] && exit 1
+# API key must be set in environment (inherited from OpenClaw)
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+    echo "ERROR: ANTHROPIC_API_KEY not set in environment" >&2
+    echo "This script should be run from OpenClaw hooks which inherit the API key" >&2
+    exit 1
+fi
 
 # Database configuration - use dynamic naming based on OS user
 DB_USER="${PGUSER:-$(whoami)}"
