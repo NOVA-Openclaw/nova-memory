@@ -10,7 +10,7 @@ import {
   getCachedEntity,
   setCachedEntity,
   closeDbPool,
-} from "../../projects/nova-relationships/lib/entity-resolver";
+} from "../../../nova-relationships/lib/entity-resolver/index.ts";
 
 async function verify() {
   console.log("\n✅ Successfully imported entity-resolver library from hook!\n");
