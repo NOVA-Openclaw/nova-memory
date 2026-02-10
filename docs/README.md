@@ -45,6 +45,7 @@ Nova-memory is a PostgreSQL-based long-term memory system for AI assistants that
 
 ### 📊 Core Systems  
 - [Database Schema Guide](database-schema-guide.md) - Tables, relationships, and access patterns
+- [Database Aliasing Guide](DATABASE-ALIASING.md) - pgbouncer setup for multi-agent database sharing
 - [Memory Extraction Pipeline](memory-extraction-pipeline.md) - Automated conversation processing
 - [Semantic Search Guide](semantic-search-guide.md) - Vector embeddings and intelligent queries
 

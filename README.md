@@ -652,6 +652,8 @@ Combined pipeline: extract → store.
 - `ANTHROPIC_API_KEY` - Required for extraction scripts
 - `PGHOST`, `PGUSER`, `PGDATABASE` - PostgreSQL connection (defaults to localhost/nova/nova_memory)
 
+**Multi-Agent Setup:** For shared database access with multiple agents, see [Database Aliasing Guide](docs/DATABASE-ALIASING.md).
+
 ## Schema Updates
 
 When modifying the schema, update both your local database and this repository:
