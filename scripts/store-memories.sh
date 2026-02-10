@@ -23,8 +23,9 @@ if ! echo "$JSON_DATA" | jq . >/dev/null 2>&1; then
     exit 1
 fi
 
-DB="nova_memory"
-DB_USER="nova"
+# Database configuration - use dynamic naming based on OS user
+DB_USER="${PGUSER:-$(whoami)}"
+DB="${DB_USER//-/_}_memory"
 DB_HOST="localhost"
 
 # Function to safely escape SQL strings

@@ -8,6 +8,10 @@ NC='\033[0m'
 
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace-claude-code}"
 
+# Use dynamic database name based on OS user
+DB_USER="${PGUSER:-$(whoami)}"
+DB_NAME="${DB_USER//-/_}_memory"
+
 echo ""
 echo "═══════════════════════════════════════════"
 echo "  nova-memory Installation Verification"
@@ -64,21 +68,21 @@ fi
 echo ""
 echo "Checking database..."
 if command -v psql &> /dev/null; then
-    if psql -U nova -d nova_memory -c '\q' 2>/dev/null; then
-        echo -e "  ${GREEN}✅${NC} Database 'nova_memory' accessible"
+    if psql -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; then
+        echo -e "  ${GREEN}✅${NC} Database '$DB_NAME' accessible"
         
         # Check for key tables
-        TABLES=$(psql -U nova -d nova_memory -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'" 2>/dev/null | tr -d '[:space:]')
+        TABLES=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'" 2>/dev/null | tr -d '[:space:]')
         echo "      Tables: $TABLES"
         
         # Check for pgvector
-        if psql -U nova -d nova_memory -tAc "SELECT 1 FROM pg_extension WHERE extname='vector'" 2>/dev/null | grep -q 1; then
+        if psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT 1 FROM pg_extension WHERE extname='vector'" 2>/dev/null | grep -q 1; then
             echo -e "      ${GREEN}✓${NC} pgvector extension installed"
         else
             echo -e "      ${YELLOW}⚠${NC} pgvector extension not installed"
         fi
     else
-        echo -e "  ${RED}❌${NC} Cannot connect to database 'nova_memory'"
+        echo -e "  ${RED}❌${NC} Cannot connect to database '$DB_NAME'"
     fi
 else
     echo -e "  ${RED}❌${NC} psql command not found"

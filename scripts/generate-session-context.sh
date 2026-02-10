@@ -20,8 +20,9 @@ if [ -z "$ENTITY_IDS" ]; then
 fi
 
 # Get participant names
-DB="nova_memory"
-DB_USER="nova"
+# Database configuration - use dynamic naming based on OS user
+DB_USER="${PGUSER:-$(whoami)}"
+DB="${DB_USER//-/_}_memory"
 DB_HOST="localhost"
 
 PARTICIPANT_NAMES=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "

@@ -7,13 +7,28 @@ confidence when facts are re-confirmed.
 """
 
 import psycopg2
+import os
+import subprocess
 from typing import Optional, Dict, Any
 from confidence_helper import get_initial_confidence
 
 
+def get_db_name():
+    """Get database name based on current OS user."""
+    db_user = os.environ.get('PGUSER')
+    if not db_user:
+        try:
+            db_user = subprocess.check_output(['whoami'], text=True).strip()
+        except:
+            db_user = 'nova'  # fallback
+    # Replace hyphens with underscores (PostgreSQL doesn't allow hyphens)
+    db_user = db_user.replace('-', '_')
+    return f"{db_user}_memory"
+
+
 def get_db_connection():
     """Get database connection to nova_memory."""
-    return psycopg2.connect(dbname='nova_memory')
+    return psycopg2.connect(dbname=get_db_name())
 
 
 def find_existing_fact(entity_id: int, key: str, new_value: str, conn=None) -> Optional[Dict[str, Any]]:

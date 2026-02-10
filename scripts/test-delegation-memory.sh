@@ -19,7 +19,7 @@ echo "📊 Test 1: Check delegation facts in database"
 FACT_COUNT=$(psql -h $DB_HOST -U $DB_USER -d $DB_NAME -t -A -c "SELECT COUNT(*) FROM entity_facts WHERE entity_id = 1 AND key IN ('delegates_to', 'task_delegation', 'agent_capability');" 2>/dev/null)
 echo "   Found $FACT_COUNT delegation facts"
 if [ "$FACT_COUNT" -lt 1 ]; then
-    echo "   ⚠️  No delegation facts found. Run: psql -h localhost -U nova -d nova_memory -f scripts/seed-delegation-knowledge.sql"
+    echo "   ⚠️  No delegation facts found. Run: psql -h localhost -U $DB_USER -d $DB_NAME -f scripts/seed-delegation-knowledge.sql"
 else
     echo "   ✅ Delegation facts exist"
 fi
@@ -120,6 +120,6 @@ if [ "$FACT_COUNT" -gt 0 ] && [ "$EMBED_COUNT" -gt 0 ]; then
     echo "  • 'research this topic' → should surface Scout"
 else
     echo "⚠️  System needs setup. Run:"
-    echo "  1. psql -h localhost -U nova -d nova_memory -f scripts/seed-delegation-knowledge.sql"
+    echo "  1. psql -h localhost -U $DB_USER -d $DB_NAME -f scripts/seed-delegation-knowledge.sql"
     echo "  2. ./scripts/embed-delegation-facts.sh"
 fi

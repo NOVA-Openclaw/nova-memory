@@ -13,7 +13,42 @@ The installer is **idempotent** - safe to run multiple times.
 
 ## Recent Changes (2026-02-10)
 
-### 1. Hooks Now Use Relative Paths
+### 1. Dynamic Database Naming (enables multi-user setups)
+
+**All scripts now use OS username for database naming:**
+
+**Before:**
+```bash
+DB_NAME="nova_memory"
+DB_USER="${PGUSER:-nova}"
+```
+
+**After:**
+```bash
+# Use current OS user for both DB user and name
+DB_USER="${PGUSER:-$(whoami)}"
+DB_NAME="${DB_USER//-/_}_memory"  # Replace hyphens with underscores
+```
+
+**Why:** PostgreSQL doesn't allow hyphens in identifiers, so usernames like `nova-staging` become `nova_staging_memory`.
+
+**Examples:**
+- User `nova` → database `nova_memory`
+- User `nova-staging` → database `nova_staging_memory`
+- User `argus` → database `argus_memory`
+
+**Files Updated:**
+- `install.sh` - Dynamic DB_NAME generation
+- `verify-installation.sh` - Uses dynamic database name
+- All scripts in `scripts/` directory (both `.sh` and `.py` files)
+
+**Benefits:**
+- Multiple users can run nova-memory on the same PostgreSQL instance
+- Each user has isolated memory storage
+- No hardcoded username assumptions
+- Works in staging/development environments
+
+### 2. Hooks Now Use Relative Paths
 
 All hooks have been updated to reference scripts using relative paths instead of hardcoded `~/clawd/scripts/`:
 
@@ -37,7 +72,7 @@ This allows the repo to be installed anywhere, not just at `~/clawd/`.
 - `hooks/session-init/handler.ts` - now uses relative path for `generate-session-context.sh`
 - `hooks/semantic-recall/handler.ts` - now uses relative path for `proactive-recall.py`
 
-### 2. Comprehensive Installer Script
+### 3. Comprehensive Installer Script
 
 Created `install.sh` - a fully idempotent installer that:
 
@@ -48,7 +83,8 @@ Created `install.sh` - a fully idempotent installer that:
 - ✅ Checks for pgvector extension availability
 
 #### Database Setup (Idempotent)
-- Creates `nova_memory` database if it doesn't exist
+- Creates database named `{username}_memory` (e.g., `nova_memory`, `argus_memory`)
+- Automatically replaces hyphens with underscores (e.g., `nova-staging` → `nova_staging_memory`)
 - Applies `schema.sql` (safe to run multiple times)
 - Reports what was created vs what already existed
 - Counts total tables in database
@@ -88,7 +124,7 @@ Checking prerequisites...
   ✅ pgvector extension available
 
 Database setup...
-  ✅ Database 'nova_memory' exists
+  ✅ Database 'nova_memory' exists  (or 'argus_memory', 'nova_staging_memory', etc.)
   ✅ Database connection verified
   ✅ Schema applied successfully
       Skipped 315 existing objects

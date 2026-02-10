@@ -12,10 +12,14 @@ IS_GROUP="${IS_GROUP:-false}"
 [ -z "$ANTHROPIC_API_KEY" ] && [ -f ~/.secrets/anthropic-api-key ] && ANTHROPIC_API_KEY=$(cat ~/.secrets/anthropic-api-key)
 [ -z "$ANTHROPIC_API_KEY" ] && exit 1
 
+# Database configuration - use dynamic naming based on OS user
+DB_USER="${PGUSER:-$(whoami)}"
+DB_NAME="${DB_USER//-/_}_memory"
+
 # Look up user's default visibility preference
 DEFAULT_VIS="public"
 if [ -n "$SENDER_ID" ]; then
-    DEFAULT_VIS=$(psql -h localhost -U nova -d nova_memory -t -A -c "
+    DEFAULT_VIS=$(psql -h localhost -U "$DB_USER" -d "$DB_NAME" -t -A -c "
         SELECT ef2.value FROM entity_facts ef1
         JOIN entity_facts ef2 ON ef1.entity_id = ef2.entity_id
         WHERE ef1.key IN ('phone', 'has_phone_number', 'signal')
@@ -27,7 +31,7 @@ if [ -n "$SENDER_ID" ]; then
 fi
 
 # Get existing facts for deduplication check
-EXISTING_FACTS=$(psql -h localhost -U nova -d nova_memory -t -A -c "
+EXISTING_FACTS=$(psql -h localhost -U "$DB_USER" -d "$DB_NAME" -t -A -c "
     SELECT DISTINCT CONCAT(e.name, '.', ef.key, '=', LEFT(ef.value, 100)) 
     FROM entity_facts ef 
     JOIN entities e ON e.id = ef.entity_id 
@@ -35,7 +39,7 @@ EXISTING_FACTS=$(psql -h localhost -U nova -d nova_memory -t -A -c "
     LIMIT 200;
 " 2>/dev/null | tr '\n' '; ' | head -c 2000)
 
-EXISTING_VOCAB=$(psql -h localhost -U nova -d nova_memory -t -A -c "
+EXISTING_VOCAB=$(psql -h localhost -U "$DB_USER" -d "$DB_NAME" -t -A -c "
     SELECT word FROM vocabulary ORDER BY word LIMIT 200;
 " 2>/dev/null | tr '\n' ', ' | head -c 1000)
 

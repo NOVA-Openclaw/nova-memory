@@ -15,11 +15,18 @@ cd ~/clawd/nova-memory
 
 The installer will:
 - ✅ Check all prerequisites (PostgreSQL, psql, pgvector)
-- ✅ Create/verify database
+- ✅ Create/verify database (named `{username}_memory`, e.g., `nova_memory`)
 - ✅ Apply schema (idempotent - safe to run multiple times)
 - ✅ Install hooks to OpenClaw workspace
 - ✅ Set up all scripts with correct permissions
 - ✅ Verify everything is working
+
+**Note:** The database name is automatically generated from your OS username:
+- User `nova` → database `nova_memory`
+- User `nova-staging` → database `nova_staging_memory`
+- User `argus` → database `argus_memory`
+
+This allows multiple users to run nova-memory on the same PostgreSQL instance without conflicts.
 
 Then enable the hooks:
 ```bash
@@ -43,8 +50,11 @@ git clone https://github.com/NOVA-Openclaw/nova-memory.git
 
 # 2. Set up PostgreSQL database
 cd nova-memory
-createdb nova_memory
-psql -d nova_memory -f schema.sql
+# Database name is based on your username (e.g., nova_memory, argus_memory)
+DB_USER=$(whoami)
+DB_NAME="${DB_USER//-/_}_memory"
+createdb "$DB_NAME"
+psql -d "$DB_NAME" -f schema.sql
 
 # 3. Set your Anthropic API key
 export ANTHROPIC_API_KEY="your-key-here"

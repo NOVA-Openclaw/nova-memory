@@ -19,9 +19,24 @@ import argparse
 from pathlib import Path
 import psycopg2
 import openai
+import subprocess
 
 EMBEDDING_MODEL = "text-embedding-3-small"
-DB_NAME = "nova_memory"
+
+# Database configuration - use dynamic naming based on OS user
+def get_db_name():
+    """Get database name based on current OS user."""
+    db_user = os.environ.get('PGUSER')
+    if not db_user:
+        try:
+            db_user = subprocess.check_output(['whoami'], text=True).strip()
+        except:
+            db_user = 'nova'  # fallback
+    # Replace hyphens with underscores (PostgreSQL doesn't allow hyphens)
+    db_user = db_user.replace('-', '_')
+    return f"{db_user}_memory"
+
+DB_NAME = get_db_name()
 
 # Default configuration
 DEFAULT_MAX_RESULTS = 10  # Fetch more, then filter by token budget

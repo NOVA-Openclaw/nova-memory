@@ -585,7 +585,19 @@ def main():
         logger.info("Running in DRY RUN mode - no changes will be made")
     
     try:
-        conn = psycopg2.connect(dbname='nova_memory')
+        # Database configuration - use dynamic naming based on OS user
+        db_user = os.environ.get('PGUSER')
+        if not db_user:
+            try:
+                import subprocess
+                db_user = subprocess.check_output(['whoami'], text=True).strip()
+            except:
+                db_user = 'nova'  # fallback
+        # Replace hyphens with underscores (PostgreSQL doesn't allow hyphens)
+        db_user = db_user.replace('-', '_')
+        db_name = f"{db_user}_memory"
+        
+        conn = psycopg2.connect(dbname=db_name)
         
         # 1. Merge duplicates (unless skipped)
         if skip_dedup:

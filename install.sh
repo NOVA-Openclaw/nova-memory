@@ -6,8 +6,9 @@ set -e
 
 VERSION="1.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DB_NAME="nova_memory"
-DB_USER="${PGUSER:-nova}"
+# Use current OS user for both DB user and name
+DB_USER="${PGUSER:-$(whoami)}"
+DB_NAME="${DB_USER//-/_}_memory"  # Replace hyphens with underscores (nova-staging → nova_staging_memory)
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace-claude-code}"
 
 # Color codes for output

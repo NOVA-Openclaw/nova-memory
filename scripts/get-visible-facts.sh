@@ -8,8 +8,9 @@ set -e
 PARTICIPANT_IDS="${1:-}"
 QUERY="${2:-}"
 
-DB="nova_memory"
-DB_USER="nova"
+# Database configuration - use dynamic naming based on OS user
+DB_USER="${PGUSER:-$(whoami)}"
+DB="${DB_USER//-/_}_memory"
 DB_HOST="localhost"
 
 if [ -z "$PARTICIPANT_IDS" ]; then

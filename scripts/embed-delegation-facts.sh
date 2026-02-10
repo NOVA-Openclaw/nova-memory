@@ -7,9 +7,10 @@
 
 set -e
 
-DB_NAME="nova_memory"
+# Database configuration - use dynamic naming based on OS user
+DB_USER="${PGUSER:-$(whoami)}"
+DB_NAME="${DB_USER//-/_}_memory"
 DB_HOST="localhost"
-DB_USER="nova"
 
 # OpenAI API key
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
