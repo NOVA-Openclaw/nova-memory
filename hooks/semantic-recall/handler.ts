@@ -9,7 +9,7 @@ import {
   setCachedEntity,
   type Entity,
   type EntityFacts,
-} from "../../projects/nova-relationships/lib/entity-resolver";
+} from "../../../nova-relationships/lib/entity-resolver/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
