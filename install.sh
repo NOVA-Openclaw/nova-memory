@@ -4,29 +4,314 @@
 
 set -e
 
-VERSION="1.0"
+VERSION="2.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Use current OS user for both DB user and name
 DB_USER="${PGUSER:-$(whoami)}"
 DB_NAME="${DB_USER//-/_}_memory"  # Replace hyphens with underscores (nova-staging → nova_staging_memory)
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace-claude-code}"
 
+# Parse arguments
+VERIFY_ONLY=0
+FORCE_INSTALL=0
+for arg in "$@"; do
+    case $arg in
+        --verify-only)
+            VERIFY_ONLY=1
+            shift
+            ;;
+        --force)
+            FORCE_INSTALL=1
+            shift
+            ;;
+        --help)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --verify-only    Check installation without modifying anything"
+            echo "  --force          Force overwrite existing files (skip file verification)"
+            echo "  --help           Show this help message"
+            exit 0
+            ;;
+    esac
+done
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Status indicators
 CHECK_MARK="${GREEN}✅${NC}"
 CROSS_MARK="${RED}❌${NC}"
 WARNING="${YELLOW}⚠️${NC}"
+INFO="${BLUE}ℹ️${NC}"
+
+# Verification results
+VERIFICATION_PASSED=0
+VERIFICATION_WARNINGS=0
+VERIFICATION_ERRORS=0
 
 echo ""
 echo "═══════════════════════════════════════════"
-echo "  nova-memory installer v${VERSION}"
+if [ $VERIFY_ONLY -eq 1 ]; then
+    echo "  nova-memory verification v${VERSION}"
+else
+    echo "  nova-memory installer v${VERSION}"
+fi
 echo "═══════════════════════════════════════════"
 echo ""
+
+# ============================================
+# Verification Functions
+# ============================================
+
+verify_schema() {
+    echo "Schema verification..."
+    
+    # Check if database exists
+    if ! psql -U "$DB_USER" -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+        echo -e "  ${CROSS_MARK} Database '$DB_NAME' does not exist"
+        VERIFICATION_ERRORS=$((VERIFICATION_ERRORS + 1))
+        return 1
+    fi
+    
+    # Count expected tables from schema.sql
+    EXPECTED_TABLES=$(grep "^CREATE TABLE" "$SCRIPT_DIR/schema.sql" 2>/dev/null | wc -l)
+    
+    # Count actual tables in database
+    ACTUAL_TABLES=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
+    
+    if [ "$ACTUAL_TABLES" -eq "$EXPECTED_TABLES" ]; then
+        echo -e "  ${CHECK_MARK} All $EXPECTED_TABLES tables present"
+    elif [ "$ACTUAL_TABLES" -lt "$EXPECTED_TABLES" ]; then
+        echo -e "  ${WARNING} Only $ACTUAL_TABLES/$EXPECTED_TABLES tables found (missing tables)"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    else
+        echo -e "  ${WARNING} Found $ACTUAL_TABLES tables (expected $EXPECTED_TABLES, extra tables present)"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    fi
+    
+    # Verify individual table existence (detailed check)
+    # Extract table names from schema.sql
+    TABLE_NAMES=$(grep "^CREATE TABLE" "$SCRIPT_DIR/schema.sql" | sed -E 's/CREATE TABLE [^.]+\.([^ ]+).*/\1/' | sort)
+    
+    local tables_missing=()
+    local tables_present=0
+    
+    for table in $TABLE_NAMES; do
+        # Check if table exists
+        TABLE_EXISTS=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '$table'" | tr -d '[:space:]')
+        
+        if [ "$TABLE_EXISTS" -eq 0 ]; then
+            tables_missing+=("$table")
+        else
+            tables_present=$((tables_present + 1))
+        fi
+    done
+    
+    if [ ${#tables_missing[@]} -gt 0 ]; then
+        echo -e "  ${WARNING} Missing tables:"
+        for table in "${tables_missing[@]}"; do
+            echo "      • $table"
+        done
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + ${#tables_missing[@]}))
+    fi
+    
+    # Sample column count check for a few key tables
+    local sample_tables=("entities" "entity_facts" "events" "lessons" "agents")
+    local column_issues=0
+    
+    for table in "${sample_tables[@]}"; do
+        # Get column count from database
+        COL_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '$table'" 2>/dev/null | tr -d '[:space:]')
+        
+        if [ -n "$COL_COUNT" ] && [ "$COL_COUNT" -gt 0 ]; then
+            echo -e "  ${CHECK_MARK} Table '$table' schema present ($COL_COUNT columns)"
+        elif psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '$table'" | grep -q 1; then
+            echo -e "  ${WARNING} Table '$table' exists but column check failed"
+            column_issues=$((column_issues + 1))
+        fi
+    done
+    
+    if [ $column_issues -gt 0 ]; then
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + column_issues))
+    fi
+    
+    return 0
+}
+
+verify_files() {
+    echo ""
+    echo "File verification..."
+    
+    local files_checked=0
+    local files_matching=0
+    local files_different=0
+    local files_missing=0
+    
+    # Check hooks
+    for hook_dir in "$SCRIPT_DIR/hooks"/*; do
+        if [ ! -d "$hook_dir" ]; then
+            continue
+        fi
+        
+        hook_name=$(basename "$hook_dir")
+        target_dir="$WORKSPACE/hooks/$hook_name"
+        
+        if [ ! -d "$target_dir" ]; then
+            echo -e "  ${WARNING} Hook '$hook_name' not installed"
+            files_missing=$((files_missing + 1))
+            continue
+        fi
+        
+        # Check each file in the hook
+        for source_file in "$hook_dir"/*.ts "$hook_dir"/*.js "$hook_dir"/*.sh; do
+            if [ ! -f "$source_file" ]; then
+                continue
+            fi
+            
+            filename=$(basename "$source_file")
+            target_file="$target_dir/$filename"
+            
+            if [ ! -f "$target_file" ]; then
+                echo -e "  ${WARNING} $hook_name/$filename missing"
+                files_missing=$((files_missing + 1))
+                continue
+            fi
+            
+            # Compare checksums
+            source_hash=$(sha256sum "$source_file" | awk '{print $1}')
+            target_hash=$(sha256sum "$target_file" | awk '{print $1}')
+            
+            files_checked=$((files_checked + 1))
+            
+            if [ "$source_hash" = "$target_hash" ]; then
+                echo -e "  ${CHECK_MARK} $hook_name/$filename matches source"
+                files_matching=$((files_matching + 1))
+            else
+                echo -e "  ${WARNING} $hook_name/$filename differs (local modifications?)"
+                files_different=$((files_different + 1))
+            fi
+        done
+    done
+    
+    # Check scripts
+    if [ -d "$SCRIPT_DIR/scripts" ]; then
+        for source_file in "$SCRIPT_DIR/scripts"/*.sh "$SCRIPT_DIR/scripts"/*.py; do
+            if [ ! -f "$source_file" ]; then
+                continue
+            fi
+            
+            filename=$(basename "$source_file")
+            target_file="$WORKSPACE/scripts/$filename"
+            
+            if [ ! -f "$target_file" ]; then
+                echo -e "  ${WARNING} scripts/$filename missing"
+                files_missing=$((files_missing + 1))
+                continue
+            fi
+            
+            # Compare checksums
+            source_hash=$(sha256sum "$source_file" | awk '{print $1}')
+            target_hash=$(sha256sum "$target_file" | awk '{print $1}')
+            
+            files_checked=$((files_checked + 1))
+            
+            if [ "$source_hash" = "$target_hash" ]; then
+                echo -e "  ${CHECK_MARK} scripts/$filename matches source"
+                files_matching=$((files_matching + 1))
+            else
+                echo -e "  ${WARNING} scripts/$filename differs (local modifications?)"
+                files_different=$((files_different + 1))
+            fi
+        done
+    fi
+    
+    if [ $files_different -gt 0 ]; then
+        echo -e "  ${INFO} Run with --force to overwrite modified files"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + files_different))
+    fi
+    
+    if [ $files_missing -gt 0 ]; then
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + files_missing))
+    fi
+    
+    return 0
+}
+
+verify_config() {
+    echo ""
+    echo "Config verification..."
+    
+    # Check environment variables
+    local required_vars=("PGUSER" "ANTHROPIC_API_KEY")
+    local optional_vars=("OPENAI_API_KEY" "OPENCLAW_WORKSPACE")
+    
+    for var in "${required_vars[@]}"; do
+        if [ -z "${!var}" ]; then
+            echo -e "  ${WARNING} $var not set"
+            VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+        else
+            # Don't print full value for API keys
+            if [[ "$var" == *"KEY"* ]]; then
+                echo -e "  ${CHECK_MARK} $var set: ${!var:0:8}..."
+            else
+                echo -e "  ${CHECK_MARK} $var set: ${!var}"
+            fi
+        fi
+    done
+    
+    for var in "${optional_vars[@]}"; do
+        if [ -z "${!var}" ]; then
+            echo -e "  ${INFO} $var not set (optional)"
+        else
+            if [[ "$var" == *"KEY"* ]]; then
+                echo -e "  ${CHECK_MARK} $var set: ${!var:0:8}..."
+            else
+                echo -e "  ${CHECK_MARK} $var set: ${!var}"
+            fi
+        fi
+    done
+    
+    # Check database connection
+    if psql -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; then
+        echo -e "  ${CHECK_MARK} Database connection works"
+    else
+        echo -e "  ${CROSS_MARK} Database connection failed"
+        VERIFICATION_ERRORS=$((VERIFICATION_ERRORS + 1))
+        return 1
+    fi
+    
+    # Check OpenClaw hook config
+    HOOK_CONFIG="$HOME/.openclaw/hooks.json"
+    if [ -f "$HOOK_CONFIG" ]; then
+        echo -e "  ${CHECK_MARK} OpenClaw hook config exists"
+        
+        # Check if our hooks are registered
+        for hook in "memory-extract" "semantic-recall" "session-init"; do
+            if grep -q "\"$hook\"" "$HOOK_CONFIG" 2>/dev/null; then
+                ENABLED=$(grep -A5 "\"$hook\"" "$HOOK_CONFIG" | grep -c "\"enabled\": true" || echo "0")
+                if [ "$ENABLED" -gt 0 ]; then
+                    echo -e "  ${CHECK_MARK} Hook '$hook' enabled in OpenClaw"
+                else
+                    echo -e "  ${WARNING} Hook '$hook' exists but not enabled"
+                    VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+                fi
+            else
+                echo -e "  ${WARNING} Hook '$hook' not found in OpenClaw config"
+                VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+            fi
+        done
+    else
+        echo -e "  ${WARNING} OpenClaw hook config not found at $HOOK_CONFIG"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    fi
+    
+    return 0
+}
 
 # ============================================
 # Part 1: Prerequisites Check
@@ -66,7 +351,7 @@ else
     exit 1
 fi
 
-# Check for required environment variables
+# Check for required environment variables (basic check)
 if [ -z "$ANTHROPIC_API_KEY" ]; then
     echo -e "  ${WARNING} ANTHROPIC_API_KEY not set (memory extraction will fail)"
 else
@@ -79,6 +364,31 @@ if psql -U "$DB_USER" -d postgres -tAc "SELECT 1 FROM pg_available_extensions WH
 else
     echo -e "  ${WARNING} pgvector extension not found (required for semantic search)"
     echo "      Install: sudo apt install postgresql-16-pgvector"
+fi
+
+# ============================================
+# Run Verification if --verify-only
+# ============================================
+if [ $VERIFY_ONLY -eq 1 ]; then
+    echo ""
+    verify_schema
+    verify_files
+    verify_config
+    
+    echo ""
+    echo "═══════════════════════════════════════════"
+    echo "  Verification Summary"
+    echo "═══════════════════════════════════════════"
+    if [ $VERIFICATION_ERRORS -gt 0 ]; then
+        echo -e "  ${CROSS_MARK} $VERIFICATION_ERRORS errors found"
+        exit 1
+    elif [ $VERIFICATION_WARNINGS -gt 0 ]; then
+        echo -e "  ${WARNING} $VERIFICATION_WARNINGS warnings found"
+        exit 0
+    else
+        echo -e "  ${CHECK_MARK} All checks passed"
+        exit 0
+    fi
 fi
 
 # ============================================
@@ -167,6 +477,34 @@ install_hook() {
         return 1
     fi
     
+    # If not forcing, check if files differ
+    if [ $FORCE_INSTALL -eq 0 ] && [ -d "$target" ]; then
+        local files_differ=0
+        for source_file in "$source"/*.ts "$source"/*.js "$source"/*.sh; do
+            if [ ! -f "$source_file" ]; then
+                continue
+            fi
+            
+            filename=$(basename "$source_file")
+            target_file="$target/$filename"
+            
+            if [ -f "$target_file" ]; then
+                source_hash=$(sha256sum "$source_file" | awk '{print $1}')
+                target_hash=$(sha256sum "$target_file" | awk '{print $1}')
+                
+                if [ "$source_hash" != "$target_hash" ]; then
+                    files_differ=1
+                    break
+                fi
+            fi
+        done
+        
+        if [ $files_differ -eq 1 ]; then
+            echo -e "  ${WARNING} $hook_name has local modifications, skipping (use --force to overwrite)"
+            return 2
+        fi
+    fi
+    
     # Remove existing target if it exists
     if [ -e "$target" ]; then
         rm -rf "$target"
@@ -180,13 +518,17 @@ install_hook() {
 
 # Install each hook
 INSTALLED_HOOKS=()
+SKIPPED_HOOKS=()
 for hook in "memory-extract" "semantic-recall" "session-init"; do
-    if install_hook "$hook"; then
+    install_hook "$hook" && result=$? || result=$?
+    if [ $result -eq 0 ]; then
         INSTALLED_HOOKS+=("$hook")
+    elif [ $result -eq 2 ]; then
+        SKIPPED_HOOKS+=("$hook")
     fi
 done
 
-if [ ${#INSTALLED_HOOKS[@]} -eq 0 ]; then
+if [ ${#INSTALLED_HOOKS[@]} -eq 0 ] && [ ${#SKIPPED_HOOKS[@]} -eq 0 ]; then
     echo -e "  ${CROSS_MARK} No hooks installed"
     exit 1
 fi
@@ -205,10 +547,38 @@ if [ -d "$SCRIPTS_SOURCE" ]; then
     # Create or update scripts directory
     mkdir -p "$SCRIPTS_TARGET"
     
-    # Copy all scripts
-    cp -r "$SCRIPTS_SOURCE"/* "$SCRIPTS_TARGET/" 2>/dev/null || true
+    # Copy scripts, respecting force flag
+    scripts_copied=0
+    scripts_skipped=0
     
-    echo -e "  ${CHECK_MARK} Scripts copied to workspace"
+    for source_file in "$SCRIPTS_SOURCE"/*.sh "$SCRIPTS_SOURCE"/*.py; do
+        if [ ! -f "$source_file" ]; then
+            continue
+        fi
+        
+        filename=$(basename "$source_file")
+        target_file="$SCRIPTS_TARGET/$filename"
+        
+        # Check if file differs
+        if [ $FORCE_INSTALL -eq 0 ] && [ -f "$target_file" ]; then
+            source_hash=$(sha256sum "$source_file" | awk '{print $1}')
+            target_hash=$(sha256sum "$target_file" | awk '{print $1}')
+            
+            if [ "$source_hash" != "$target_hash" ]; then
+                echo -e "  ${WARNING} scripts/$filename differs, skipping (use --force to overwrite)"
+                scripts_skipped=$((scripts_skipped + 1))
+                continue
+            fi
+        fi
+        
+        cp "$source_file" "$target_file"
+        scripts_copied=$((scripts_copied + 1))
+    done
+    
+    echo -e "  ${CHECK_MARK} $scripts_copied scripts copied to workspace"
+    if [ $scripts_skipped -gt 0 ]; then
+        echo -e "  ${WARNING} $scripts_skipped scripts skipped (local modifications)"
+    fi
 else
     echo -e "  ${CROSS_MARK} Scripts directory not found at $SCRIPTS_SOURCE"
     exit 1
@@ -253,38 +623,41 @@ fi
 # Part 5: Verification
 # ============================================
 echo ""
-echo "Verification..."
-
-# Test database connection
-if psql -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; then
-    echo -e "  ${CHECK_MARK} Database connection OK"
-else
-    echo -e "  ${CROSS_MARK} Database connection failed"
-    exit 1
-fi
-
-# Test a simple query
-QUERY_RESULT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'" 2>/dev/null)
-if [ $? -eq 0 ]; then
-    echo -e "  ${CHECK_MARK} Test query OK (found $QUERY_RESULT tables)"
-else
-    echo -e "  ${CROSS_MARK} Test query failed"
-fi
-
-# List installed hooks
-echo -e "  ${CHECK_MARK} Installed hooks:"
-for hook in "${INSTALLED_HOOKS[@]}"; do
-    echo "      • $hook"
-done
+verify_schema
+verify_files
+verify_config
 
 # ============================================
 # Installation Complete
 # ============================================
 echo ""
 echo "═══════════════════════════════════════════"
-echo -e "  ${GREEN}Installation complete!${NC}"
+if [ $VERIFICATION_ERRORS -gt 0 ]; then
+    echo -e "  ${CROSS_MARK} Installation completed with errors"
+elif [ $VERIFICATION_WARNINGS -gt 0 ]; then
+    echo -e "  ${WARNING} Installation completed with warnings"
+else
+    echo -e "  ${GREEN}Installation complete!${NC}"
+fi
 echo "═══════════════════════════════════════════"
 echo ""
+
+if [ ${#INSTALLED_HOOKS[@]} -gt 0 ]; then
+    echo "Installed hooks:"
+    for hook in "${INSTALLED_HOOKS[@]}"; do
+        echo "  • $hook"
+    done
+    echo ""
+fi
+
+if [ ${#SKIPPED_HOOKS[@]} -gt 0 ]; then
+    echo "Skipped hooks (local modifications):"
+    for hook in "${SKIPPED_HOOKS[@]}"; do
+        echo "  • $hook"
+    done
+    echo ""
+fi
+
 echo "Next steps:"
 echo ""
 echo "1. Enable hooks in OpenClaw:"
@@ -293,13 +666,8 @@ for hook in "${INSTALLED_HOOKS[@]}"; do
 done
 echo ""
 echo "2. Verify installation:"
-echo "   openclaw hooks list"
+echo "   $0 --verify-only"
 echo ""
-echo "3. Set environment variables (if not already set):"
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo "   export ANTHROPIC_API_KEY='your-key-here'"
-fi
-echo ""
-echo "4. Check logs:"
+echo "3. Check logs:"
 echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
 echo ""
