@@ -656,7 +656,111 @@ if ls "$SCRIPTS_TARGET"/*.py &> /dev/null; then
 fi
 
 # ============================================
-# Part 5: Cron Job Setup (Memory Maintenance)
+# Part 5: Python Virtual Environment Setup
+# ============================================
+echo ""
+echo "Python virtual environment setup..."
+
+VENV_DIR="$HOME/.local/share/$USER/venv"
+REQUIRED_PACKAGES=("openai" "tiktoken" "psycopg2-binary" "pillow")
+
+# Check if Python3 is available
+if command -v python3 &> /dev/null; then
+    PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+    echo -e "  ${CHECK_MARK} Python3 available ($PYTHON_VERSION)"
+else
+    echo -e "  ${CROSS_MARK} Python3 not found (required for memory scripts)"
+    echo "      Install: sudo apt install python3 python3-pip"
+    exit 1
+fi
+
+# Check if virtualenv is installed
+if python3 -m virtualenv --version &> /dev/null 2>&1; then
+    echo -e "  ${CHECK_MARK} virtualenv available"
+else
+    echo "  Installing virtualenv..."
+    if pip3 install --user virtualenv &> /dev/null; then
+        echo -e "  ${CHECK_MARK} virtualenv installed"
+    else
+        echo -e "  ${CROSS_MARK} Failed to install virtualenv"
+        echo "      Try: pip3 install --user virtualenv"
+        exit 1
+    fi
+fi
+
+# Create venv if it doesn't exist
+if [ -d "$VENV_DIR" ]; then
+    echo -e "  ${CHECK_MARK} Virtual environment exists at $VENV_DIR"
+else
+    echo "  Creating virtual environment at $VENV_DIR..."
+    # Create parent directories if needed
+    mkdir -p "$(dirname "$VENV_DIR")"
+    
+    if python3 -m virtualenv "$VENV_DIR" &> /dev/null; then
+        echo -e "  ${CHECK_MARK} Virtual environment created"
+    else
+        echo -e "  ${CROSS_MARK} Failed to create virtual environment"
+        echo "      Try: python3 -m virtualenv $VENV_DIR"
+        exit 1
+    fi
+fi
+
+# Check and install required packages
+echo "  Checking Python dependencies..."
+VENV_PYTHON="$VENV_DIR/bin/python"
+VENV_PIP="$VENV_DIR/bin/pip"
+
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo -e "  ${CROSS_MARK} Virtual environment Python not found at $VENV_PYTHON"
+    exit 1
+fi
+
+PACKAGES_TO_INSTALL=()
+PACKAGES_INSTALLED=()
+
+for package in "${REQUIRED_PACKAGES[@]}"; do
+    # Check if package is already installed in venv
+    if "$VENV_PYTHON" -c "import ${package//-/_}" &> /dev/null; then
+        PACKAGES_INSTALLED+=("$package")
+    else
+        PACKAGES_TO_INSTALL+=("$package")
+    fi
+done
+
+if [ ${#PACKAGES_INSTALLED[@]} -gt 0 ]; then
+    echo -e "  ${CHECK_MARK} ${#PACKAGES_INSTALLED[@]} packages already installed: ${PACKAGES_INSTALLED[*]}"
+fi
+
+if [ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
+    echo "  Installing missing packages: ${PACKAGES_TO_INSTALL[*]}"
+    if "$VENV_PIP" install "${PACKAGES_TO_INSTALL[@]}" &> /dev/null; then
+        echo -e "  ${CHECK_MARK} ${#PACKAGES_TO_INSTALL[@]} packages installed successfully"
+    else
+        echo -e "  ${WARNING} Some packages failed to install"
+        echo "      Try manually: $VENV_PIP install ${PACKAGES_TO_INSTALL[*]}"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    fi
+else
+    echo -e "  ${CHECK_MARK} All required packages already installed"
+fi
+
+# Verify all packages are now available
+MISSING_PACKAGES=()
+for package in "${REQUIRED_PACKAGES[@]}"; do
+    if ! "$VENV_PYTHON" -c "import ${package//-/_}" &> /dev/null; then
+        MISSING_PACKAGES+=("$package")
+    fi
+done
+
+if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
+    echo -e "  ${WARNING} Missing packages after installation: ${MISSING_PACKAGES[*]}"
+    VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + ${#MISSING_PACKAGES[@]}))
+else
+    echo -e "  ${CHECK_MARK} All Python dependencies verified"
+fi
+
+# ============================================
+# Part 6: Cron Job Setup (Memory Maintenance)
 # ============================================
 echo ""
 echo "Cron job setup (memory maintenance)..."
@@ -717,7 +821,7 @@ PGDATABASE=$DB_NAME
 fi
 
 # ============================================
-# Part 6: Verification
+# Part 7: Verification
 # ============================================
 echo ""
 verify_schema
