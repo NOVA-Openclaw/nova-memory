@@ -7,11 +7,12 @@ A PostgreSQL-based long-term memory system for AI assistants, with natural langu
 ## Quick Start (For AI Assistants)
 
 ```bash
-# 1. Clone this repo
+# 1. Clone this repo (or symlink from workspace)
 git clone https://github.com/NOVA-Openclaw/nova-memory.git
-cd nova-memory
+# OR: ln -s ~/clawd/nova-memory ~/.openclaw/workspace-claude-code/nova-memory
 
 # 2. Set up PostgreSQL database
+cd nova-memory
 createdb nova_memory
 psql -d nova_memory -f schema.sql
 
@@ -21,9 +22,11 @@ export ANTHROPIC_API_KEY="your-key-here"
 # 4. Test extraction
 ./scripts/process-input.sh "John mentioned he loves coffee from Blue Bottle in Brooklyn"
 
-# 5. (Optional) Install Clawdbot hook for automatic extraction
-cp -r hooks/memory-extract ~/clawd/hooks/
+# 5. Install OpenClaw hooks for automatic extraction
+./install-hooks.sh
 openclaw hooks enable memory-extract
+openclaw hooks enable semantic-recall
+openclaw hooks enable session-init
 ```
 
 ## Overview
@@ -618,18 +621,36 @@ git add schema.sql && git commit -m "Update schema: [description]"
 git push
 ```
 
-## Clawdbot Hook (Automatic Extraction)
+## OpenClaw Hooks (Automatic Extraction)
 
-The `hooks/memory-extract/` directory contains a Clawdbot hook that automatically extracts memories from incoming messages.
+The `hooks/` directory contains OpenClaw hooks that automatically extract and manage memories.
+
+### Available Hooks
+
+- **memory-extract** - Extracts structured memories from incoming messages
+- **semantic-recall** - Provides contextual memory recall during conversations
+- **session-init** - Generates privacy-filtered context when sessions start
 
 ### Installation
 
-```bash
-# Copy hook to your Clawdbot workspace
-cp -r hooks/memory-extract ~/clawd/hooks/
+Run the installation script to symlink hooks to your OpenClaw workspace:
 
-# Enable the hook
+```bash
+./install-hooks.sh
+```
+
+This creates symlinks from `~/.openclaw/workspace-claude-code/hooks/` to `nova-memory/hooks/`. Symlinks ensure:
+- Hooks stay under version control
+- Changes are tracked in git
+- Updates propagate automatically
+- No manual copying needed
+
+### Enable Hooks
+
+```bash
 openclaw hooks enable memory-extract
+openclaw hooks enable semantic-recall
+openclaw hooks enable session-init
 ```
 
 ### Configuration
@@ -637,20 +658,27 @@ openclaw hooks enable memory-extract
 Set the `NOVA_MEMORY_SCRIPTS` environment variable to point to your scripts directory:
 
 ```bash
-export NOVA_MEMORY_SCRIPTS="/path/to/nova-memory/scripts"
+export NOVA_MEMORY_SCRIPTS="$HOME/clawd/nova-memory/scripts"
 ```
 
 ### ✅ Hook Active
 
-The hook listens for `message:received` events and triggers on every incoming message. 
-
-
+The hooks listen for `message:received` events and trigger on every incoming message.
 
 Memories are automatically extracted and stored from conversations.
 
 **Manual extraction** (if needed):
 ```bash
 ./scripts/process-input.sh "User said: I love pizza from Mario's"
+```
+
+### Uninstallation
+
+To remove hooks:
+
+```bash
+cd ~/.openclaw/workspace-claude-code/hooks/
+rm memory-extract semantic-recall session-init
 ```
 
 ## Resource Policies (1Password Integration)
