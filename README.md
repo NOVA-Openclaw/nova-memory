@@ -4,12 +4,42 @@ A PostgreSQL-based long-term memory system for AI assistants, with natural langu
 
 **For AI Entities:** This system helps you remember things across sessions by storing structured memories in a database. Follow the Quick Start below to set it up.
 
-## Quick Start (For AI Assistants)
+## ⚡ Quick Start (Recommended - NEW!)
+
+**One-command installation:**
 
 ```bash
-# 1. Clone this repo (or symlink from workspace)
+cd ~/clawd/nova-memory
+./install.sh
+```
+
+The installer will:
+- ✅ Check all prerequisites (PostgreSQL, psql, pgvector)
+- ✅ Create/verify database
+- ✅ Apply schema (idempotent - safe to run multiple times)
+- ✅ Install hooks to OpenClaw workspace
+- ✅ Set up all scripts with correct permissions
+- ✅ Verify everything is working
+
+Then enable the hooks:
+```bash
+openclaw hooks enable memory-extract
+openclaw hooks enable semantic-recall
+openclaw hooks enable session-init
+```
+
+📖 **Full documentation:** See [INSTALLATION.md](./INSTALLATION.md)
+
+🔍 **Verify installation:** Run `./verify-installation.sh`
+
+## Manual Installation (Old Method)
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+```bash
+# 1. Clone this repo
 git clone https://github.com/NOVA-Openclaw/nova-memory.git
-# OR: ln -s ~/clawd/nova-memory ~/.openclaw/workspace-claude-code/nova-memory
 
 # 2. Set up PostgreSQL database
 cd nova-memory
@@ -22,12 +52,14 @@ export ANTHROPIC_API_KEY="your-key-here"
 # 4. Test extraction
 ./scripts/process-input.sh "John mentioned he loves coffee from Blue Bottle in Brooklyn"
 
-# 5. Install OpenClaw hooks for automatic extraction
-./install-hooks.sh
+# 5. Install OpenClaw hooks
+./install.sh
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
 ```
+
+</details>
 
 ## Overview
 

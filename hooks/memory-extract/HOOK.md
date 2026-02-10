@@ -1,7 +1,7 @@
 ---
 name: memory-extract
 description: "Extracts memories from incoming messages and stores in database"
-metadata: {"clawdbot":{"emoji":"🧠","events":["message:received"]}}
+metadata: {"openclaw":{"emoji":"🧠","events":["message:received"]}}
 ---
 
 # Memory Extraction Hook
