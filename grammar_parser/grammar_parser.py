@@ -18,6 +18,7 @@ from relation_types import (
     ROMANTIC_SUBTYPES,
 )
 from grammar_patterns import GRAMMAR_PATTERNS
+from anaphora_resolver import AnaphoraResolver
 
 
 class GrammarParser:
@@ -209,13 +210,42 @@ class GrammarParser:
         doc = self.nlp(text)
         all_relations = []
         
-        # Parse each sentence
-        for sent in doc.sents:
-            relations = self.parse_sentence(sent.text, context)
-            all_relations.extend(relations)
+        # Initialize anaphora resolver
+        resolver = AnaphoraResolver(nlp=self.nlp)
         
-        # TODO: Implement anaphora resolution across sentences
-        # For now, just return all relations
+        # First pass: extract entities from all sentences
+        for sent_idx, sent in enumerate(doc.sents):
+            resolver.current_sentence_index = sent_idx
+            resolver.extract_entities_from_doc(sent)
+        
+        # Second pass: parse each sentence with anaphora resolution
+        resolver.current_sentence_index = 0
+        for sent in doc.sents:
+            # Parse the sentence
+            relations = self.parse_sentence(sent.text, context)
+            
+            # Resolve pronouns in extracted relations
+            for relation in relations:
+                # Resolve subject if it's a pronoun
+                if relation.subject and relation.subject.lower() in (
+                    resolver.MALE_PRONOUNS | resolver.FEMALE_PRONOUNS | 
+                    resolver.NEUTRAL_PRONOUNS | resolver.PLURAL_PRONOUNS
+                ):
+                    resolved = resolver.resolve(relation.subject.lower())
+                    if resolved:
+                        relation.subject = resolved
+                
+                # Resolve object if it's a pronoun
+                if relation.object and relation.object.lower() in (
+                    resolver.MALE_PRONOUNS | resolver.FEMALE_PRONOUNS | 
+                    resolver.NEUTRAL_PRONOUNS | resolver.PLURAL_PRONOUNS
+                ):
+                    resolved = resolver.resolve(relation.object.lower())
+                    if resolved:
+                        relation.object = resolved
+            
+            all_relations.extend(relations)
+            resolver.next_sentence()
         
         return all_relations
 
