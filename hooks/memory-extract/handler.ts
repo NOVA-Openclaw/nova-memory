@@ -114,7 +114,8 @@ const handler = async (event) => {
   const envVars = `SENDER_NAME='${senderName}' SENDER_ID='${senderId}' IS_GROUP='${isGroup}'`;
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
-  const scriptPath = join(__dirname, '../../scripts/process-input.sh');
+  // Use grammar-enhanced extraction (issue #22)
+  const scriptPath = join(__dirname, '../../scripts/process-input-with-grammar.sh');
   
   exec(`${envVars} ${scriptPath} '${escaped}'`, (err) => {
     if (err) {

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict QkJuhvZr9xqldLWglahndcfBE5TJcRO8fhmQRUvpfLE2C4uf931g2U17uiTjHjw
+\restrict LXWrXhcdnPl2IJJqKAMgs9zhRPEg2mIcFhY1Ebhd7O0l2ZW5hOrHiEbuQUL8jhW
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2103,6 +2103,83 @@ CREATE TABLE public.events_archive (
 ALTER TABLE public.events_archive OWNER TO nova;
 
 --
+-- Name: extraction_metrics; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.extraction_metrics (
+    id integer NOT NULL,
+    "timestamp" timestamp with time zone DEFAULT now(),
+    method text,
+    num_relations integer,
+    avg_confidence real,
+    processing_time_ms integer
+);
+
+
+ALTER TABLE public.extraction_metrics OWNER TO nova;
+
+--
+-- Name: extraction_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.extraction_metrics_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.extraction_metrics_id_seq OWNER TO nova;
+
+--
+-- Name: extraction_metrics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.extraction_metrics_id_seq OWNED BY public.extraction_metrics.id;
+
+
+--
+-- Name: fact_change_log; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.fact_change_log (
+    id integer NOT NULL,
+    fact_id integer NOT NULL,
+    old_value text,
+    new_value text,
+    changed_by_entity_id integer,
+    reason character varying(100),
+    changed_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.fact_change_log OWNER TO nova;
+
+--
+-- Name: fact_change_log_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.fact_change_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.fact_change_log_id_seq OWNER TO nova;
+
+--
+-- Name: fact_change_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.fact_change_log_id_seq OWNED BY public.fact_change_log.id;
+
+
+--
 -- Name: gambling_entries; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -4069,28 +4146,6 @@ COMMENT ON TABLE public.workflow_steps IS 'Ordered steps in a workflow with agen
 
 
 --
--- Name: workflow_steps_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
---
-
-CREATE SEQUENCE public.workflow_steps_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.workflow_steps_id_seq OWNER TO nova;
-
---
--- Name: workflow_steps_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
---
-
-ALTER SEQUENCE public.workflow_steps_id_seq OWNED BY public.workflow_steps.id;
-
-
---
 -- Name: workflows; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -4114,6 +4169,57 @@ ALTER TABLE public.workflows OWNER TO nova;
 --
 
 COMMENT ON TABLE public.workflows IS 'Defines multi-agent workflows with ordered steps and deliverable handoffs';
+
+
+--
+-- Name: workflow_steps_detail; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.workflow_steps_detail AS
+ SELECT w.name AS workflow_name,
+    w.description AS workflow_description,
+    ws.step_order,
+    a.name AS agent_name,
+    ws.description AS step_description,
+    ws.produces_deliverable,
+    ws.deliverable_type,
+    ws.deliverable_description,
+    ws.estimated_duration_minutes
+   FROM ((public.workflow_steps ws
+     JOIN public.workflows w ON ((w.id = ws.workflow_id)))
+     JOIN public.agents a ON ((a.id = ws.agent_id)))
+  ORDER BY w.name, ws.step_order;
+
+
+ALTER VIEW public.workflow_steps_detail OWNER TO nova;
+
+--
+-- Name: VIEW workflow_steps_detail; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON VIEW public.workflow_steps_detail IS 'Human-readable view of workflows with agent names and deliverable details';
+
+
+--
+-- Name: workflow_steps_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.workflow_steps_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.workflow_steps_id_seq OWNER TO nova;
+
+--
+-- Name: workflow_steps_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.workflow_steps_id_seq OWNED BY public.workflow_steps.id;
 
 
 --
@@ -4290,6 +4396,20 @@ ALTER TABLE ONLY public.entity_relationships ALTER COLUMN id SET DEFAULT nextval
 --
 
 ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.events_id_seq'::regclass);
+
+
+--
+-- Name: extraction_metrics id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.extraction_metrics ALTER COLUMN id SET DEFAULT nextval('public.extraction_metrics_id_seq'::regclass);
+
+
+--
+-- Name: fact_change_log id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.fact_change_log ALTER COLUMN id SET DEFAULT nextval('public.fact_change_log_id_seq'::regclass);
 
 
 --
@@ -4717,6 +4837,22 @@ ALTER TABLE ONLY public.events_archive
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: extraction_metrics extraction_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.extraction_metrics
+    ADD CONSTRAINT extraction_metrics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: fact_change_log fact_change_log_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.fact_change_log
+    ADD CONSTRAINT fact_change_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -7712,17 +7848,24 @@ GRANT SELECT,INSERT,UPDATE ON TABLE public.workflow_steps TO newhart;
 
 
 --
--- Name: SEQUENCE workflow_steps_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.workflow_steps_id_seq TO newhart;
-
-
---
 -- Name: TABLE workflows; Type: ACL; Schema: public; Owner: nova
 --
 
 GRANT SELECT,INSERT,UPDATE ON TABLE public.workflows TO newhart;
+
+
+--
+-- Name: TABLE workflow_steps_detail; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT ON TABLE public.workflow_steps_detail TO newhart;
+
+
+--
+-- Name: SEQUENCE workflow_steps_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.workflow_steps_id_seq TO newhart;
 
 
 --
@@ -7776,5 +7919,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict QkJuhvZr9xqldLWglahndcfBE5TJcRO8fhmQRUvpfLE2C4uf931g2U17uiTjHjw
+\unrestrict LXWrXhcdnPl2IJJqKAMgs9zhRPEg2mIcFhY1Ebhd7O0l2ZW5hOrHiEbuQUL8jhW
 
