@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict LXWrXhcdnPl2IJJqKAMgs9zhRPEg2mIcFhY1Ebhd7O0l2ZW5hOrHiEbuQUL8jhW
+\restrict 8A9oNhd8O0do0wWM6dy8o0yWK0w02SVnZYtcuuhE646sISJYiTUJ5wKTaIOKLqr
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2734,6 +2734,68 @@ ALTER SEQUENCE public.models_id_seq OWNED BY public.ai_models.id;
 
 
 --
+-- Name: motivation_d100; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.motivation_d100 (
+    roll integer NOT NULL,
+    task_name character varying(255),
+    task_description text,
+    workflow_id integer,
+    skill_name character varying(255),
+    tool_name character varying(255),
+    difficulty character varying(20) DEFAULT 'medium'::character varying,
+    energy_required character varying(20) DEFAULT 'low'::character varying,
+    estimated_minutes integer,
+    enabled boolean DEFAULT true,
+    times_rolled integer DEFAULT 0,
+    times_completed integer DEFAULT 0,
+    last_rolled timestamp without time zone,
+    last_completed timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now(),
+    notes text,
+    CONSTRAINT motivation_d100_roll_check CHECK (((roll >= 1) AND (roll <= 100)))
+);
+
+
+ALTER TABLE public.motivation_d100 OWNER TO nova;
+
+--
+-- Name: TABLE motivation_d100; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.motivation_d100 IS 'D100 random task table for NOVA motivation system - roll when bored!';
+
+
+--
+-- Name: COLUMN motivation_d100.roll; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.motivation_d100.roll IS 'Die value 1-100';
+
+
+--
+-- Name: COLUMN motivation_d100.workflow_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.motivation_d100.workflow_id IS 'Optional link to workflows table for structured execution';
+
+
+--
+-- Name: COLUMN motivation_d100.skill_name; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.motivation_d100.skill_name IS 'Optional SKILL.md to follow (e.g., "daily-inspiration-art")';
+
+
+--
+-- Name: COLUMN motivation_d100.tool_name; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.motivation_d100.tool_name IS 'Optional tool to use (e.g., "bird-x", "gog")';
+
+
+--
 -- Name: music_analysis; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -4960,6 +5022,14 @@ ALTER TABLE ONLY public.ai_models
 
 
 --
+-- Name: motivation_d100 motivation_d100_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.motivation_d100
+    ADD CONSTRAINT motivation_d100_pkey PRIMARY KEY (roll);
+
+
+--
 -- Name: music_analysis music_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -6421,6 +6491,14 @@ ALTER TABLE ONLY public.media_queue
 
 ALTER TABLE ONLY public.media_tags
     ADD CONSTRAINT media_tags_media_id_fkey FOREIGN KEY (media_id) REFERENCES public.media_consumed(id) ON DELETE CASCADE;
+
+
+--
+-- Name: motivation_d100 motivation_d100_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.motivation_d100
+    ADD CONSTRAINT motivation_d100_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES public.workflows(id);
 
 
 --
@@ -7919,5 +7997,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict LXWrXhcdnPl2IJJqKAMgs9zhRPEg2mIcFhY1Ebhd7O0l2ZW5hOrHiEbuQUL8jhW
+\unrestrict 8A9oNhd8O0do0wWM6dy8o0yWK0w02SVnZYtcuuhE646sISJYiTUJ5wKTaIOKLqr
 
