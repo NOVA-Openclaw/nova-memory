@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict zknP4ai3kaFM5oRr6zbiLs4xV4ftbhuV1mrGumf3DCorAgsBdUeCz2e1DEhRjxB
+\restrict 06nJgAFXiAwNVfzAa9x4L53ngpvtYfSgKpRje2J4m7uFd9wwxN91RamIWYSGbcG
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2216,6 +2216,13 @@ CREATE TABLE public.event_projects (
 ALTER TABLE public.event_projects OWNER TO nova;
 
 --
+-- Name: TABLE event_projects; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.event_projects IS 'Links events to projects. Many-to-many relationship table for project milestones and activities.';
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2308,6 +2315,13 @@ CREATE TABLE public.extraction_metrics (
 ALTER TABLE public.extraction_metrics OWNER TO nova;
 
 --
+-- Name: TABLE extraction_metrics; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.extraction_metrics IS 'Performance metrics for data extraction processes. Tracks accuracy and efficiency of knowledge extraction.';
+
+
+--
 -- Name: extraction_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -2345,6 +2359,13 @@ CREATE TABLE public.fact_change_log (
 
 
 ALTER TABLE public.fact_change_log OWNER TO nova;
+
+--
+-- Name: TABLE fact_change_log; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.fact_change_log IS 'Audit trail for entity fact modifications. Tracks who changed what and when for accountability.';
+
 
 --
 -- Name: fact_change_log_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -2389,6 +2410,62 @@ CREATE TABLE public.gambling_entries (
 ALTER TABLE public.gambling_entries OWNER TO nova;
 
 --
+-- Name: TABLE gambling_entries; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.gambling_entries IS 'Individual gambling session records. Tracks bets, outcomes, and session details for analysis.';
+
+
+--
+-- Name: COLUMN gambling_entries.log_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.log_id IS 'References gambling_logs for session grouping';
+
+
+--
+-- Name: COLUMN gambling_entries.session_date; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.session_date IS 'Date and time of gambling session';
+
+
+--
+-- Name: COLUMN gambling_entries.casino; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.casino IS 'Casino or venue name';
+
+
+--
+-- Name: COLUMN gambling_entries.game; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.game IS 'Game type (poker, blackjack, etc.)';
+
+
+--
+-- Name: COLUMN gambling_entries.amount; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.amount IS 'Win/loss amount (positive for wins, negative for losses)';
+
+
+--
+-- Name: COLUMN gambling_entries.duration_minutes; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.duration_minutes IS 'Session duration in minutes';
+
+
+--
+-- Name: COLUMN gambling_entries.base_bet; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.gambling_entries.base_bet IS 'Typical bet size for the session';
+
+
+--
 -- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -2427,6 +2504,13 @@ CREATE TABLE public.gambling_logs (
 
 
 ALTER TABLE public.gambling_logs OWNER TO nova;
+
+--
+-- Name: TABLE gambling_logs; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.gambling_logs IS 'High-level gambling session summaries. Groups multiple gambling_entries by session.';
+
 
 --
 -- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -2573,6 +2657,13 @@ CREATE TABLE public.lessons_archive (
 
 
 ALTER TABLE public.lessons_archive OWNER TO nova;
+
+--
+-- Name: TABLE lessons_archive; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.lessons_archive IS 'Archived lessons and insights. Historical record of previously stored learnings.';
+
 
 --
 -- Name: COLUMN lessons_archive.confidence; Type: COMMENT; Schema: public; Owner: nova
@@ -2901,6 +2992,35 @@ CREATE TABLE public.memory_embeddings_archive (
 ALTER TABLE public.memory_embeddings_archive OWNER TO nova;
 
 --
+-- Name: TABLE memory_embeddings_archive; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.memory_embeddings_archive IS 'Archived vector embeddings from semantic memory system. Historical embeddings for backup/analysis.';
+
+
+--
+-- Name: memory_type_priorities; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.memory_type_priorities (
+    source_type text NOT NULL,
+    priority numeric(3,2) DEFAULT 1.00 NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.memory_type_priorities OWNER TO nova;
+
+--
+-- Name: TABLE memory_type_priorities; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.memory_type_priorities IS 'Priority weights for semantic recall by source_type. Higher = more likely to surface. NOVA can modify.';
+
+
+--
 -- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -3126,6 +3246,13 @@ CREATE TABLE public.place_properties (
 
 
 ALTER TABLE public.place_properties OWNER TO nova;
+
+--
+-- Name: TABLE place_properties; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.place_properties IS 'Properties and attributes of places. Key-value storage for place characteristics.';
+
 
 --
 -- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -3508,6 +3635,13 @@ CREATE TABLE public.project_entities (
 ALTER TABLE public.project_entities OWNER TO nova;
 
 --
+-- Name: TABLE project_entities; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.project_entities IS 'Links projects to entities (people, orgs, AIs). Many-to-many relationship table for project participants.';
+
+
+--
 -- Name: project_tasks; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -3525,6 +3659,13 @@ CREATE TABLE public.project_tasks (
 
 
 ALTER TABLE public.project_tasks OWNER TO nova;
+
+--
+-- Name: TABLE project_tasks; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.project_tasks IS 'Project-specific task breakdown. Links tasks to projects for organized project management.';
+
 
 --
 -- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -4361,6 +4502,13 @@ CREATE TABLE public.vehicles (
 
 
 ALTER TABLE public.vehicles OWNER TO nova;
+
+--
+-- Name: TABLE vehicles; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.vehicles IS 'Vehicle tracking and management. Cars, bikes, boats, planes owned or used.';
+
 
 --
 -- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -5283,6 +5431,14 @@ ALTER TABLE ONLY public.memory_embeddings_archive
 
 ALTER TABLE ONLY public.memory_embeddings
     ADD CONSTRAINT memory_embeddings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: memory_type_priorities memory_type_priorities_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.memory_type_priorities
+    ADD CONSTRAINT memory_type_priorities_pkey PRIMARY KEY (source_type);
 
 
 --
@@ -8277,5 +8433,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict zknP4ai3kaFM5oRr6zbiLs4xV4ftbhuV1mrGumf3DCorAgsBdUeCz2e1DEhRjxB
+\unrestrict 06nJgAFXiAwNVfzAa9x4L53ngpvtYfSgKpRje2J4m7uFd9wwxN91RamIWYSGbcG
 
