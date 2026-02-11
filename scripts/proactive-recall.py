@@ -140,17 +140,21 @@ def recall(message, token_budget=DEFAULT_TOKEN_BUDGET, threshold=DEFAULT_THRESHO
         query_embedding = get_embedding(client, message)
         
         cur = conn.cursor()
+        # Priority-weighted semantic search (#53)
+        # Joins memory_type_priorities for configurable source_type boosting
         cur.execute("""
             SELECT 
-                source_type,
-                source_id,
-                content,
-                1 - (embedding <=> %s::vector) AS similarity
-            FROM memory_embeddings
-            WHERE 1 - (embedding <=> %s::vector) > %s
-            ORDER BY embedding <=> %s::vector
+                m.source_type,
+                m.source_id,
+                m.content,
+                1 - (m.embedding <=> %s::vector) AS similarity,
+                (1 - (m.embedding <=> %s::vector)) * COALESCE(p.priority, 1.0) AS weighted_score
+            FROM memory_embeddings m
+            LEFT JOIN memory_type_priorities p ON p.source_type = m.source_type
+            WHERE 1 - (m.embedding <=> %s::vector) > %s
+            ORDER BY weighted_score DESC
             LIMIT %s
-        """, (query_embedding, query_embedding, threshold, query_embedding, max_results))
+        """, (query_embedding, query_embedding, query_embedding, threshold, max_results))
         
         results = cur.fetchall()
         conn.close()
@@ -160,7 +164,7 @@ def recall(message, token_budget=DEFAULT_TOKEN_BUDGET, threshold=DEFAULT_THRESHO
         tokens_used = 0
         result_count = len(results)  # Use actual result count for dynamic sizing
         
-        for source_type, source_id, content, similarity in results:
+        for source_type, source_id, content, similarity, weighted_score in results:
             # Apply tiered truncation based on confidence AND result count
             truncated = truncate_content(content, similarity, result_count, high_confidence)
             entry_tokens = estimate_tokens(truncated) + 20  # +20 for formatting overhead
