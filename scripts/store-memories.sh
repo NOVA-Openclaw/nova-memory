@@ -145,6 +145,27 @@ find_entity() {
 STORED_COUNT=0
 SKIPPED_COUNT=0
 
+# Create entity for unknown sender (#38)
+if [ -n "$SENDER_NAME" ] && [ "$SENDER_NAME" != "null" ] && [ "$SENDER_NAME" != "unknown" ]; then
+    existing=$(find_entity "$SENDER_NAME")
+    if [ -z "$existing" ]; then
+        psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q -c "
+            INSERT INTO entities (name, type) VALUES ('$(sql_escape "$SENDER_NAME")', 'person')
+            ON CONFLICT DO NOTHING;
+        " 2>/dev/null
+        # Store phone number as fact if available
+        if [ -n "$SENDER_ID" ] && [ "$SENDER_ID" != "unknown" ]; then
+            psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q -c "
+                INSERT INTO entity_facts (entity_id, key, value, source)
+                SELECT id, 'phone', '$(sql_escape "$SENDER_ID")', 'auto-extracted'
+                FROM entities WHERE LOWER(name) = LOWER('$(sql_escape "$SENDER_NAME")')
+                ON CONFLICT DO NOTHING;
+            " 2>/dev/null
+        fi
+        echo "  + Entity (auto-created): $SENDER_NAME"
+    fi
+fi
+
 # Process entities
 echo "$JSON_DATA" | jq -c '.entities[]? // empty' | while read -r entity; do
     name=$(echo "$entity" | jq -r '.name')
