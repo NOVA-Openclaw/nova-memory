@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict yrNlUKZeNXLofnIsIDjmnCFx9dKb5VnNEVRJ4ISwvkRdgWUnaajLXsm0L1skrJS
+\restrict FnKYdostk4shmcJ54q8q3zxWk2EmXviZagAvsAfYDc0CYqCMavFhfE5MwzdCorj
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -836,6 +836,70 @@ ALTER FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_
 
 COMMENT ON FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer) IS 'Queue a test failure for Coder to fix. Creates placeholder issue, notifies for gh issue creation.';
 
+
+--
+-- Name: queue_test_failure(text, integer, text, text, text, text[], jsonb, integer); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_test_file text DEFAULT NULL::text, p_code_files text[] DEFAULT NULL::text[], p_context jsonb DEFAULT '{}'::jsonb, p_priority integer DEFAULT 7) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_title TEXT;
+  v_issue_number INTEGER;
+  v_queue_id INTEGER;
+  v_parent_title TEXT;
+  v_full_context JSONB;
+BEGIN
+  v_title := 'Test failure: ' || p_test_name;
+  
+  -- Get parent issue title if exists
+  SELECT title INTO v_parent_title 
+  FROM coder_issue_queue 
+  WHERE repo = p_repo AND issue_number = p_parent_issue;
+  
+  -- Build full context
+  v_full_context := p_context || jsonb_build_object(
+    'parent_title', v_parent_title,
+    'test_file', p_test_file,
+    'code_files', p_code_files,
+    'queued_at', NOW()
+  );
+  
+  -- Placeholder issue number
+  v_issue_number := -1 * (SELECT COALESCE(MAX(ABS(issue_number)), 0) + 1 
+                          FROM coder_issue_queue 
+                          WHERE repo = p_repo AND issue_number < 0);
+  
+  INSERT INTO coder_issue_queue (
+    repo, issue_number, title, priority, status, source, 
+    parent_issue_id, error_message, test_file, code_files, context
+  ) VALUES (
+    p_repo, v_issue_number, v_title, p_priority, 'pending_tests',
+    'test_failure', 
+    (SELECT id FROM coder_issue_queue WHERE repo = p_repo AND issue_number = p_parent_issue),
+    p_error_message, p_test_file, p_code_files, v_full_context
+  )
+  RETURNING id INTO v_queue_id;
+  
+  PERFORM pg_notify('test_failure', json_build_object(
+    'queue_id', v_queue_id,
+    'repo', p_repo,
+    'parent_issue', p_parent_issue,
+    'parent_title', v_parent_title,
+    'test_name', p_test_name,
+    'test_file', p_test_file,
+    'code_files', p_code_files,
+    'error', LEFT(p_error_message, 1000),
+    'context', v_full_context
+  )::text);
+  
+  RETURN v_queue_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_test_file text, p_code_files text[], p_context jsonb, p_priority integer) OWNER TO nova;
 
 --
 -- Name: roll_d100(); Type: FUNCTION; Schema: public; Owner: nova
@@ -1855,7 +1919,10 @@ CREATE TABLE public.coder_issue_queue (
     created_at timestamp with time zone DEFAULT now(),
     started_at timestamp with time zone,
     completed_at timestamp with time zone,
-    error_message text
+    error_message text,
+    context jsonb DEFAULT '{}'::jsonb,
+    test_file text,
+    code_files text[]
 );
 
 
@@ -8749,5 +8816,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yrNlUKZeNXLofnIsIDjmnCFx9dKb5VnNEVRJ4ISwvkRdgWUnaajLXsm0L1skrJS
+\unrestrict FnKYdostk4shmcJ54q8q3zxWk2EmXviZagAvsAfYDc0CYqCMavFhfE5MwzdCorj
 
