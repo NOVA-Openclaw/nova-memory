@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict PUWzKcfMw82yPxskRLfU53wDvfuqMe5XaPcMaQtpnJr3pjx8MuimlJ3himjvuYv
+\restrict zknP4ai3kaFM5oRr6zbiLs4xV4ftbhuV1mrGumf3DCorAgsBdUeCz2e1DEhRjxB
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -690,9 +690,9 @@ BEGIN
     rolled_value := floor(random() * 100 + 1)::int;
     
     -- Log the roll
-    UPDATE motivation_d100 
-    SET times_rolled = times_rolled + 1, last_rolled = NOW() 
-    WHERE motivation_d100.roll = rolled_value AND task_name IS NOT NULL;
+    UPDATE motivation_d100 m
+    SET times_rolled = m.times_rolled + 1, last_rolled = NOW() 
+    WHERE m.roll = rolled_value AND m.task_name IS NOT NULL;
     
     -- Return the result
     RETURN QUERY
@@ -1558,6 +1558,55 @@ CREATE TABLE public.asset_classes (
 ALTER TABLE public.asset_classes OWNER TO nova;
 
 --
+-- Name: TABLE asset_classes; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.asset_classes IS 'Asset class definitions for financial portfolio management. Defines tradeable asset types with pricing sources and trading characteristics.';
+
+
+--
+-- Name: COLUMN asset_classes.code; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.asset_classes.code IS 'Unique asset class identifier (e.g., STOCK, BOND, CRYPTO)';
+
+
+--
+-- Name: COLUMN asset_classes.name; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.asset_classes.name IS 'Human-readable asset class name';
+
+
+--
+-- Name: COLUMN asset_classes.description; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.asset_classes.description IS 'Detailed description of the asset class';
+
+
+--
+-- Name: COLUMN asset_classes.price_source; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.asset_classes.price_source IS 'Data source for price information (e.g., Yahoo Finance, Alpha Vantage)';
+
+
+--
+-- Name: COLUMN asset_classes.trading_hours; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.asset_classes.trading_hours IS 'When this asset class typically trades';
+
+
+--
+-- Name: COLUMN asset_classes.typical_unit; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (shares, contracts, etc.)';
+
+
+--
 -- Name: certificates; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -1644,6 +1693,55 @@ CREATE TABLE public.conversations (
 
 
 ALTER TABLE public.conversations OWNER TO nova;
+
+--
+-- Name: TABLE conversations; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.conversations IS 'Conversation session tracking. Logs chat sessions with metadata for analysis and continuity.';
+
+
+--
+-- Name: COLUMN conversations.id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.conversations.id IS 'Unique conversation identifier';
+
+
+--
+-- Name: COLUMN conversations.session_key; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.conversations.session_key IS 'Session identifier for grouping related messages';
+
+
+--
+-- Name: COLUMN conversations.channel; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.conversations.channel IS 'Communication channel (signal, discord, etc.)';
+
+
+--
+-- Name: COLUMN conversations.started_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.conversations.started_at IS 'Conversation start timestamp';
+
+
+--
+-- Name: COLUMN conversations.summary; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.conversations.summary IS 'Conversation summary or key points';
+
+
+--
+-- Name: COLUMN conversations.notes; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.conversations.notes IS 'Additional notes about the conversation';
+
 
 --
 -- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -1909,6 +2007,13 @@ CREATE TABLE public.entity_fact_conflicts (
 ALTER TABLE public.entity_fact_conflicts OWNER TO nova;
 
 --
+-- Name: TABLE entity_fact_conflicts; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entity_fact_conflicts IS 'Conflicts between entity facts requiring resolution. Part of the truth reconciliation system.';
+
+
+--
 -- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -1961,6 +2066,34 @@ CREATE TABLE public.entity_facts_archive (
 
 
 ALTER TABLE public.entity_facts_archive OWNER TO nova;
+
+--
+-- Name: TABLE entity_facts_archive; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.entity_facts_archive IS 'Archived entity facts from decay/cleanup processes. Historical record of previously stored knowledge.';
+
+
+--
+-- Name: COLUMN entity_facts_archive.archived_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts_archive.archived_at IS 'When the fact was archived';
+
+
+--
+-- Name: COLUMN entity_facts_archive.archive_reason; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts_archive.archive_reason IS 'Why the fact was archived (decay, conflict, manual)';
+
+
+--
+-- Name: COLUMN entity_facts_archive.archived_by; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.entity_facts_archive.archived_by IS 'System or agent that archived the fact';
+
 
 --
 -- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -2045,6 +2178,13 @@ CREATE TABLE public.event_entities (
 ALTER TABLE public.event_entities OWNER TO nova;
 
 --
+-- Name: TABLE event_entities; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.event_entities IS 'Links events to entities (people, orgs, AIs). Many-to-many relationship table.';
+
+
+--
 -- Name: event_places; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2055,6 +2195,13 @@ CREATE TABLE public.event_places (
 
 
 ALTER TABLE public.event_places OWNER TO nova;
+
+--
+-- Name: TABLE event_places; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.event_places IS 'Links events to places/locations. Many-to-many relationship table.';
+
 
 --
 -- Name: event_projects; Type: TABLE; Schema: public; Owner: nova
@@ -2136,6 +2283,13 @@ CREATE TABLE public.events_archive (
 
 
 ALTER TABLE public.events_archive OWNER TO nova;
+
+--
+-- Name: TABLE events_archive; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.events_archive IS 'Archived historical events. Long-term storage for events moved out of active events table.';
+
 
 --
 -- Name: extraction_metrics; Type: TABLE; Schema: public; Owner: nova
@@ -3069,6 +3223,76 @@ CREATE TABLE public.portfolio_positions (
 ALTER TABLE public.portfolio_positions OWNER TO nova;
 
 --
+-- Name: TABLE portfolio_positions; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.portfolio_positions IS 'Individual stock/investment positions tracking purchases, sales, and P&L. Core table for portfolio management.';
+
+
+--
+-- Name: COLUMN portfolio_positions.id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.id IS 'Unique position identifier';
+
+
+--
+-- Name: COLUMN portfolio_positions.symbol; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.symbol IS 'Ticker symbol or asset identifier';
+
+
+--
+-- Name: COLUMN portfolio_positions.shares; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.shares IS 'Number of shares/units held';
+
+
+--
+-- Name: COLUMN portfolio_positions.cost_basis; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.cost_basis IS 'Total purchase price';
+
+
+--
+-- Name: COLUMN portfolio_positions.purchased_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.purchased_at IS 'Date and time of purchase';
+
+
+--
+-- Name: COLUMN portfolio_positions.sold_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.sold_at IS 'Date and time of sale (NULL for open positions)';
+
+
+--
+-- Name: COLUMN portfolio_positions.sale_proceeds; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.sale_proceeds IS 'Total sale proceeds (NULL for open positions)';
+
+
+--
+-- Name: COLUMN portfolio_positions.notes; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.notes IS 'Additional notes about the position';
+
+
+--
+-- Name: COLUMN portfolio_positions.created_at; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.portfolio_positions.created_at IS 'Record creation timestamp';
+
+
+--
 -- Name: portfolio_positions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
 --
 
@@ -3107,6 +3331,13 @@ CREATE TABLE public.portfolio_snapshots (
 
 
 ALTER TABLE public.portfolio_snapshots OWNER TO nova;
+
+--
+-- Name: TABLE portfolio_snapshots; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.portfolio_snapshots IS 'Historical snapshots of portfolio values and performance metrics over time.';
+
 
 --
 -- Name: portfolio_snapshots_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -3159,6 +3390,13 @@ CREATE TABLE public.positions (
 
 
 ALTER TABLE public.positions OWNER TO nova;
+
+--
+-- Name: TABLE positions; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.positions IS 'Legacy or alternative positions tracking table. May be deprecated in favor of portfolio_positions.';
+
 
 --
 -- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -3248,6 +3486,13 @@ CREATE TABLE public.price_cache_v2 (
 
 
 ALTER TABLE public.price_cache_v2 OWNER TO nova;
+
+--
+-- Name: TABLE price_cache_v2; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.price_cache_v2 IS 'Cached price data for assets to reduce API calls. Version 2 of price caching system.';
+
 
 --
 -- Name: project_entities; Type: TABLE; Schema: public; Owner: nova
@@ -8032,5 +8277,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PUWzKcfMw82yPxskRLfU53wDvfuqMe5XaPcMaQtpnJr3pjx8MuimlJ3himjvuYv
+\unrestrict zknP4ai3kaFM5oRr6zbiLs4xV4ftbhuV1mrGumf3DCorAgsBdUeCz2e1DEhRjxB
 
