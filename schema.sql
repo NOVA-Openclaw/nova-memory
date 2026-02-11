@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict i1YUeqrhPzucbgnrsd6fVesqpGj82go3Jp57XYW973rwuIecjgXsAgwcG7k4PJE
+\restrict yrNlUKZeNXLofnIsIDjmnCFx9dKb5VnNEVRJ4ISwvkRdgWUnaajLXsm0L1skrJS
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -597,6 +597,21 @@ $$;
 ALTER FUNCTION public.get_ralph_state(p_series_id text) OWNER TO nova;
 
 --
+-- Name: link_github_issue(integer, integer); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.link_github_issue(p_queue_id integer, p_github_issue integer) RETURNS void
+    LANGUAGE sql
+    AS $$
+  UPDATE coder_issue_queue 
+  SET issue_number = p_github_issue 
+  WHERE id = p_queue_id;
+$$;
+
+
+ALTER FUNCTION public.link_github_issue(p_queue_id integer, p_github_issue integer) OWNER TO nova;
+
+--
 -- Name: log_agent_modification(integer, text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -765,6 +780,62 @@ $$;
 
 
 ALTER FUNCTION public.prevent_locked_project_update() OWNER TO nova;
+
+--
+-- Name: queue_test_failure(text, integer, text, text, integer); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer DEFAULT 7) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_title TEXT;
+  v_issue_number INTEGER;
+  v_queue_id INTEGER;
+BEGIN
+  -- Generate title
+  v_title := 'Test failure: ' || p_test_name;
+  
+  -- For now, use negative numbers as placeholder until GitHub issue is created
+  -- The actual issue creation happens via gh CLI externally
+  v_issue_number := -1 * (SELECT COALESCE(MAX(ABS(issue_number)), 0) + 1 
+                          FROM coder_issue_queue 
+                          WHERE repo = p_repo AND issue_number < 0);
+  
+  -- Insert into queue
+  INSERT INTO coder_issue_queue (
+    repo, issue_number, title, priority, status, source, 
+    parent_issue_id, error_message
+  ) VALUES (
+    p_repo, v_issue_number, v_title, p_priority, 'pending_tests',
+    'test_failure', 
+    (SELECT id FROM coder_issue_queue WHERE repo = p_repo AND issue_number = p_parent_issue),
+    p_error_message
+  )
+  RETURNING id INTO v_queue_id;
+  
+  -- Notify for external processing (gh issue create)
+  PERFORM pg_notify('test_failure', json_build_object(
+    'queue_id', v_queue_id,
+    'repo', p_repo,
+    'parent_issue', p_parent_issue,
+    'test_name', p_test_name,
+    'error', LEFT(p_error_message, 500)
+  )::text);
+  
+  RETURN v_queue_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer) OWNER TO nova;
+
+--
+-- Name: FUNCTION queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer) IS 'Queue a test failure for Coder to fix. Creates placeholder issue, notifies for gh issue creation.';
+
 
 --
 -- Name: roll_d100(); Type: FUNCTION; Schema: public; Owner: nova
@@ -4465,6 +4536,30 @@ CREATE VIEW public.v_pending_tasks AS
 
 
 ALTER VIEW public.v_pending_tasks OWNER TO nova;
+
+--
+-- Name: v_pending_test_failures; Type: VIEW; Schema: public; Owner: nova
+--
+
+CREATE VIEW public.v_pending_test_failures AS
+ SELECT id,
+    repo,
+    title,
+    error_message,
+    created_at
+   FROM public.coder_issue_queue
+  WHERE ((source = 'test_failure'::text) AND (issue_number < 0))
+  ORDER BY created_at;
+
+
+ALTER VIEW public.v_pending_test_failures OWNER TO nova;
+
+--
+-- Name: VIEW v_pending_test_failures; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON VIEW public.v_pending_test_failures IS 'Test failures that need GitHub issues created via gh CLI';
+
 
 --
 -- Name: v_portfolio_allocation; Type: VIEW; Schema: public; Owner: nova
@@ -8654,5 +8749,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict i1YUeqrhPzucbgnrsd6fVesqpGj82go3Jp57XYW973rwuIecjgXsAgwcG7k4PJE
+\unrestrict yrNlUKZeNXLofnIsIDjmnCFx9dKb5VnNEVRJ4ISwvkRdgWUnaajLXsm0L1skrJS
 
