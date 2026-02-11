@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict RSwQWU5q87DFCVB0dUVzabIBVduwwTDArkObjbISGh3VNQV0YyGW9AEDeHaRdYD
+\restrict i1YUeqrhPzucbgnrsd6fVesqpGj82go3Jp57XYW973rwuIecjgXsAgwcG7k4PJE
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -397,6 +397,22 @@ $$;
 ALTER FUNCTION public.chat(p_message text, p_sender character varying) OWNER TO nova;
 
 --
+-- Name: claim_coder_issue(integer); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.claim_coder_issue(issue_id integer) RETURNS boolean
+    LANGUAGE sql
+    AS $$
+  UPDATE coder_issue_queue
+  SET status = 'implementing', started_at = NOW()
+  WHERE id = issue_id AND status = 'tests_approved'
+  RETURNING TRUE;
+$$;
+
+
+ALTER FUNCTION public.claim_coder_issue(issue_id integer) OWNER TO nova;
+
+--
 -- Name: cleanup_old_archives(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -547,6 +563,23 @@ $$;
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
 
 --
+-- Name: get_next_coder_issue(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.get_next_coder_issue() RETURNS TABLE(id integer, repo text, issue_number integer, title text)
+    LANGUAGE sql
+    AS $$
+  SELECT id, repo, issue_number, title
+  FROM coder_issue_queue
+  WHERE status = 'tests_approved'
+  ORDER BY priority DESC, created_at
+  LIMIT 1;
+$$;
+
+
+ALTER FUNCTION public.get_next_coder_issue() OWNER TO nova;
+
+--
 -- Name: get_ralph_state(text); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -610,6 +643,39 @@ $$;
 
 
 ALTER FUNCTION public.notify_agent_chat() OWNER TO postgres;
+
+--
+-- Name: notify_coder_queue_change(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.notify_coder_queue_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    PERFORM pg_notify('coder_queue', json_build_object(
+      'op', 'insert',
+      'id', NEW.id,
+      'repo', NEW.repo,
+      'issue', NEW.issue_number,
+      'status', NEW.status
+    )::text);
+  ELSIF TG_OP = 'UPDATE' AND OLD.status != NEW.status THEN
+    PERFORM pg_notify('coder_queue', json_build_object(
+      'op', 'status_change',
+      'id', NEW.id,
+      'repo', NEW.repo,
+      'issue', NEW.issue_number,
+      'old_status', OLD.status,
+      'new_status', NEW.status
+    )::text);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.notify_coder_queue_change() OWNER TO nova;
 
 --
 -- Name: notify_delegation_change(); Type: FUNCTION; Schema: public; Owner: nova
@@ -1699,6 +1765,65 @@ ALTER SEQUENCE public.certificates_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.certificates_id_seq OWNED BY public.certificates.id;
+
+
+--
+-- Name: coder_issue_queue; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.coder_issue_queue (
+    id integer NOT NULL,
+    repo text NOT NULL,
+    issue_number integer NOT NULL,
+    title text,
+    priority integer DEFAULT 5,
+    status text DEFAULT 'pending_tests'::text,
+    source text DEFAULT 'github'::text,
+    parent_issue_id integer,
+    labels text[],
+    created_at timestamp with time zone DEFAULT now(),
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    error_message text
+);
+
+
+ALTER TABLE public.coder_issue_queue OWNER TO nova;
+
+--
+-- Name: TABLE coder_issue_queue; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.coder_issue_queue IS 'Issue queue for Coder agent. NOTIFY triggers dispatch work automatically.';
+
+
+--
+-- Name: COLUMN coder_issue_queue.status; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.coder_issue_queue.status IS 'pending_tests→tests_approved→implementing→testing→done/failed';
+
+
+--
+-- Name: coder_issue_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.coder_issue_queue_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.coder_issue_queue_id_seq OWNER TO nova;
+
+--
+-- Name: coder_issue_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.coder_issue_queue_id_seq OWNED BY public.coder_issue_queue.id;
 
 
 --
@@ -4870,6 +4995,13 @@ ALTER TABLE ONLY public.certificates ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: coder_issue_queue id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.coder_issue_queue ALTER COLUMN id SET DEFAULT nextval('public.coder_issue_queue_id_seq'::regclass);
+
+
+--
 -- Name: conversations id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -5246,6 +5378,22 @@ ALTER TABLE ONLY public.certificates
 
 ALTER TABLE ONLY public.certificates
     ADD CONSTRAINT certificates_serial_key UNIQUE (serial);
+
+
+--
+-- Name: coder_issue_queue coder_issue_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.coder_issue_queue
+    ADD CONSTRAINT coder_issue_queue_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coder_issue_queue coder_issue_queue_repo_issue_number_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.coder_issue_queue
+    ADD CONSTRAINT coder_issue_queue_repo_issue_number_key UNIQUE (repo, issue_number);
 
 
 --
@@ -5889,6 +6037,20 @@ CREATE INDEX idx_certificates_serial ON public.certificates USING btree (serial)
 --
 
 CREATE INDEX idx_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
+
+
+--
+-- Name: idx_coder_queue_priority; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_coder_queue_priority ON public.coder_issue_queue USING btree (priority DESC, created_at);
+
+
+--
+-- Name: idx_coder_queue_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_coder_queue_status ON public.coder_issue_queue USING btree (status);
 
 
 --
@@ -6628,6 +6790,13 @@ CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXE
 
 
 --
+-- Name: coder_issue_queue coder_queue_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER coder_queue_notify AFTER INSERT OR UPDATE ON public.coder_issue_queue FOR EACH ROW EXECUTE FUNCTION public.notify_coder_queue_change();
+
+
+--
 -- Name: projects enforce_project_lock; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -6803,6 +6972,14 @@ ALTER TABLE ONLY public.agent_jobs
 
 ALTER TABLE ONLY public.certificates
     ADD CONSTRAINT certificates_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: coder_issue_queue coder_issue_queue_parent_issue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.coder_issue_queue
+    ADD CONSTRAINT coder_issue_queue_parent_issue_id_fkey FOREIGN KEY (parent_issue_id) REFERENCES public.coder_issue_queue(id);
 
 
 --
@@ -8477,5 +8654,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RSwQWU5q87DFCVB0dUVzabIBVduwwTDArkObjbISGh3VNQV0YyGW9AEDeHaRdYD
+\unrestrict i1YUeqrhPzucbgnrsd6fVesqpGj82go3Jp57XYW973rwuIecjgXsAgwcG7k4PJE
 
