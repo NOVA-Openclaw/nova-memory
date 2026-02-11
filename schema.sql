@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict oCjlWvcudMXXjYJxN1YBe4euH63jmYUboDraPKWse9FHE6DE2ppHoBrIcUIa1Uz
+\restrict 9rODer0UP1LDdNVA1BNEeKazXi8BUPevRfn7MLSNWhdSqLj4RgxDwPqK1G2ZUje
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -572,6 +572,7 @@ CREATE FUNCTION public.get_next_coder_issue() RETURNS TABLE(id integer, repo tex
   SELECT id, repo, issue_number, title
   FROM coder_issue_queue
   WHERE status = 'tests_approved'
+    AND NOT should_skip_issue(COALESCE(labels, '{}'))
   ORDER BY priority DESC, created_at
   LIMIT 1;
 $$;
@@ -1020,6 +1021,21 @@ $$;
 
 
 ALTER FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) OWNER TO nova;
+
+--
+-- Name: should_skip_issue(text[]); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.should_skip_issue(p_labels text[]) RETURNS boolean
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+BEGIN
+  RETURN p_labels && ARRAY['paused', 'blocked', 'on-hold', 'wontfix', 'waiting'];
+END;
+$$;
+
+
+ALTER FUNCTION public.should_skip_issue(p_labels text[]) OWNER TO nova;
 
 --
 -- Name: table_comment(text); Type: FUNCTION; Schema: public; Owner: nova
@@ -1922,7 +1938,8 @@ CREATE TABLE public.coder_issue_queue (
     error_message text,
     context jsonb DEFAULT '{}'::jsonb,
     test_file text,
-    code_files text[]
+    code_files text[],
+    CONSTRAINT coder_issue_queue_status_check CHECK ((status = ANY (ARRAY['pending_tests'::text, 'tests_approved'::text, 'implementing'::text, 'testing'::text, 'done'::text, 'failed'::text, 'paused'::text, 'blocked'::text])))
 );
 
 
@@ -1940,6 +1957,13 @@ COMMENT ON TABLE public.coder_issue_queue IS 'Issue queue for Coder agent. NOTIF
 --
 
 COMMENT ON COLUMN public.coder_issue_queue.status IS 'pending_tests→tests_approved→implementing→testing→done/failed';
+
+
+--
+-- Name: COLUMN coder_issue_queue.labels; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.coder_issue_queue.labels IS 'GitHub labels. Gem skips issues with paused, blocked, on-hold, wontfix labels.';
 
 
 --
@@ -8816,5 +8840,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict oCjlWvcudMXXjYJxN1YBe4euH63jmYUboDraPKWse9FHE6DE2ppHoBrIcUIa1Uz
+\unrestrict 9rODer0UP1LDdNVA1BNEeKazXi8BUPevRfn7MLSNWhdSqLj4RgxDwPqK1G2ZUje
 
