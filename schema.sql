@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict YCf678iPbolr6wXP1V3L9pJk9IJEfXhBcWlQolsFhV3zRIMmpuUizzDwdpkEtlV
+\restrict IbgbVmdgcdx7XKC8uwD8QNiMn98DPuZgWifjYtad2kmQh7pL9AVLpNCTGVuPqPk
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -6772,10 +6772,31 @@ CREATE INDEX idx_agent_chat_channel ON public.agent_chat USING btree (channel, c
 
 
 --
+-- Name: idx_agent_chat_created_at; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_created_at ON public.agent_chat USING btree (created_at);
+
+
+--
 -- Name: idx_agent_chat_mentions; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_agent_chat_mentions ON public.agent_chat USING gin (mentions);
+
+
+--
+-- Name: idx_agent_chat_processed_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
+
+
+--
+-- Name: idx_agent_chat_processed_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_processed_status ON public.agent_chat_processed USING btree (status);
 
 
 --
@@ -9501,5 +9522,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict YCf678iPbolr6wXP1V3L9pJk9IJEfXhBcWlQolsFhV3zRIMmpuUizzDwdpkEtlV
+\unrestrict IbgbVmdgcdx7XKC8uwD8QNiMn98DPuZgWifjYtad2kmQh7pL9AVLpNCTGVuPqPk
 
