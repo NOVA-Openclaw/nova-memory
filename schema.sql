@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict pVhZ0dqbyc3v6IKZduhLxSm0v4gvN8hq32UBMX3UdsPqLRvkfCjs1PYQl1auB2Q
+\restrict s4PxkbtHW0maIIFdAcUF8Sqk6VbQ5brKBX9s6wCPVi4Uypi9oUz6nxQVjrqMi6F
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -365,6 +365,166 @@ $$;
 ALTER FUNCTION public.agent_update_skills(p_agent_id integer, p_skills text[], p_modified_by text) OWNER TO nova;
 
 --
+-- Name: audit_bootstrap_agents(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.audit_bootstrap_agents() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        INSERT INTO bootstrap_context_audit (
+            table_name, 
+            record_id, 
+            operation, 
+            old_content, 
+            new_content, 
+            changed_by, 
+            changed_at
+        ) VALUES (
+            'bootstrap_context_agents',
+            OLD.id,
+            'DELETE',
+            OLD.content,
+            NULL,
+            OLD.updated_by,
+            NOW()
+        );
+        RETURN OLD;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO bootstrap_context_audit (
+            table_name, 
+            record_id, 
+            operation, 
+            old_content, 
+            new_content, 
+            changed_by, 
+            changed_at
+        ) VALUES (
+            'bootstrap_context_agents',
+            NEW.id,
+            'UPDATE',
+            OLD.content,
+            NEW.content,
+            NEW.updated_by,
+            NOW()
+        );
+        RETURN NEW;
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO bootstrap_context_audit (
+            table_name, 
+            record_id, 
+            operation, 
+            old_content, 
+            new_content, 
+            changed_by, 
+            changed_at
+        ) VALUES (
+            'bootstrap_context_agents',
+            NEW.id,
+            'INSERT',
+            NULL,
+            NEW.content,
+            NEW.updated_by,
+            NOW()
+        );
+        RETURN NEW;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION public.audit_bootstrap_agents() OWNER TO nova;
+
+--
+-- Name: FUNCTION audit_bootstrap_agents(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.audit_bootstrap_agents() IS 'Audit trigger function for agent-specific context changes';
+
+
+--
+-- Name: audit_bootstrap_universal(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.audit_bootstrap_universal() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        INSERT INTO bootstrap_context_audit (
+            table_name, 
+            record_id, 
+            operation, 
+            old_content, 
+            new_content, 
+            changed_by, 
+            changed_at
+        ) VALUES (
+            'bootstrap_context_universal',
+            OLD.id,
+            'DELETE',
+            OLD.content,
+            NULL,
+            OLD.updated_by,
+            NOW()
+        );
+        RETURN OLD;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO bootstrap_context_audit (
+            table_name, 
+            record_id, 
+            operation, 
+            old_content, 
+            new_content, 
+            changed_by, 
+            changed_at
+        ) VALUES (
+            'bootstrap_context_universal',
+            NEW.id,
+            'UPDATE',
+            OLD.content,
+            NEW.content,
+            NEW.updated_by,
+            NOW()
+        );
+        RETURN NEW;
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO bootstrap_context_audit (
+            table_name, 
+            record_id, 
+            operation, 
+            old_content, 
+            new_content, 
+            changed_by, 
+            changed_at
+        ) VALUES (
+            'bootstrap_context_universal',
+            NEW.id,
+            'INSERT',
+            NULL,
+            NEW.content,
+            NEW.updated_by,
+            NOW()
+        );
+        RETURN NEW;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION public.audit_bootstrap_universal() OWNER TO nova;
+
+--
+-- Name: FUNCTION audit_bootstrap_universal(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.audit_bootstrap_universal() IS 'Audit trigger function for universal context changes';
+
+
+--
 -- Name: calculate_word_count(); Type: FUNCTION; Schema: public; Owner: erato
 --
 
@@ -518,6 +678,98 @@ COMMENT ON FUNCTION public.cleanup_old_lessons_archive() IS 'Hard deletes archiv
 
 
 --
+-- Name: copy_file_to_bootstrap(text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text DEFAULT NULL::text, p_updated_by text DEFAULT 'migration'::text) RETURNS text
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    v_file_key TEXT;
+    v_result TEXT;
+BEGIN
+    -- Extract file key from path (strip .md extension)
+    v_file_key := upper(regexp_replace(
+        regexp_replace(p_file_path, '^.*/([^/]+)\.md$', '\1'),
+        '-', '_', 'g'
+    ));
+    
+    -- Determine if universal or agent-specific
+    IF p_agent_name IS NULL THEN
+        -- Universal context
+        PERFORM update_universal_context(
+            v_file_key,
+            p_file_content,
+            'Migrated from ' || p_file_path,
+            p_updated_by
+        );
+        v_result := 'universal:' || v_file_key;
+    ELSE
+        -- Agent-specific context
+        PERFORM update_agent_context(
+            p_agent_name,
+            v_file_key,
+            p_file_content,
+            'Migrated from ' || p_file_path,
+            p_updated_by
+        );
+        v_result := p_agent_name || ':' || v_file_key;
+    END IF;
+    
+    RETURN v_result;
+END;
+$_$;
+
+
+ALTER FUNCTION public.copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text, p_updated_by text) OWNER TO nova;
+
+--
+-- Name: FUNCTION copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text, p_updated_by text); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text, p_updated_by text) IS 'Migrate file content to database (auto-detects universal vs agent)';
+
+
+--
+-- Name: delete_agent_context(text, text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_deleted INTEGER;
+BEGIN
+    DELETE FROM bootstrap_context_agents 
+    WHERE agent_name = p_agent_name AND file_key = p_file_key;
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+    RETURN v_deleted > 0;
+END;
+$$;
+
+
+ALTER FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) OWNER TO nova;
+
+--
+-- Name: delete_universal_context(text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.delete_universal_context(p_file_key text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_deleted INTEGER;
+BEGIN
+    DELETE FROM bootstrap_context_universal WHERE file_key = p_file_key;
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+    RETURN v_deleted > 0;
+END;
+$$;
+
+
+ALTER FUNCTION public.delete_universal_context(p_file_key text) OWNER TO nova;
+
+--
 -- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -561,6 +813,77 @@ $$;
 
 
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
+
+--
+-- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT ON (subq.filename)
+        subq.filename,
+        subq.content,
+        subq.source
+    FROM (
+        -- Agent-specific files (higher priority)
+        SELECT 
+            file_key || '.md' as filename,
+            a.content,
+            'agent'::TEXT as source,
+            1 as priority
+        FROM bootstrap_context_agents a
+        WHERE a.agent_name = p_agent_name
+            AND (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
+        
+        UNION ALL
+        
+        -- Universal context files (lower priority)
+        SELECT 
+            file_key || '.md' as filename,
+            u.content,
+            'universal'::TEXT as source,
+            2 as priority
+        FROM bootstrap_context_universal u
+        WHERE (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
+    ) subq
+    ORDER BY subq.filename, subq.priority;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
+
+--
+-- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Get all bootstrap files for an agent (universal + agent-specific)';
+
+
+--
+-- Name: get_bootstrap_config(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.get_bootstrap_config() RETURNS TABLE(key text, value jsonb, description text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY SELECT c.key, c.value, c.description FROM bootstrap_context_config c;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_bootstrap_config() OWNER TO nova;
+
+--
+-- Name: FUNCTION get_bootstrap_config(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.get_bootstrap_config() IS 'Get bootstrap system configuration';
+
 
 --
 -- Name: get_next_coder_issue(); Type: FUNCTION; Schema: public; Owner: nova
@@ -611,6 +934,48 @@ $$;
 
 
 ALTER FUNCTION public.link_github_issue(p_queue_id integer, p_github_issue integer) OWNER TO nova;
+
+--
+-- Name: list_all_context(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.list_all_context() RETURNS TABLE(type text, agent_name text, file_key text, content_length integer, updated_at timestamp with time zone, updated_by text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        'universal'::TEXT,
+        NULL::TEXT,
+        u.file_key,
+        length(u.content),
+        u.updated_at,
+        u.updated_by
+    FROM bootstrap_context_universal u
+    
+    UNION ALL
+    
+    SELECT 
+        'agent'::TEXT,
+        a.agent_name,
+        a.file_key,
+        length(a.content),
+        a.updated_at,
+        a.updated_by
+    FROM bootstrap_context_agents a
+    ORDER BY type, agent_name, file_key;
+END;
+$$;
+
+
+ALTER FUNCTION public.list_all_context() OWNER TO nova;
+
+--
+-- Name: FUNCTION list_all_context(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.list_all_context() IS 'List all context files with metadata';
+
 
 --
 -- Name: log_agent_modification(integer, text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
@@ -1073,6 +1438,50 @@ $$;
 ALTER FUNCTION public.table_comment(tbl text) OWNER TO nova;
 
 --
+-- Name: update_agent_context(text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text DEFAULT NULL::text, p_updated_by text DEFAULT 'system'::text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_id INTEGER;
+    v_max_size INTEGER;
+BEGIN
+    -- Enforce max_file_size from config
+    SELECT (value::text)::integer INTO v_max_size 
+    FROM bootstrap_context_config 
+    WHERE key = 'max_file_size';
+    
+    IF length(p_content) > v_max_size THEN
+        RAISE EXCEPTION 'Content size (% chars) exceeds maximum allowed size (% chars)', 
+            length(p_content), v_max_size;
+    END IF;
+    
+    INSERT INTO bootstrap_context_agents (agent_name, file_key, content, description, updated_by)
+    VALUES (p_agent_name, p_file_key, p_content, p_description, p_updated_by)
+    ON CONFLICT (agent_name, file_key) DO UPDATE
+    SET content = EXCLUDED.content,
+        description = COALESCE(EXCLUDED.description, bootstrap_context_agents.description),
+        updated_at = NOW(),
+        updated_by = EXCLUDED.updated_by
+    RETURNING id INTO v_id;
+    
+    RETURN v_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text) OWNER TO nova;
+
+--
+-- Name: FUNCTION update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text) IS 'Update or insert agent-specific context file';
+
+
+--
 -- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -1150,6 +1559,50 @@ $$;
 
 
 ALTER FUNCTION public.update_music_search_vector() OWNER TO nova;
+
+--
+-- Name: update_universal_context(text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.update_universal_context(p_file_key text, p_content text, p_description text DEFAULT NULL::text, p_updated_by text DEFAULT 'system'::text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_id INTEGER;
+    v_max_size INTEGER;
+BEGIN
+    -- Enforce max_file_size from config
+    SELECT (value::text)::integer INTO v_max_size 
+    FROM bootstrap_context_config 
+    WHERE key = 'max_file_size';
+    
+    IF length(p_content) > v_max_size THEN
+        RAISE EXCEPTION 'Content size (% chars) exceeds maximum allowed size (% chars)', 
+            length(p_content), v_max_size;
+    END IF;
+    
+    INSERT INTO bootstrap_context_universal (file_key, content, description, updated_by)
+    VALUES (p_file_key, p_content, p_description, p_updated_by)
+    ON CONFLICT (file_key) DO UPDATE
+    SET content = EXCLUDED.content,
+        description = COALESCE(EXCLUDED.description, bootstrap_context_universal.description),
+        updated_at = NOW(),
+        updated_by = EXCLUDED.updated_by
+    RETURNING id INTO v_id;
+    
+    RETURN v_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_universal_context(p_file_key text, p_content text, p_description text, p_updated_by text) OWNER TO nova;
+
+--
+-- Name: FUNCTION update_universal_context(p_file_key text, p_content text, p_description text, p_updated_by text); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.update_universal_context(p_file_key text, p_content text, p_description text, p_updated_by text) IS 'Update or insert universal context file';
+
 
 --
 -- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: public; Owner: erato
@@ -7251,6 +7704,20 @@ CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR
 
 
 --
+-- Name: bootstrap_context_agents trg_audit_bootstrap_agents; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_audit_bootstrap_agents AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_agents FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_agents();
+
+
+--
+-- Name: bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_universal FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_universal();
+
+
+--
 -- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -9034,5 +9501,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pVhZ0dqbyc3v6IKZduhLxSm0v4gvN8hq32UBMX3UdsPqLRvkfCjs1PYQl1auB2Q
+\unrestrict s4PxkbtHW0maIIFdAcUF8Sqk6VbQ5brKBX9s6wCPVi4Uypi9oUz6nxQVjrqMi6F
 
