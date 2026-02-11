@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nJveI1Tw2OTmW4gTmBgfZzgOImL8FD5lihCvzgJNhNcI8AuPAMqmbBC8CXGf2mC
+\restrict LXWrXhcdnPl2IJJqKAMgs9zhRPEg2mIcFhY1Ebhd7O0l2ZW5hOrHiEbuQUL8jhW
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2138,6 +2138,45 @@ ALTER SEQUENCE public.extraction_metrics_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.extraction_metrics_id_seq OWNED BY public.extraction_metrics.id;
+
+
+--
+-- Name: fact_change_log; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.fact_change_log (
+    id integer NOT NULL,
+    fact_id integer NOT NULL,
+    old_value text,
+    new_value text,
+    changed_by_entity_id integer,
+    reason character varying(100),
+    changed_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.fact_change_log OWNER TO nova;
+
+--
+-- Name: fact_change_log_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.fact_change_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.fact_change_log_id_seq OWNER TO nova;
+
+--
+-- Name: fact_change_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.fact_change_log_id_seq OWNED BY public.fact_change_log.id;
 
 
 --
@@ -4367,6 +4406,13 @@ ALTER TABLE ONLY public.extraction_metrics ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: fact_change_log id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.fact_change_log ALTER COLUMN id SET DEFAULT nextval('public.fact_change_log_id_seq'::regclass);
+
+
+--
 -- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -4799,6 +4845,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.extraction_metrics
     ADD CONSTRAINT extraction_metrics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: fact_change_log fact_change_log_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.fact_change_log
+    ADD CONSTRAINT fact_change_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -7865,5 +7919,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nJveI1Tw2OTmW4gTmBgfZzgOImL8FD5lihCvzgJNhNcI8AuPAMqmbBC8CXGf2mC
+\unrestrict LXWrXhcdnPl2IJJqKAMgs9zhRPEg2mIcFhY1Ebhd7O0l2ZW5hOrHiEbuQUL8jhW
 
