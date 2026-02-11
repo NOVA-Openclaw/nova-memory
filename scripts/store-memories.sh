@@ -55,6 +55,30 @@ fact_exists() {
     [ "$count" -gt 0 ]
 }
 
+# Function to reinforce existing fact (increment vote_count, update last_confirmed)
+reinforce_fact() {
+    local entity_name="$1"
+    local key="$2"
+    local value="$3"
+    
+    psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+        UPDATE entity_facts ef
+        SET vote_count = vote_count + 1,
+            last_confirmed = NOW(),
+            confirmation_count = COALESCE(confirmation_count, 0) + 1,
+            updated_at = NOW()
+        FROM entities e
+        WHERE ef.entity_id = e.id
+          AND (LOWER(e.name) = LOWER('$(sql_escape "$entity_name")')
+               OR LOWER(e.full_name) = LOWER('$(sql_escape "$entity_name")')
+               OR LOWER('$(sql_escape "$entity_name")') = ANY(SELECT LOWER(unnest(e.nicknames))))
+          AND LOWER(ef.key) = LOWER('$(sql_escape "$key")')
+          AND (LOWER(ef.value) = LOWER('$(sql_escape "$value")')
+               OR ef.value ILIKE '%$(sql_escape "$value")%'
+               OR '$(sql_escape "$value")' ILIKE '%' || ef.value || '%');
+    " 2>/dev/null >/dev/null
+}
+
 # Function to check if vocabulary word exists
 vocab_exists() {
     local word="$1"
@@ -162,9 +186,10 @@ echo "$JSON_DATA" | jq -c '.facts[]? // empty' | while read -r fact; do
     actual_subject=$(find_entity "$subject")
     [ -z "$actual_subject" ] && actual_subject="$subject"
     
-    # Check for duplicate
+    # Check for duplicate and reinforce if exists
     if fact_exists "$actual_subject" "$predicate" "$value"; then
-        echo "  ~ Fact (duplicate, skipped): $actual_subject.$predicate = $value"
+        reinforce_fact "$actual_subject" "$predicate" "$value"
+        echo "  ✓ Fact reinforced: $actual_subject.$predicate = $value (vote_count++)"
         continue
     fi
     
@@ -195,9 +220,10 @@ echo "$JSON_DATA" | jq -c '.opinions[]? // empty' | while read -r opinion; do
     
     key="opinion_$subject"
     
-    # Check for duplicate
+    # Check for duplicate and reinforce if exists
     if fact_exists "$actual_holder" "$key" "$opinion_text"; then
-        echo "  ~ Opinion (duplicate, skipped): $actual_holder on $subject"
+        reinforce_fact "$actual_holder" "$key" "$opinion_text"
+        echo "  ✓ Opinion reinforced: $actual_holder on $subject (vote_count++)"
         continue
     fi
     
@@ -228,9 +254,10 @@ echo "$JSON_DATA" | jq -c '.preferences[]? // empty' | while read -r pref; do
     
     key="preference_$category"
     
-    # Check for duplicate
+    # Check for duplicate and reinforce if exists
     if fact_exists "$actual_person" "$key" "$preference"; then
-        echo "  ~ Preference (duplicate, skipped): $actual_person prefers $preference"
+        reinforce_fact "$actual_person" "$key" "$preference"
+        echo "  ✓ Preference reinforced: $actual_person prefers $preference (vote_count++)"
         continue
     fi
     
