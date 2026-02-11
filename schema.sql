@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 8A9oNhd8O0do0wWM6dy8o0yWK0w02SVnZYtcuuhE646sISJYiTUJ5wKTaIOKLqr
+\restrict PUWzKcfMw82yPxskRLfU53wDvfuqMe5XaPcMaQtpnJr3pjx8MuimlJ3himjvuYv
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -676,6 +676,41 @@ $$;
 
 
 ALTER FUNCTION public.prevent_locked_project_update() OWNER TO nova;
+
+--
+-- Name: roll_d100(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.roll_d100() RETURNS TABLE(roll integer, task_name character varying, task_description text, workflow_id integer, skill_name character varying, tool_name character varying, estimated_minutes integer)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    rolled_value INTEGER;
+BEGIN
+    rolled_value := floor(random() * 100 + 1)::int;
+    
+    -- Log the roll
+    UPDATE motivation_d100 
+    SET times_rolled = times_rolled + 1, last_rolled = NOW() 
+    WHERE motivation_d100.roll = rolled_value AND task_name IS NOT NULL;
+    
+    -- Return the result
+    RETURN QUERY
+    SELECT m.roll, m.task_name, m.task_description, m.workflow_id, m.skill_name, m.tool_name, m.estimated_minutes
+    FROM motivation_d100 m
+    WHERE m.roll = rolled_value;
+END;
+$$;
+
+
+ALTER FUNCTION public.roll_d100() OWNER TO nova;
+
+--
+-- Name: FUNCTION roll_d100(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.roll_d100() IS 'Roll the D100 motivation die - returns task if one exists at that number';
+
 
 --
 -- Name: search_media(text, integer); Type: FUNCTION; Schema: public; Owner: nova
@@ -7997,5 +8032,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 8A9oNhd8O0do0wWM6dy8o0yWK0w02SVnZYtcuuhE646sISJYiTUJ5wKTaIOKLqr
+\unrestrict PUWzKcfMw82yPxskRLfU53wDvfuqMe5XaPcMaQtpnJr3pjx8MuimlJ3himjvuYv
 
