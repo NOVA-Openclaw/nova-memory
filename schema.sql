@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 9rODer0UP1LDdNVA1BNEeKazXi8BUPevRfn7MLSNWhdSqLj4RgxDwPqK1G2ZUje
+\restrict pVhZ0dqbyc3v6IKZduhLxSm0v4gvN8hq32UBMX3UdsPqLRvkfCjs1PYQl1auB2Q
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -851,20 +851,42 @@ DECLARE
   v_queue_id INTEGER;
   v_parent_title TEXT;
   v_full_context JSONB;
+  v_semantic_context JSONB;
+  v_query_text TEXT;
 BEGIN
   v_title := 'Test failure: ' || p_test_name;
   
-  -- Get parent issue title if exists
+  -- Get parent issue title
   SELECT title INTO v_parent_title 
   FROM coder_issue_queue 
   WHERE repo = p_repo AND issue_number = p_parent_issue;
+  
+  -- Build query for semantic search
+  v_query_text := p_test_name || ' ' || COALESCE(p_test_file, '') || ' ' || p_error_message;
+  
+  -- Get semantic context (top related memories)
+  SELECT jsonb_agg(jsonb_build_object(
+    'source_type', source_type,
+    'source_id', source_id,
+    'content', LEFT(content, 500),
+    'relevance', 'high'
+  ))
+  INTO v_semantic_context
+  FROM (
+    SELECT source_type, source_id, content
+    FROM memory_embeddings
+    WHERE content ILIKE '%' || p_test_name || '%'
+       OR content ILIKE '%' || COALESCE(p_test_file, 'NOMATCH') || '%'
+    LIMIT 5
+  ) relevant;
   
   -- Build full context
   v_full_context := p_context || jsonb_build_object(
     'parent_title', v_parent_title,
     'test_file', p_test_file,
     'code_files', p_code_files,
-    'queued_at', NOW()
+    'queued_at', NOW(),
+    'semantic_context', COALESCE(v_semantic_context, '[]'::jsonb)
   );
   
   -- Placeholder issue number
@@ -1844,6 +1866,167 @@ COMMENT ON COLUMN public.asset_classes.trading_hours IS 'When this asset class t
 --
 
 COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (shares, contracts, etc.)';
+
+
+--
+-- Name: bootstrap_context_agents; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.bootstrap_context_agents (
+    id integer NOT NULL,
+    agent_name text NOT NULL,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    description text,
+    updated_at timestamp with time zone DEFAULT now(),
+    updated_by text,
+    CONSTRAINT bootstrap_context_agents_file_key_check CHECK ((file_key <> ''::text))
+);
+
+
+ALTER TABLE public.bootstrap_context_agents OWNER TO nova;
+
+--
+-- Name: TABLE bootstrap_context_agents; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.bootstrap_context_agents IS 'Per-agent context files (SEED_CONTEXT.md, domain knowledge)';
+
+
+--
+-- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.bootstrap_context_agents_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNER TO nova;
+
+--
+-- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNED BY public.bootstrap_context_agents.id;
+
+
+--
+-- Name: bootstrap_context_audit; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.bootstrap_context_audit (
+    id integer NOT NULL,
+    table_name text NOT NULL,
+    record_id integer,
+    operation text NOT NULL,
+    old_content text,
+    new_content text,
+    changed_by text,
+    changed_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.bootstrap_context_audit OWNER TO nova;
+
+--
+-- Name: TABLE bootstrap_context_audit; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.bootstrap_context_audit IS 'Audit trail of all context modifications';
+
+
+--
+-- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.bootstrap_context_audit_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNER TO nova;
+
+--
+-- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNED BY public.bootstrap_context_audit.id;
+
+
+--
+-- Name: bootstrap_context_config; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.bootstrap_context_config (
+    key text NOT NULL,
+    value jsonb NOT NULL,
+    description text,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.bootstrap_context_config OWNER TO nova;
+
+--
+-- Name: TABLE bootstrap_context_config; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.bootstrap_context_config IS 'Configuration for bootstrap system behavior';
+
+
+--
+-- Name: bootstrap_context_universal; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.bootstrap_context_universal (
+    id integer NOT NULL,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    description text,
+    updated_at timestamp with time zone DEFAULT now(),
+    updated_by text,
+    CONSTRAINT bootstrap_context_universal_file_key_check CHECK ((file_key <> ''::text))
+);
+
+
+ALTER TABLE public.bootstrap_context_universal OWNER TO nova;
+
+--
+-- Name: TABLE bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.bootstrap_context_universal IS 'Universal context files loaded for all agents (AGENTS.md, SOUL.md, etc.)';
+
+
+--
+-- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.bootstrap_context_universal_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNER TO nova;
+
+--
+-- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNED BY public.bootstrap_context_universal.id;
 
 
 --
@@ -4189,45 +4372,6 @@ ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
 
 
 --
--- Name: sops; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.sops (
-    id integer NOT NULL,
-    title text NOT NULL,
-    content text NOT NULL,
-    created_at timestamp without time zone DEFAULT now(),
-    updated_at timestamp without time zone DEFAULT now(),
-    created_by text DEFAULT 'newhart'::text,
-    version integer DEFAULT 1
-);
-
-
-ALTER TABLE public.sops OWNER TO postgres;
-
---
--- Name: sops_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
-
-CREATE SEQUENCE public.sops_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.sops_id_seq OWNER TO postgres;
-
---
--- Name: sops_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
-ALTER SEQUENCE public.sops_id_seq OWNED BY public.sops.id;
-
-
---
 -- Name: tags; Type: TABLE; Schema: public; Owner: erato
 --
 
@@ -5174,6 +5318,27 @@ ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artw
 
 
 --
+-- Name: bootstrap_context_agents id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_agents ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_agents_id_seq'::regclass);
+
+
+--
+-- Name: bootstrap_context_audit id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_audit ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_audit_id_seq'::regclass);
+
+
+--
+-- Name: bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_universal ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_universal_id_seq'::regclass);
+
+
+--
 -- Name: certificates id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -5384,13 +5549,6 @@ ALTER TABLE ONLY public.ralph_sessions ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- Name: sops id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.sops ALTER COLUMN id SET DEFAULT nextval('public.sops_id_seq'::regclass);
-
-
---
 -- Name: tags id; Type: DEFAULT; Schema: public; Owner: erato
 --
 
@@ -5540,6 +5698,54 @@ ALTER TABLE ONLY public.artwork
 
 ALTER TABLE ONLY public.asset_classes
     ADD CONSTRAINT asset_classes_pkey PRIMARY KEY (code);
+
+
+--
+-- Name: bootstrap_context_agents bootstrap_context_agents_agent_name_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_agents
+    ADD CONSTRAINT bootstrap_context_agents_agent_name_file_key_key UNIQUE (agent_name, file_key);
+
+
+--
+-- Name: bootstrap_context_agents bootstrap_context_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_agents
+    ADD CONSTRAINT bootstrap_context_agents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bootstrap_context_audit bootstrap_context_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_audit
+    ADD CONSTRAINT bootstrap_context_audit_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bootstrap_context_config bootstrap_context_config_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_config
+    ADD CONSTRAINT bootstrap_context_config_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: bootstrap_context_universal bootstrap_context_universal_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_universal
+    ADD CONSTRAINT bootstrap_context_universal_file_key_key UNIQUE (file_key);
+
+
+--
+-- Name: bootstrap_context_universal bootstrap_context_universal_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_universal
+    ADD CONSTRAINT bootstrap_context_universal_pkey PRIMARY KEY (id);
 
 
 --
@@ -5967,14 +6173,6 @@ ALTER TABLE ONLY public.ralph_sessions
 
 
 --
--- Name: sops sops_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.sops
-    ADD CONSTRAINT sops_pkey PRIMARY KEY (id);
-
-
---
 -- Name: tags tags_name_key; Type: CONSTRAINT; Schema: public; Owner: erato
 --
 
@@ -6195,6 +6393,20 @@ CREATE INDEX idx_agents_role ON public.agents USING btree (role);
 --
 
 CREATE INDEX idx_agents_status ON public.agents USING btree (status);
+
+
+--
+-- Name: idx_bootstrap_agents_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_bootstrap_agents_name ON public.bootstrap_context_agents USING btree (agent_name);
+
+
+--
+-- Name: idx_bootstrap_audit_table; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_bootstrap_audit_table ON public.bootstrap_context_audit USING btree (table_name, changed_at);
 
 
 --
@@ -8424,24 +8636,6 @@ GRANT ALL ON SEQUENCE public.ralph_sessions_id_seq TO "nova-staging";
 
 
 --
--- Name: TABLE sops; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT SELECT ON TABLE public.sops TO newhart;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sops TO erato;
-GRANT SELECT ON TABLE public.sops TO nova;
-GRANT ALL ON TABLE public.sops TO "nova-staging";
-
-
---
--- Name: SEQUENCE sops_id_seq; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.sops_id_seq TO erato;
-GRANT ALL ON SEQUENCE public.sops_id_seq TO "nova-staging";
-
-
---
 -- Name: TABLE tags; Type: ACL; Schema: public; Owner: erato
 --
 
@@ -8840,5 +9034,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9rODer0UP1LDdNVA1BNEeKazXi8BUPevRfn7MLSNWhdSqLj4RgxDwPqK1G2ZUje
+\unrestrict pVhZ0dqbyc3v6IKZduhLxSm0v4gvN8hq32UBMX3UdsPqLRvkfCjs1PYQl1auB2Q
 
