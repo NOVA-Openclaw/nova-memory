@@ -11,7 +11,50 @@ cd ~/clawd/nova-memory
 
 The installer is **idempotent** - safe to run multiple times.
 
-## Recent Changes (2026-02-10)
+## Recent Changes
+
+### 2026-02-11: Automatic Hook Configuration
+
+The installer now **automatically enables hooks** in the OpenClaw config:
+
+**What Changed:**
+- Added `scripts/enable-hooks.sh` - Safe JSON patching using jq
+- `install.sh` now calls `enable-hooks.sh` after copying hook files
+- Hooks are enabled in `~/.openclaw/openclaw.json` automatically
+- Creates backup before modifying config
+- Handles both new and existing hooks sections
+
+**Before:**
+```bash
+./install.sh
+openclaw hooks enable memory-extract
+openclaw hooks enable semantic-recall
+openclaw hooks enable session-init
+openclaw gateway restart
+```
+
+**After:**
+```bash
+./install.sh  # Automatically enables hooks and prompts to restart gateway
+openclaw gateway restart
+```
+
+**Benefits:**
+- ✅ No manual configuration needed
+- ✅ Idempotent (safe to run multiple times)
+- ✅ Preserves existing hook configurations
+- ✅ Creates backups before modifying config
+- ✅ Works with or without existing hooks section
+
+**Implementation:**
+The `enable-hooks.sh` script uses jq to safely patch the OpenClaw JSON config:
+- Creates hooks section if it doesn't exist
+- Enables hooks.enabled and hooks.internal.enabled
+- Adds all three nova-memory hooks with enabled: true
+- Preserves any existing hooks in the config
+- Creates timestamped backup of original config
+
+### 2026-02-10: Multi-User Support and Portability
 
 ### 1. Dynamic Database Naming (enables multi-user setups)
 
@@ -175,15 +218,13 @@ The installer and hooks use these environment variables:
 
 ## Post-Installation
 
-After running `install.sh`, enable the hooks in OpenClaw:
+After running `install.sh`, **the hooks are automatically enabled**. Just restart the gateway:
 
 ```bash
-openclaw hooks enable memory-extract
-openclaw hooks enable semantic-recall
-openclaw hooks enable session-init
+openclaw gateway restart
 ```
 
-Verify installation:
+Verify hooks are enabled:
 
 ```bash
 openclaw hooks list
@@ -193,6 +234,18 @@ Monitor logs:
 
 ```bash
 tail -f ~/clawd/logs/memory-extract-hook.log
+```
+
+If automatic configuration failed (e.g., jq not installed), you can manually enable hooks:
+
+```bash
+# Option 1: Use the enable-hooks.sh script
+~/clawd/nova-memory/scripts/enable-hooks.sh
+
+# Option 2: Use OpenClaw CLI (legacy method)
+openclaw hooks enable memory-extract
+openclaw hooks enable semantic-recall
+openclaw hooks enable session-init
 ```
 
 ## Manual Installation (Old Method)
