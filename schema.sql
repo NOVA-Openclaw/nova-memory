@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict uHyR34laBIERsuEzDlX62MrlzmN1IjvySn2ED8dZpC6Tl2of8JoSzu44hwl0rjR
+\restrict DKPAbz8Q7WhdPqtrKWYPY3C9iICPxHeevWIcf4eJprATOnqtLN7pEhKLl9uR4ee
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -610,6 +610,29 @@ $$;
 
 
 ALTER FUNCTION public.notify_agent_chat() OWNER TO postgres;
+
+--
+-- Name: notify_delegation_change(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.notify_delegation_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM pg_notify('delegation_changed', TG_TABLE_NAME);
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+
+ALTER FUNCTION public.notify_delegation_change() OWNER TO nova;
+
+--
+-- Name: FUNCTION notify_delegation_change(); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.notify_delegation_change() IS 'SHORT-TERM: Triggers DELEGATION_CONTEXT.md regeneration. Remove when PR #9 long-term solution is active.';
+
 
 --
 -- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: nova
@@ -6591,6 +6614,13 @@ CREATE TRIGGER agent_chat_notify AFTER INSERT ON public.agent_chat FOR EACH ROW 
 
 
 --
+-- Name: agents agents_delegation_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER agents_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
+
+
+--
 -- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -6665,6 +6695,20 @@ CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH
 --
 
 CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+
+
+--
+-- Name: workflow_steps workflow_steps_delegation_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER workflow_steps_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.workflow_steps FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
+
+
+--
+-- Name: workflows workflows_delegation_notify; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER workflows_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.workflows FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
 
 
 --
@@ -8433,5 +8477,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uHyR34laBIERsuEzDlX62MrlzmN1IjvySn2ED8dZpC6Tl2of8JoSzu44hwl0rjR
+\unrestrict DKPAbz8Q7WhdPqtrKWYPY3C9iICPxHeevWIcf4eJprATOnqtLN7pEhKLl9uR4ee
 
