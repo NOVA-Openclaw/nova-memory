@@ -76,6 +76,9 @@ VERIFICATION_PASSED=0
 VERIFICATION_WARNINGS=0
 VERIFICATION_ERRORS=0
 
+# Track if gateway restart is needed
+GATEWAY_RESTART_NEEDED=0
+
 echo ""
 echo "═══════════════════════════════════════════"
 if [ $VERIFY_ONLY -eq 1 ]; then
@@ -656,6 +659,48 @@ if ls "$SCRIPTS_TARGET"/*.py &> /dev/null; then
 fi
 
 # ============================================
+# Part 4.5: OpenClaw Config Patching
+# ============================================
+echo ""
+echo "OpenClaw config patching..."
+
+OPENCLAW_CONFIG="$HOME/.openclaw/openclaw.json"
+ENABLE_HOOKS_SCRIPT="$SCRIPT_DIR/scripts/enable-hooks.sh"
+
+# Check if jq is available (required for config patching)
+if ! command -v jq &> /dev/null; then
+    echo -e "  ${WARNING} jq not installed (needed for config patching)"
+    echo "      Install: sudo apt install jq"
+    echo "      Skipping automatic config patching"
+    VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+elif [ ! -f "$OPENCLAW_CONFIG" ]; then
+    echo -e "  ${WARNING} OpenClaw config not found at $OPENCLAW_CONFIG"
+    echo "      Config patching skipped"
+    VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+elif [ ! -f "$ENABLE_HOOKS_SCRIPT" ]; then
+    echo -e "  ${WARNING} enable-hooks.sh script not found"
+    echo "      Config patching skipped"
+    VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+else
+    # Make sure enable-hooks.sh is executable
+    chmod +x "$ENABLE_HOOKS_SCRIPT"
+    
+    # Run the config patching script
+    echo "  Enabling nova-memory hooks in OpenClaw config..."
+    if "$ENABLE_HOOKS_SCRIPT" "$OPENCLAW_CONFIG" > /dev/null 2>&1; then
+        echo -e "  ${CHECK_MARK} Hooks enabled in OpenClaw config"
+        echo "      • memory-extract"
+        echo "      • semantic-recall"
+        echo "      • session-init"
+        GATEWAY_RESTART_NEEDED=1
+    else
+        echo -e "  ${WARNING} Failed to patch OpenClaw config"
+        echo "      You can run manually: $ENABLE_HOOKS_SCRIPT"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    fi
+fi
+
+# ============================================
 # Part 5: Python Virtual Environment Setup
 # ============================================
 echo ""
@@ -859,17 +904,34 @@ fi
 
 echo "Next steps:"
 echo ""
-echo "1. Enable hooks in OpenClaw:"
-for hook in "${INSTALLED_HOOKS[@]}"; do
-    echo "   openclaw hooks enable $hook"
-done
-echo ""
-echo "2. List available hooks:"
-echo "   openclaw hooks list"
-echo ""
-echo "3. Verify installation:"
-echo "   $0 --verify-only"
-echo ""
-echo "4. Check logs:"
-echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
-echo ""
+
+# Check if we patched the config successfully
+if [ -n "${GATEWAY_RESTART_NEEDED:-}" ]; then
+    echo "1. Restart OpenClaw gateway to enable hooks:"
+    echo "   openclaw gateway restart"
+    echo ""
+    echo "2. Verify installation:"
+    echo "   $0 --verify-only"
+    echo ""
+    echo "3. Check logs:"
+    echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
+    echo ""
+else
+    echo "1. Hooks were not automatically enabled. Enable them manually:"
+    for hook in "${INSTALLED_HOOKS[@]}"; do
+        echo "   openclaw hooks enable $hook"
+    done
+    echo ""
+    echo "2. Or use the enable-hooks.sh script:"
+    echo "   $SCRIPT_DIR/scripts/enable-hooks.sh"
+    echo ""
+    echo "3. Then restart OpenClaw gateway:"
+    echo "   openclaw gateway restart"
+    echo ""
+    echo "4. Verify installation:"
+    echo "   $0 --verify-only"
+    echo ""
+    echo "5. Check logs:"
+    echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
+    echo ""
+fi
