@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict pk3F86MXVc2ikpC6dsS2POzdxhZ0TNNC9S5ASDUokNZpiaYXiYIrZK7BtdAbV5g
+\restrict HweviBBjU9tMPGpLor76gKmM0m6OgYtg9GYJQR1ZMzZJebUSc68ZLjN5AWQoEdd
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -832,31 +832,51 @@ ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
 CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    v_agent_id INTEGER;
 BEGIN
+    SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name;
+    
     RETURN QUERY
     SELECT DISTINCT ON (subq.filename)
         subq.filename,
         subq.content,
         subq.source
     FROM (
-        -- Agent-specific files (higher priority)
+        -- Agent-specific context
         SELECT 
-            file_key || '.md' as filename,
-            a.content,
+            kv.key || '.md' as filename,
+            kv.value as content,
             'agent'::TEXT as source,
             1 as priority
-        FROM bootstrap_context_agents a
-        WHERE a.agent_name = p_agent_name
+        FROM agents a
+        CROSS JOIN LATERAL jsonb_each_text(COALESCE(a.bootstrap_context, '{}'::jsonb)) AS kv
+        WHERE a.name = p_agent_name
             AND (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
         
         UNION ALL
         
-        -- Universal context files (lower priority)
+        -- Workflow context
+        (SELECT 
+            'WORKFLOW_CONTEXT.md' as filename,
+            'Workflow: ' || w.name || E'\n\n' || w.description as content,
+            'workflow'::TEXT as source,
+            2 as priority
+        FROM workflow_steps ws
+        JOIN workflows w ON ws.workflow_id = w.id
+        WHERE ws.agent_id = v_agent_id
+            AND w.status = 'active'
+            AND (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
+        LIMIT 1)
+        
+        UNION ALL
+        
+        -- Universal context
         SELECT 
             file_key || '.md' as filename,
             u.content,
             'universal'::TEXT as source,
-            2 as priority
+            3 as priority
         FROM bootstrap_context_universal u
         WHERE (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
     ) subq
@@ -9549,5 +9569,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pk3F86MXVc2ikpC6dsS2POzdxhZ0TNNC9S5ASDUokNZpiaYXiYIrZK7BtdAbV5g
+\unrestrict HweviBBjU9tMPGpLor76gKmM0m6OgYtg9GYJQR1ZMzZJebUSc68ZLjN5AWQoEdd
 
