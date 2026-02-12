@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict s4PxkbtHW0maIIFdAcUF8Sqk6VbQ5brKBX9s6wCPVi4Uypi9oUz6nxQVjrqMi6F
+\restrict Gob13JUOqNGMvy5HocsUkP91hG6z9fhWn7pVwYfRSANR9orZoVbgAsMdNFFBblu
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1003,21 +1003,13 @@ ALTER FUNCTION public.log_agent_modification(p_agent_id integer, p_modified_by t
 CREATE FUNCTION public.notify_agent_chat() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-DECLARE
-    payload TEXT;
 BEGIN
-    -- Build JSON payload with message info
-    payload := json_build_object(
+    PERFORM pg_notify('agent_chat', json_build_object(
         'id', NEW.id,
         'channel', NEW.channel,
         'sender', NEW.sender,
-        'mentions', NEW.mentions,
-        'created_at', NEW.created_at
-    )::text;
-    
-    -- Notify all listeners on 'agent_chat' channel
-    PERFORM pg_notify('agent_chat', payload);
-    
+        'mentions', NEW.mentions
+    )::text);
     RETURN NEW;
 END;
 $$;
@@ -6772,10 +6764,31 @@ CREATE INDEX idx_agent_chat_channel ON public.agent_chat USING btree (channel, c
 
 
 --
+-- Name: idx_agent_chat_created_at; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_created_at ON public.agent_chat USING btree (created_at);
+
+
+--
 -- Name: idx_agent_chat_mentions; Type: INDEX; Schema: public; Owner: nova
 --
 
 CREATE INDEX idx_agent_chat_mentions ON public.agent_chat USING gin (mentions);
+
+
+--
+-- Name: idx_agent_chat_processed_agent; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
+
+
+--
+-- Name: idx_agent_chat_processed_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_agent_chat_processed_status ON public.agent_chat_processed USING btree (status);
 
 
 --
@@ -9501,5 +9514,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict s4PxkbtHW0maIIFdAcUF8Sqk6VbQ5brKBX9s6wCPVi4Uypi9oUz6nxQVjrqMi6F
+\unrestrict Gob13JUOqNGMvy5HocsUkP91hG6z9fhWn7pVwYfRSANR9orZoVbgAsMdNFFBblu
 
