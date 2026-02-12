@@ -43,3 +43,9 @@ service-account*.json
 **/id_ed25519
 grammar_parser/venv/
 **/__pycache__/
+
+# SE workflow temporary files
+tests/TEST-CASES-*.md
+tests/TEST-RESULTS-*.md
+IMPLEMENTATION-*.md
+*-review.md
