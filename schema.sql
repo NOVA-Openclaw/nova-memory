@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict o3sV41kcTwoAZ3IqJ88MGAguVKlOdOcPdeQAKvE1nt2U2s5UYXTYerktNXqXeY0
+\restrict qfGrBVx32lyI9HJpTNeeWhwc2RbaiFuMlzf40qcZqafC2cdy9KfK0EQsh0KXqmV
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -696,7 +696,7 @@ BEGIN
     
     -- Determine if universal or agent-specific
     IF p_agent_name IS NULL THEN
-        -- Universal context
+        -- Universal context (unchanged)
         PERFORM update_universal_context(
             v_file_key,
             p_file_content,
@@ -705,7 +705,7 @@ BEGIN
         );
         v_result := 'universal:' || v_file_key;
     ELSE
-        -- Agent-specific context
+        -- Agent-specific context - write to agents.bootstrap_context
         PERFORM update_agent_context(
             p_agent_name,
             v_file_key,
@@ -738,17 +738,28 @@ CREATE FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) 
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    v_deleted INTEGER;
+    v_updated INTEGER;
 BEGIN
-    DELETE FROM bootstrap_context_agents 
-    WHERE agent_name = p_agent_name AND file_key = p_file_key;
-    GET DIAGNOSTICS v_deleted = ROW_COUNT;
-    RETURN v_deleted > 0;
+    UPDATE agents
+    SET bootstrap_context = bootstrap_context - p_file_key,
+        updated_at = NOW()
+    WHERE name = p_agent_name
+      AND bootstrap_context ? p_file_key;
+    
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+    RETURN v_updated > 0;
 END;
 $$;
 
 
 ALTER FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) OWNER TO nova;
+
+--
+-- Name: FUNCTION delete_agent_context(p_agent_name text, p_file_key text); Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) IS 'Delete a key from agents.bootstrap_context JSONB column';
+
 
 --
 -- Name: delete_universal_context(text); Type: FUNCTION; Schema: public; Owner: nova
@@ -860,7 +871,7 @@ ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
 -- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Get all bootstrap files for an agent (universal + agent-specific)';
+COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Get all bootstrap files for an agent from agents.bootstrap_context + universal + workflow context';
 
 
 --
@@ -944,6 +955,7 @@ CREATE FUNCTION public.list_all_context() RETURNS TABLE(type text, agent_name te
     AS $$
 BEGIN
     RETURN QUERY
+    -- Universal context (unchanged)
     SELECT 
         'universal'::TEXT,
         NULL::TEXT,
@@ -955,14 +967,18 @@ BEGIN
     
     UNION ALL
     
+    -- Agent-specific context from agents.bootstrap_context JSONB
     SELECT 
         'agent'::TEXT,
-        a.agent_name,
-        a.file_key,
-        length(a.content),
+        a.name,
+        kv.key as file_key,
+        length(kv.value) as content_length,
         a.updated_at,
-        a.updated_by
-    FROM bootstrap_context_agents a
+        'system'::TEXT as updated_by  -- No per-key tracking in JSONB
+    FROM agents a
+    CROSS JOIN LATERAL jsonb_each_text(COALESCE(a.bootstrap_context, '{}'::jsonb)) AS kv
+    WHERE a.bootstrap_context IS NOT NULL
+    
     ORDER BY type, agent_name, file_key;
 END;
 $$;
@@ -974,7 +990,7 @@ ALTER FUNCTION public.list_all_context() OWNER TO nova;
 -- Name: FUNCTION list_all_context(); Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON FUNCTION public.list_all_context() IS 'List all context files with metadata';
+COMMENT ON FUNCTION public.list_all_context() IS 'List all context files from agents.bootstrap_context + universal sources';
 
 
 --
@@ -1437,7 +1453,7 @@ CREATE FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, 
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    v_id INTEGER;
+    v_agent_id INTEGER;
     v_max_size INTEGER;
 BEGIN
     -- Enforce max_file_size from config
@@ -1450,16 +1466,19 @@ BEGIN
             length(p_content), v_max_size;
     END IF;
     
-    INSERT INTO bootstrap_context_agents (agent_name, file_key, content, description, updated_by)
-    VALUES (p_agent_name, p_file_key, p_content, p_description, p_updated_by)
-    ON CONFLICT (agent_name, file_key) DO UPDATE
-    SET content = EXCLUDED.content,
-        description = COALESCE(EXCLUDED.description, bootstrap_context_agents.description),
-        updated_at = NOW(),
-        updated_by = EXCLUDED.updated_by
-    RETURNING id INTO v_id;
+    -- Update agents.bootstrap_context JSONB column
+    UPDATE agents
+    SET bootstrap_context = COALESCE(bootstrap_context, '{}'::jsonb) || 
+                           jsonb_build_object(p_file_key, p_content),
+        updated_at = NOW()
+    WHERE name = p_agent_name
+    RETURNING id INTO v_agent_id;
     
-    RETURN v_id;
+    IF v_agent_id IS NULL THEN
+        RAISE EXCEPTION 'Agent not found: %', p_agent_name;
+    END IF;
+    
+    RETURN v_agent_id;
 END;
 $$;
 
@@ -1470,7 +1489,7 @@ ALTER FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p
 -- Name: FUNCTION update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text); Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text) IS 'Update or insert agent-specific context file';
+COMMENT ON FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text) IS 'Update agent-specific context in agents.bootstrap_context JSONB column';
 
 
 --
@@ -2050,7 +2069,7 @@ COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = in
 -- Name: COLUMN agents.bootstrap_context; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.agents.bootstrap_context IS 'JSON: files, queries, SOPs to inject before tasking';
+COMMENT ON COLUMN public.agents.bootstrap_context IS 'Agent-specific bootstrap context files (JSONB map of file_key -> content). Replaces bootstrap_context_agents table.';
 
 
 --
@@ -9530,5 +9549,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict o3sV41kcTwoAZ3IqJ88MGAguVKlOdOcPdeQAKvE1nt2U2s5UYXTYerktNXqXeY0
+\unrestrict qfGrBVx32lyI9HJpTNeeWhwc2RbaiFuMlzf40qcZqafC2cdy9KfK0EQsh0KXqmV
 
