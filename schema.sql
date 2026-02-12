@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HweviBBjU9tMPGpLor76gKmM0m6OgYtg9GYJQR1ZMzZJebUSc68ZLjN5AWQoEdd
+\restrict 8GeVniWU1fP1jvrYIuP3jINwYIYEwJyBA7yc2A1M7vTz9QugQoy6pQlQFsGdY3b
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -975,30 +975,31 @@ CREATE FUNCTION public.list_all_context() RETURNS TABLE(type text, agent_name te
     AS $$
 BEGIN
     RETURN QUERY
-    -- Universal context (unchanged)
-    SELECT 
-        'universal'::TEXT,
-        NULL::TEXT,
-        u.file_key,
-        length(u.content),
-        u.updated_at,
-        u.updated_by
-    FROM bootstrap_context_universal u
-    
-    UNION ALL
-    
-    -- Agent-specific context from agents.bootstrap_context JSONB
-    SELECT 
-        'agent'::TEXT,
-        a.name,
-        kv.key as file_key,
-        length(kv.value) as content_length,
-        a.updated_at,
-        'system'::TEXT as updated_by  -- No per-key tracking in JSONB
-    FROM agents a
-    CROSS JOIN LATERAL jsonb_each_text(COALESCE(a.bootstrap_context, '{}'::jsonb)) AS kv
-    WHERE a.bootstrap_context IS NOT NULL
-    
+    SELECT * FROM (
+        -- Universal context (unchanged)
+        SELECT 
+            'universal'::TEXT as type,
+            NULL::TEXT as agent_name,
+            u.file_key,
+            length(u.content) as content_length,
+            u.updated_at,
+            u.updated_by
+        FROM bootstrap_context_universal u
+        
+        UNION ALL
+        
+        -- Agent-specific context from agents.bootstrap_context JSONB
+        SELECT 
+            'agent'::TEXT as type,
+            a.name as agent_name,
+            kv.key as file_key,
+            length(kv.value) as content_length,
+            a.updated_at,
+            'system'::TEXT as updated_by
+        FROM agents a
+        CROSS JOIN LATERAL jsonb_each_text(COALESCE(a.bootstrap_context, '{}'::jsonb)) AS kv
+        WHERE a.bootstrap_context IS NOT NULL
+    ) subq
     ORDER BY type, agent_name, file_key;
 END;
 $$;
@@ -9569,5 +9570,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HweviBBjU9tMPGpLor76gKmM0m6OgYtg9GYJQR1ZMzZJebUSc68ZLjN5AWQoEdd
+\unrestrict 8GeVniWU1fP1jvrYIuP3jINwYIYEwJyBA7yc2A1M7vTz9QugQoy6pQlQFsGdY3b
 
