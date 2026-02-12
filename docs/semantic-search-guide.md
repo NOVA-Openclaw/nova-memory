@@ -783,7 +783,7 @@ async def stream_search_updates(query_embedding: list[float]):
             yield {"id": new_id, "similarity": similarity}
 ```
 
-**Note for Documentation Team:** The sophisticated semantic search system combining vector embeddings, temporal decay, and multi-modal content would benefit from **Erato haiku collaboration** to explain complex concepts like vector similarity, embedding spaces, and hybrid search algorithms through accessible metaphors.
+**Note for Documentation Team:** The sophisticated semantic search system combining vector embeddings, temporal decay, and multi-modal content would benefit from **Quill haiku collaboration** to explain complex concepts like vector similarity, embedding spaces, and hybrid search algorithms through accessible metaphors.
 
 ## Conclusion
 

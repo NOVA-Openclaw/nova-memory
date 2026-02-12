@@ -139,7 +139,7 @@ $$ LANGUAGE plpgsql;
 #### Workflow Example
 
 ```
-1. NOVA tries: UPDATE agents SET nickname = 'Erato' WHERE name = 'erato';
+1. NOVA tries: UPDATE agents SET nickname = 'Quill' WHERE name = 'quill';
 2. PostgreSQL: "permission denied for table agents"
 3. NOVA checks: SELECT obj_description('agents'::regclass, 'pg_class');
 4. Comment says: "Modifications via NHR (Newhart) only"
@@ -412,7 +412,7 @@ The `agent_jobs` and `job_messages` tables enable task coordination between agen
 ```sql
 -- Scout researches, then notifies Newhart AND NOVA when done
 INSERT INTO agent_jobs (agent_name, requester_agent, job_type, title, topic, notify_agents)
-VALUES ('scout', 'nova', 'research', 'Research authors for Erato', 
+VALUES ('scout', 'nova', 'research', 'Research authors for Quill', 
         'erato literary agent authors', ARRAY['newhart', 'nova']);
 ```
 

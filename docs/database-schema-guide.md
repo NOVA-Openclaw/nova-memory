@@ -432,7 +432,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 **Workflow example:**
-1. NOVA tries: `UPDATE agents SET nickname = 'Erato' WHERE name = 'erato'`
+1. NOVA tries: `UPDATE agents SET nickname = 'Quill' WHERE name = 'quill'`
 2. PostgreSQL: "permission denied for table agents"  
 3. NOVA queries table comment, sees "Modifications via NHR only"
 4. NOVA messages Newhart with the update request
@@ -605,7 +605,7 @@ max_client_conn = 100
 default_pool_size = 25
 ```
 
-**Note for Documentation Team:** The multi-tier memory hierarchy and access control architecture would benefit from **Erato haiku collaboration** to create intuitive metaphors for complex concepts like table-comment-driven security and row-level locking patterns.
+**Note for Documentation Team:** The multi-tier memory hierarchy and access control architecture would benefit from **Quill haiku collaboration** to create intuitive metaphors for complex concepts like table-comment-driven security and row-level locking patterns.
 
 ## Next Steps
 

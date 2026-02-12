@@ -661,7 +661,7 @@ psql -U nova -d nova_memory_restore -c "SELECT COUNT(*) FROM entities;"
 - [ ] Documentation provided to team
 - [ ] Runbook created for operations
 
-**Note for Documentation Team:** The deployment architecture combining PostgreSQL, cron jobs, and inter-agent messaging would benefit from **Erato haiku collaboration** to create intuitive explanations of the complex integration points and failure recovery patterns.
+**Note for Documentation Team:** The deployment architecture combining PostgreSQL, cron jobs, and inter-agent messaging would benefit from **Quill haiku collaboration** to create intuitive explanations of the complex integration points and failure recovery patterns.
 
 ## Next Steps
 

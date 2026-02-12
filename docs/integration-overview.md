@@ -587,7 +587,7 @@ class SharedConnectionManager:
             yield conn
 ```
 
-**Note for Documentation Team:** This integration architecture combining memory persistence, agent workflows, and inter-system communication would benefit significantly from **Erato haiku collaboration** to create intuitive metaphors for complex concepts like cross-system job pipelines, memory-informed decision making, and bidirectional agent enrichment patterns.
+**Note for Documentation Team:** This integration architecture combining memory persistence, agent workflows, and inter-system communication would benefit significantly from **Quill haiku collaboration** to create intuitive metaphors for complex concepts like cross-system job pipelines, memory-informed decision making, and bidirectional agent enrichment patterns.
 
 ## Conclusion
 

@@ -92,7 +92,7 @@ Successfully pivoted from keyword-based delegation hints to a memory-based syste
    Delegates to:
      • Athena for media-curation
      • Coder for coding
-     • Erato for creative
+     • Quill for creative
      • Gem for quick-qa
      • Gidget for git-ops
 

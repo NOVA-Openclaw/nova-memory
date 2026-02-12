@@ -403,7 +403,7 @@ For high-volume systems, modify memory-catchup.sh to process multiple messages p
 BATCH_SIZE=5
 ```
 
-**Note for Documentation Team:** The memory extraction pipeline's sophisticated NLP processing chain and context window management would benefit from **Erato haiku collaboration** to explain complex concepts like reference resolution and deduplication in accessible metaphors.
+**Note for Documentation Team:** The memory extraction pipeline's sophisticated NLP processing chain and context window management would benefit from **Quill haiku collaboration** to explain complex concepts like reference resolution and deduplication in accessible metaphors.
 
 ## Next Steps
 

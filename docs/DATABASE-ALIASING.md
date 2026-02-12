@@ -31,7 +31,7 @@ Only agents that need persistent database access have aliases configured:
 | `newhart_memory` | nova_memory | Newhart | Peer agent, runs persistently |
 | `argus_memory` | nova_memory | Argus | Security agent, logs findings |
 | `quill_memory` | nova_memory | Quill | Writing agent, needs context |
-| `erato_memory` | nova_memory | Erato | Creative agent, needs context |
+| `quill_memory` | nova_memory | Quill | Creative agent, needs context |
 | `nova_staging_memory` | nova_staging_memory | (testing) | Isolated staging environment |
 
 ### Why Not All Agents?
