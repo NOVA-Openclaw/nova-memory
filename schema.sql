@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict IbgbVmdgcdx7XKC8uwD8QNiMn98DPuZgWifjYtad2kmQh7pL9AVLpNCTGVuPqPk
+\restrict eRGQpwreFekkGmZKGYuUrz75pH3IPRsTbcRfwhKPotkEj62jXzn7lUqv3kuh4vl
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1003,21 +1003,13 @@ ALTER FUNCTION public.log_agent_modification(p_agent_id integer, p_modified_by t
 CREATE FUNCTION public.notify_agent_chat() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-DECLARE
-    payload TEXT;
 BEGIN
-    -- Build JSON payload with message info
-    payload := json_build_object(
+    PERFORM pg_notify('agent_chat', json_build_object(
         'id', NEW.id,
         'channel', NEW.channel,
         'sender', NEW.sender,
-        'mentions', NEW.mentions,
-        'created_at', NEW.created_at
-    )::text;
-    
-    -- Notify all listeners on 'agent_chat' channel
-    PERFORM pg_notify('agent_chat', payload);
-    
+        'mentions', NEW.mentions
+    )::text);
     RETURN NEW;
 END;
 $$;
@@ -9522,5 +9514,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict IbgbVmdgcdx7XKC8uwD8QNiMn98DPuZgWifjYtad2kmQh7pL9AVLpNCTGVuPqPk
+\unrestrict eRGQpwreFekkGmZKGYuUrz75pH3IPRsTbcRfwhKPotkEj62jXzn7lUqv3kuh4vl
 
