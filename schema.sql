@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ab0445wAQiegJXlgfaLSsd2fggZXgI2OUMGipeEkMIkZdwW8h6ZoSGlVFBLu21B
+\restrict BvAm8PDnowzbuUwwMDKSQhLFFo2hH2ABCghj8iGfQ7rsUjse0tr8xwYcgVR5InA
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -453,14 +453,14 @@ CREATE FUNCTION public.audit_bootstrap_context_change() RETURNS trigger
     AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        INSERT INTO bootstrap_context_audit (table_name, operation, new_data, changed_by)
-        VALUES (TG_TABLE_NAME, 'INSERT', row_to_json(NEW), COALESCE(NEW.updated_by, current_user));
+        INSERT INTO bootstrap_context_audit (table_name, record_id, operation, new_content, changed_by)
+        VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', NEW.content, COALESCE(NEW.updated_by, current_user));
     ELSIF TG_OP = 'UPDATE' THEN
-        INSERT INTO bootstrap_context_audit (table_name, operation, old_data, new_data, changed_by)
-        VALUES (TG_TABLE_NAME, 'UPDATE', row_to_json(OLD), row_to_json(NEW), COALESCE(NEW.updated_by, current_user));
+        INSERT INTO bootstrap_context_audit (table_name, record_id, operation, old_content, new_content, changed_by)
+        VALUES (TG_TABLE_NAME, NEW.id, 'UPDATE', OLD.content, NEW.content, COALESCE(NEW.updated_by, current_user));
     ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO bootstrap_context_audit (table_name, operation, old_data, changed_by)
-        VALUES (TG_TABLE_NAME, 'DELETE', row_to_json(OLD), current_user);
+        INSERT INTO bootstrap_context_audit (table_name, record_id, operation, old_content, changed_by)
+        VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', OLD.content, current_user);
     END IF;
     RETURN COALESCE(NEW, OLD);
 END;
@@ -9835,5 +9835,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ab0445wAQiegJXlgfaLSsd2fggZXgI2OUMGipeEkMIkZdwW8h6ZoSGlVFBLu21B
+\unrestrict BvAm8PDnowzbuUwwMDKSQhLFFo2hH2ABCghj8iGfQ7rsUjse0tr8xwYcgVR5InA
 
