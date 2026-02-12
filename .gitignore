@@ -49,3 +49,6 @@ tests/TEST-CASES-*.md
 tests/TEST-RESULTS-*.md
 IMPLEMENTATION-*.md
 *-review.md
+
+# NOVA local documentation config (untracked)
+.nova/
