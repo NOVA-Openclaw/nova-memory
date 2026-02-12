@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Gob13JUOqNGMvy5HocsUkP91hG6z9fhWn7pVwYfRSANR9orZoVbgAsMdNFFBblu
+\restrict o3sV41kcTwoAZ3IqJ88MGAguVKlOdOcPdeQAKvE1nt2U2s5UYXTYerktNXqXeY0
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2002,7 +2002,7 @@ CREATE TABLE public.agents (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     persistent boolean DEFAULT true,
-    seed_context jsonb,
+    bootstrap_context jsonb,
     instantiation_sop character varying(100),
     nickname character varying(50),
     instance_type character varying(20) DEFAULT 'subagent'::character varying,
@@ -2047,10 +2047,10 @@ COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = in
 
 
 --
--- Name: COLUMN agents.seed_context; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.bootstrap_context; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.agents.seed_context IS 'JSON: files, queries, SOPs to inject before tasking';
+COMMENT ON COLUMN public.agents.bootstrap_context IS 'JSON: files, queries, SOPs to inject before tasking';
 
 
 --
@@ -5545,6 +5545,8 @@ CREATE TABLE public.workflow_steps (
     handoff_to_step integer,
     required boolean DEFAULT true,
     estimated_duration_minutes integer,
+    requires_authorization boolean DEFAULT false,
+    requires_discussion boolean DEFAULT false,
     CONSTRAINT workflow_steps_check CHECK ((((produces_deliverable = true) AND (deliverable_type IS NOT NULL)) OR (produces_deliverable = false)))
 );
 
@@ -5556,6 +5558,20 @@ ALTER TABLE public.workflow_steps OWNER TO nova;
 --
 
 COMMENT ON TABLE public.workflow_steps IS 'Ordered steps in a workflow with agent assignments and deliverable specifications';
+
+
+--
+-- Name: COLUMN workflow_steps.requires_authorization; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.workflow_steps.requires_authorization IS 'If true, must get explicit human authorization before proceeding to next step';
+
+
+--
+-- Name: COLUMN workflow_steps.requires_discussion; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.workflow_steps.requires_discussion IS 'If true, discuss with human before proceeding (but can continue without explicit authorization if authorization=false)';
 
 
 --
@@ -9514,5 +9530,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Gob13JUOqNGMvy5HocsUkP91hG6z9fhWn7pVwYfRSANR9orZoVbgAsMdNFFBblu
+\unrestrict o3sV41kcTwoAZ3IqJ88MGAguVKlOdOcPdeQAKvE1nt2U2s5UYXTYerktNXqXeY0
 
