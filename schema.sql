@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict IuOutGkZ4YCS2uM6mC232tN1st3fQKMBiW5UPYQ5cHrAefQV3Gc9fYnjn91BpiF
+\restrict aaq1JJHLWgkdwWwqg6vZrD5uWF5mKfYwuqS9ydess8P7v6dpZQvg1Kv1Uc3g74A
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -8922,7 +8922,7 @@ GRANT ALL ON TABLE public.agent_system_config TO "nova-staging";
 --
 
 REVOKE ALL ON TABLE public.agents FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agents TO nova;
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,UPDATE ON TABLE public.agents TO nova;
 GRANT ALL ON TABLE public.agents TO newhart;
 GRANT SELECT ON TABLE public.agents TO gem;
 GRANT SELECT ON TABLE public.agents TO coder;
@@ -10091,5 +10091,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict IuOutGkZ4YCS2uM6mC232tN1st3fQKMBiW5UPYQ5cHrAefQV3Gc9fYnjn91BpiF
+\unrestrict aaq1JJHLWgkdwWwqg6vZrD5uWF5mKfYwuqS9ydess8P7v6dpZQvg1Kv1Uc3g74A
 
