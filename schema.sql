@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict jUmpUYbQEileNrGZzr0H3QyPcMI2zKwhDLPjJAfmqfiXxE0YgqSRZychcqSffby
+\restrict ky8iQLQJs4KpwOPRjadwyA1olSzMeSH48rO7zbaShY22wiw7l8rc8a2R8fF8wFz
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -8701,6 +8701,22 @@ ALTER TABLE ONLY public.works
 
 
 --
+-- Name: agent_chat_pub; Type: PUBLICATION; Schema: -; Owner: postgres
+--
+
+CREATE PUBLICATION agent_chat_pub WITH (publish = 'insert, update, delete, truncate');
+
+
+ALTER PUBLICATION agent_chat_pub OWNER TO postgres;
+
+--
+-- Name: agent_chat_pub agent_chat; Type: PUBLICATION TABLE; Schema: public; Owner: postgres
+--
+
+ALTER PUBLICATION agent_chat_pub ADD TABLE ONLY public.agent_chat;
+
+
+--
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
 --
 
@@ -10075,5 +10091,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jUmpUYbQEileNrGZzr0H3QyPcMI2zKwhDLPjJAfmqfiXxE0YgqSRZychcqSffby
+\unrestrict ky8iQLQJs4KpwOPRjadwyA1olSzMeSH48rO7zbaShY22wiw7l8rc8a2R8fF8wFz
 
