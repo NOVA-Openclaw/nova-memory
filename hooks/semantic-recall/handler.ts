@@ -46,6 +46,12 @@ function formatEntityContext(entity: Entity, facts: EntityFacts): string {
 }
 
 const handler = async (event) => {
+  // Check if OPENAI_API_KEY is set before executing
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("[semantic-recall] ERROR: OPENAI_API_KEY not set - semantic recall disabled");
+    return;
+  }
+
   // Only handle message:received events
   if (event.type !== "message" || event.action !== "received") {
     return;
