@@ -57,12 +57,12 @@ def get_openai_client():
     """Get OpenAI client with API key from environment.
     
     API key must be set in environment (inherited from OpenClaw).
+    Returns None if API key is not set.
     """
     api_key = os.environ.get("OPENAI_API_KEY")
     
     if not api_key:
-        print("ERROR: OPENAI_API_KEY not set in environment", file=sys.stderr)
-        print("This script should be run from OpenClaw hooks which inherit the API key", file=sys.stderr)
+        # Don't print to stderr anymore - caller handles the error
         return None
     
     return openai.OpenAI(api_key=api_key)

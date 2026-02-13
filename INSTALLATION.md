@@ -2,6 +2,41 @@
 
 This document describes the installation process and recent changes to make nova-memory portable and easy to install.
 
+## Prerequisites
+
+Before installing nova-memory, ensure you have the following:
+
+### Required
+
+- **PostgreSQL** (version 12 or higher)
+  - Install: `sudo apt install postgresql postgresql-contrib` (Ubuntu/Debian)
+  - Install: `brew install postgresql` (macOS)
+
+- **OPENAI_API_KEY** - OpenAI API key for embeddings
+  - **Required for semantic recall** - generates embeddings using `text-embedding-3-small`
+  - Get your API key from: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+  - The installer will prompt you for this if not set in your environment
+  - Alternatively, set it before running the installer:
+    ```bash
+    export OPENAI_API_KEY='your-key-here'
+    ```
+
+### Recommended
+
+- **ANTHROPIC_API_KEY** - Claude API key for memory extraction
+  - Used by the memory-extract hook to analyze messages
+  - Get your API key from: [https://console.anthropic.com/](https://console.anthropic.com/)
+
+- **pgvector extension** - For semantic search performance
+  - Install: `sudo apt install postgresql-16-pgvector` (Ubuntu/Debian)
+  - Install: `brew install pgvector` (macOS)
+
+### Optional
+
+- **jq** - JSON processor for config patching
+  - Install: `sudo apt install jq`
+  - Required for automatic OpenClaw config patching
+
 ## Quick Install
 
 ```bash
