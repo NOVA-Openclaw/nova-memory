@@ -3,11 +3,13 @@
 # Test for Issue #70: Add Outbound Send Support to agent_chat Plugin
 # Tests the resolveAgentName() function and outbound send with mentions
 
-set -e
-
 DB_NAME="nova_memory"
 DB_USER="nova"
 
+# Test tracking counters (Issue #75 fix)
+TOTAL_TESTS=0
+PASSED_TESTS=0
+FAILED_TESTS=0
 echo "=========================================="
 echo "Testing Issue #70: Outbound Send Support"
 echo "=========================================="
@@ -25,10 +27,14 @@ function print_test() {
 
 function print_pass() {
     echo -e "${GREEN}✓ PASS:${NC} $1"
+    ((PASSED_TESTS++))
+    ((TOTAL_TESTS++))
 }
 
 function print_fail() {
     echo -e "${RED}✗ FAIL:${NC} $1"
+    ((FAILED_TESTS++))
+    ((TOTAL_TESTS++))
 }
 
 function print_info() {
@@ -455,29 +461,32 @@ fi
 echo ""
 
 # Clean up test data
-print_test "Cleaning up test data"
+print_info "Cleaning up test data"
 psql -U $DB_USER -d $DB_NAME << EOF > /dev/null 2>&1
 DELETE FROM agent_chat_processed WHERE chat_id IN (SELECT id FROM agent_chat WHERE sender = 'test-sender-70' OR sender = 'test-receiver-70');
 DELETE FROM agent_chat WHERE sender = 'test-sender-70' OR sender = 'test-receiver-70';
 DELETE FROM agent_aliases WHERE alias LIKE 'test-alias-70-%';
 DELETE FROM agents WHERE name IN ('test-sender-70', 'test-receiver-70');
 EOF
-print_pass "Test data cleaned up"
+print_info "Test data cleaned up"
 
 echo ""
 echo "=========================================="
-echo "All Issue #70 Tests Completed!"
+echo "Test Results Summary"
 echo "=========================================="
+echo "Total tests: $TOTAL_TESTS"
+echo "Passed: $PASSED_TESTS"
+echo "Failed: $FAILED_TESTS"
 echo ""
-print_info "Summary:"
-print_info "✓ Direct name resolution"
-print_info "✓ Nickname resolution (case-insensitive)"
-print_info "✓ Alias resolution"
-print_info "✓ Non-existent agent handling"
-print_info "✓ Message insertion with mentions"
-print_info "✓ Message fetching by receiver"
-print_info "✓ Multiple message handling"
-print_info "✓ Empty target validation"
-print_info "✓ Full send workflow"
-echo ""
-print_pass "All tests passed! Issue #70 implementation verified."
+
+if [ $FAILED_TESTS -gt 0 ]; then
+    echo -e "${RED}✗ TESTS FAILED${NC}"
+    echo ""
+    print_info "Please review the failed tests above and fix the issues."
+    exit 1
+else
+    echo -e "${GREEN}✓ ALL TESTS PASSED${NC}"
+    echo ""
+    print_info "Issue #70 implementation verified successfully!"
+    exit 0
+fi

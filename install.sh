@@ -574,9 +574,9 @@ install_hook() {
         return 1
     fi
     
-    # If not forcing, check if files differ
+    # If not forcing, check if files are already up to date
     if [ $FORCE_INSTALL -eq 0 ] && [ -d "$target" ]; then
-        local files_differ=0
+        local all_match=1
         for source_file in "$source"/*.ts "$source"/*.js "$source"/*.sh; do
             if [ ! -f "$source_file" ]; then
                 continue
@@ -590,26 +590,36 @@ install_hook() {
                 target_hash=$(sha256sum "$target_file" | awk '{print $1}')
                 
                 if [ "$source_hash" != "$target_hash" ]; then
-                    files_differ=1
+                    all_match=0
                     break
                 fi
+            else
+                # Target file missing, need to reinstall
+                all_match=0
+                break
             fi
         done
         
-        if [ $files_differ -eq 1 ]; then
-            echo -e "  ${WARNING} $hook_name has local modifications, skipping (use --force to overwrite)"
+        if [ $all_match -eq 1 ]; then
+            echo -e "  ${INFO} $hook_name up to date"
             return 2
         fi
     fi
     
     # Remove existing target if it exists
+    local was_existing=0
     if [ -e "$target" ]; then
+        was_existing=1
         rm -rf "$target"
     fi
     
     # Copy hook directory
     cp -r "$source" "$target"
-    echo -e "  ${CHECK_MARK} $hook_name installed"
+    if [ $was_existing -eq 1 ]; then
+        echo -e "  ${CHECK_MARK} $hook_name updated"
+    else
+        echo -e "  ${CHECK_MARK} $hook_name installed"
+    fi
     return 0
 }
 
@@ -637,15 +647,20 @@ echo ""
 echo "Scripts setup..."
 
 SCRIPTS_SOURCE="$SCRIPT_DIR/scripts"
-SCRIPTS_TARGET="$WORKSPACE/scripts"
+SCRIPTS_TARGET_WORKSPACE="$WORKSPACE/scripts"
+SCRIPTS_TARGET_OPENCLAW="$HOME/.openclaw/scripts"
 
-# Copy scripts directory to workspace (so hooks can find them via relative path)
+# Copy scripts directory to both locations:
+# 1. Workspace scripts (for hooks using relative paths)
+# 2. OpenClaw scripts (where semantic-recall handler expects them)
 if [ -d "$SCRIPTS_SOURCE" ]; then
-    # Create or update scripts directory
-    mkdir -p "$SCRIPTS_TARGET"
+    # Create both target directories
+    mkdir -p "$SCRIPTS_TARGET_WORKSPACE"
+    mkdir -p "$SCRIPTS_TARGET_OPENCLAW"
     
     # Copy scripts, respecting force flag
     scripts_copied=0
+    scripts_updated=0
     scripts_skipped=0
     
     for source_file in "$SCRIPTS_SOURCE"/*.sh "$SCRIPTS_SOURCE"/*.py; do
@@ -654,46 +669,64 @@ if [ -d "$SCRIPTS_SOURCE" ]; then
         fi
         
         filename=$(basename "$source_file")
-        target_file="$SCRIPTS_TARGET/$filename"
+        target_file_workspace="$SCRIPTS_TARGET_WORKSPACE/$filename"
+        target_file_openclaw="$SCRIPTS_TARGET_OPENCLAW/$filename"
         
-        # Check if file differs
-        if [ $FORCE_INSTALL -eq 0 ] && [ -f "$target_file" ]; then
+        # Check if we should skip (both files match source)
+        if [ $FORCE_INSTALL -eq 0 ]; then
             source_hash=$(sha256sum "$source_file" | awk '{print $1}')
-            target_hash=$(sha256sum "$target_file" | awk '{print $1}')
             
-            if [ "$source_hash" != "$target_hash" ]; then
-                echo -e "  ${WARNING} scripts/$filename differs, skipping (use --force to overwrite)"
-                scripts_skipped=$((scripts_skipped + 1))
+            workspace_matches=0
+            openclaw_matches=0
+            
+            if [ -f "$target_file_workspace" ]; then
+                workspace_hash=$(sha256sum "$target_file_workspace" | awk '{print $1}')
+                [ "$source_hash" = "$workspace_hash" ] && workspace_matches=1
+            fi
+            
+            if [ -f "$target_file_openclaw" ]; then
+                openclaw_hash=$(sha256sum "$target_file_openclaw" | awk '{print $1}')
+                [ "$source_hash" = "$openclaw_hash" ] && openclaw_matches=1
+            fi
+            
+            # If both locations match source, skip
+            if [ $workspace_matches -eq 1 ] && [ $openclaw_matches -eq 1 ]; then
                 continue
             fi
         fi
         
-        cp "$source_file" "$target_file"
-        scripts_copied=$((scripts_copied + 1))
+        # Copy to both locations
+        cp "$source_file" "$target_file_workspace"
+        cp "$source_file" "$target_file_openclaw"
+        
+        if [ -f "$target_file_workspace" ] && [ -f "$target_file_openclaw" ]; then
+            scripts_copied=$((scripts_copied + 1))
+        fi
     done
     
-    echo -e "  ${CHECK_MARK} $scripts_copied scripts copied to workspace"
-    if [ $scripts_skipped -gt 0 ]; then
-        echo -e "  ${WARNING} $scripts_skipped scripts skipped (local modifications)"
-    fi
+    echo -e "  ${CHECK_MARK} $scripts_copied scripts installed to:"
+    echo "      • $SCRIPTS_TARGET_WORKSPACE"
+    echo "      • $SCRIPTS_TARGET_OPENCLAW"
 else
     echo -e "  ${CROSS_MARK} Scripts directory not found at $SCRIPTS_SOURCE"
     exit 1
 fi
 
-# Ensure all scripts are executable
+# Ensure all scripts are executable in both locations
 SCRIPT_COUNT=0
-for script in "$SCRIPTS_TARGET"/*.sh "$SCRIPTS_TARGET"/*.py; do
-    if [ -f "$script" ]; then
-        chmod +x "$script"
-        SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
-    fi
+for location in "$SCRIPTS_TARGET_WORKSPACE" "$SCRIPTS_TARGET_OPENCLAW"; do
+    for script in "$location"/*.sh "$location"/*.py; do
+        if [ -f "$script" ]; then
+            chmod +x "$script"
+            SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
+        fi
+    done
 done
 
 echo -e "  ${CHECK_MARK} Made $SCRIPT_COUNT scripts executable"
 
 # Check Python dependencies (if Python scripts exist)
-if ls "$SCRIPTS_TARGET"/*.py &> /dev/null; then
+if ls "$SCRIPTS_TARGET_WORKSPACE"/*.py &> /dev/null; then
     if command -v python3 &> /dev/null; then
         echo -e "  ${CHECK_MARK} Python3 available"
         
@@ -868,7 +901,7 @@ echo "Cron job setup (memory maintenance)..."
 
 CRON_FILE="/etc/cron.d/nova-memory-maintenance"
 CRON_USER="${DB_USER//-/_}"  # Use same user as database
-SCRIPT_PATH="$SCRIPTS_TARGET/memory-maintenance.py"
+SCRIPT_PATH="$SCRIPTS_TARGET_OPENCLAW/memory-maintenance.py"
 
 # Check if script exists
 if [ ! -f "$SCRIPT_PATH" ]; then
