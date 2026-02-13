@@ -10,7 +10,6 @@ DB_USER="nova"
 TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
-
 echo "=========================================="
 echo "Testing Issue #70: Outbound Send Support"
 echo "=========================================="
