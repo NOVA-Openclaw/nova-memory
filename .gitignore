@@ -52,3 +52,6 @@ IMPLEMENTATION-*.md
 
 # NOVA local documentation config (untracked)
 .nova/
+
+# Seed data (removed from repository per issue #83)
+seed-data/
