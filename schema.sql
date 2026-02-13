@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ekerUNGm2g7DgDGLwVf5JbKOOx87rbMmVWDqbQMfmegftxBJUgKkDD5wB7gaUbx
+\restrict XvgIhx0bFmTKn001FeucUAJIFlzaXofQZCszb3U7eveOXiK6EkSB2unzMSx0msz
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -5964,6 +5964,7 @@ CREATE TABLE public.workflows (
     created_by text DEFAULT 'newhart'::text,
     status text DEFAULT 'active'::text,
     tags text[] DEFAULT '{}'::text[],
+    department text,
     CONSTRAINT workflows_status_check CHECK ((status = ANY (ARRAY['active'::text, 'deprecated'::text, 'archived'::text])))
 );
 
@@ -7989,6 +7990,13 @@ CREATE INDEX idx_workflow_steps_order ON public.workflow_steps USING btree (work
 --
 
 CREATE INDEX idx_workflow_steps_workflow ON public.workflow_steps USING btree (workflow_id);
+
+
+--
+-- Name: idx_workflows_department; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflows_department ON public.workflows USING btree (department);
 
 
 --
@@ -10067,5 +10075,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ekerUNGm2g7DgDGLwVf5JbKOOx87rbMmVWDqbQMfmegftxBJUgKkDD5wB7gaUbx
+\unrestrict XvgIhx0bFmTKn001FeucUAJIFlzaXofQZCszb3U7eveOXiK6EkSB2unzMSx0msz
 
