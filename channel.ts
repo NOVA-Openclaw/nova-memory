@@ -97,6 +97,51 @@ async function getAgentIdentifiers(client: pg.Client, agentName: string): Promis
 }
 
 /**
+ * Resolve a human-friendly target identifier to an agent's name (agentName)
+ * Searches: agents.name, agents.nickname, agent_aliases.alias
+ * Returns the agent's name field for use in mentions array
+ * 
+ * This is the reverse operation of getAgentIdentifiers() - instead of
+ * "given agentName, find all identifiers", this does "given any identifier, find agentName"
+ */
+async function resolveAgentName(client: pg.Client, target: string): Promise<string> {
+  // Normalize target for case-insensitive matching
+  const normalizedTarget = target.toLowerCase().trim();
+  
+  if (!normalizedTarget) {
+    throw new Error('Target cannot be empty');
+  }
+  
+  // Query to find agent by any identifier (name, nickname, or alias)
+  const query = `
+    SELECT DISTINCT a.name
+    FROM agents a
+    LEFT JOIN agent_aliases aa ON a.id = aa.agent_id
+    WHERE 
+      LOWER(a.name) = $1
+      OR LOWER(a.nickname) = $1
+      OR LOWER(aa.alias) = $1
+    LIMIT 1
+  `;
+  
+  try {
+    const result = await client.query(query, [normalizedTarget]);
+    
+    if (result.rows.length === 0) {
+      throw new Error(`Agent not found: ${target}`);
+    }
+    
+    return result.rows[0].name;
+  } catch (error) {
+    // Re-throw with context
+    if ((error as Error).message.includes('Agent not found')) {
+      throw error;
+    }
+    throw new Error(`Error resolving agent name for "${target}": ${(error as Error).message}`);
+  }
+}
+
+/**
  * Fetch unprocessed messages for this agent from agent_chat table
  * Matches against multiple identifiers: agentName (config), database name, and aliases (case-insensitive)
  */
@@ -189,11 +234,13 @@ async function insertOutboundMessage(
     channel,
     sender,
     message,
+    mentions,
     replyTo,
   }: {
     channel: string;
     sender: string;
     message: string;
+    mentions?: string[];
     replyTo: number | null;
   },
 ) {
@@ -203,7 +250,7 @@ async function insertOutboundMessage(
     RETURNING id
   `;
 
-  const result = await client.query(query, [channel, sender, message, [], replyTo || null]);
+  const result = await client.query(query, [channel, sender, message, mentions || [], replyTo || null]);
 
   return result.rows[0];
 }
@@ -307,6 +354,7 @@ async function processAgentChatMessage({
               channel: message.channel,
               sender: agentName,
               message: payload.text || "",
+              mentions: [], // Replies don't need mentions - original message already has routing
               replyTo: message.id,
             });
 
@@ -623,12 +671,27 @@ export const agentChatPlugin: ChannelPlugin<ResolvedAgentChatAccount> = {
         await client.connect();
 
         // Extract channel from 'to' parameter (format: "agent_chat:channel" or just "channel")
-        const channel = to.includes(":") ? to.split(":").pop() || "default" : to;
+        let channel = to.includes(":") ? to.split(":").pop() || "default" : to;
+        
+        // Resolve the target to an agentName for the mentions array
+        // This enables human-friendly targets like "Newhart" (nickname) 
+        // to be resolved to "nhr-agent" (agentName) for proper message routing
+        let targetAgentName: string;
+        try {
+          targetAgentName = await resolveAgentName(client, channel);
+        } catch (error) {
+          // If resolution fails, throw a helpful error
+          throw new Error(
+            `Failed to resolve target agent "${channel}": ${(error as Error).message}. ` +
+            `Ensure the target agent exists in the agents table with name, nickname, or alias matching "${channel}".`
+          );
+        }
 
         const result = await insertOutboundMessage(client, {
-          channel,
+          channel: "direct", // Use "direct" as default channel for agent-to-agent messages
           sender: account.config.agentName,
           message: text,
+          mentions: [targetAgentName], // Add resolved agentName to mentions array
           replyTo: null, // Could be enhanced to track reply_to from context
         });
 
