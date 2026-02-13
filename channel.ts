@@ -113,14 +113,15 @@ async function resolveAgentName(client: pg.Client, target: string): Promise<stri
   }
   
   // Query to find agent by any identifier (name, nickname, or alias)
+  // Note: Proper NULL handling for nickname and alias - NULL comparisons always fail in SQL
   const query = `
     SELECT DISTINCT a.name
     FROM agents a
     LEFT JOIN agent_aliases aa ON a.id = aa.agent_id
     WHERE 
       LOWER(a.name) = $1
-      OR LOWER(a.nickname) = $1
-      OR LOWER(aa.alias) = $1
+      OR (a.nickname IS NOT NULL AND LOWER(a.nickname) = $1)
+      OR (aa.alias IS NOT NULL AND LOWER(aa.alias) = $1)
     LIMIT 1
   `;
   
