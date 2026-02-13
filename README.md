@@ -366,6 +366,83 @@ INSERT INTO agent_chat (channel, sender, message, mentions)
 VALUES ('default', 'nova', 'Hey, can you review the latest PR?', ARRAY['coder']);
 ```
 
+#### New Features (Issues #69 & #70)
+
+**🔍 Case-Insensitive Agent Matching (#69)**
+
+Agents can now be mentioned using any of their identifiers, matched case-insensitively:
+- **Agent name** (`agents.name`)
+- **Nickname** (`agents.nickname`) 
+- **Aliases** (`agent_aliases.alias`)
+- **Config agentName** (from Clawdbot config)
+
+**Benefits:**
+- `@nhr-agent`, `@NHR-AGENT`, `@Nhr-Agent` all work
+- `@Newhart` matches if "Newhart" is the nickname
+- `@bob` matches if "bob" is an alias
+
+**Agent Aliases Table:**
+```sql
+CREATE TABLE agent_aliases (
+    agent_id INTEGER REFERENCES agents(id) ON DELETE CASCADE,
+    alias VARCHAR(100) NOT NULL,
+    PRIMARY KEY (agent_id, alias)
+);
+
+-- Add aliases for an agent
+INSERT INTO agent_aliases (agent_id, alias)
+SELECT id, 'assistant' FROM agents WHERE name = 'nova-main';
+
+-- Query agent identifiers
+SELECT a.name, a.nickname, array_agg(aa.alias) as aliases
+FROM agents a 
+LEFT JOIN agent_aliases aa ON a.id = aa.agent_id
+GROUP BY a.id, a.name, a.nickname;
+```
+
+**📤 Outbound Send Support (#70)**
+
+Agents can now send messages using human-friendly identifiers instead of exact database names:
+
+**New Function: `resolveAgentName(target)`**
+- Converts any identifier (nickname, alias, name) to the agent's database name
+- Used automatically by the `sendText()` function
+- Case-insensitive matching
+
+**Enhanced sendText() Function:**
+```typescript
+// Old way: Need exact database name
+sendText({ to: "nhr-agent", text: "Hello" })
+
+// New way: Use friendly identifiers  
+sendText({ to: "Newhart", text: "Hello" })     // nickname
+sendText({ to: "bob", text: "Hello" })         // alias
+sendText({ to: "NHR-AGENT", text: "Hello" })  // case-insensitive name
+```
+
+**Examples:**
+
+```sql
+-- Setup: Agent with multiple identifiers
+INSERT INTO agents (name, nickname) VALUES ('nhr-agent', 'Newhart');
+INSERT INTO agent_aliases (agent_id, alias) 
+SELECT id, 'bob' FROM agents WHERE name = 'nhr-agent';
+
+-- All these resolve to the same agent:
+SELECT resolveAgentName('nhr-agent');  -- → 'nhr-agent'
+SELECT resolveAgentName('Newhart');    -- → 'nhr-agent'  
+SELECT resolveAgentName('BOB');        -- → 'nhr-agent'
+```
+
+**Full Workflow:**
+1. **Send:** `sendText({ to: "Newhart", text: "Hello" })`
+2. **Resolve:** "Newhart" → resolves to "nhr-agent" 
+3. **Route:** Message stored with `mentions: ["nhr-agent"]`
+4. **Receive:** nhr-agent's identifiers include "newhart" → message matches
+5. **Deliver:** Message delivered to nhr-agent session
+
+**Backward Compatibility:** All existing code continues to work unchanged.
+
 ### Agent Jobs Tables (Task Routing & Pipelines)
 
 The `agent_jobs` and `job_messages` tables enable task coordination between agents with pipeline routing:
