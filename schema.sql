@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict JvukuQTTve8SboAd1fC2yj1XxmisT9vuKY83mxU0K3CYQKk4ALMNPMwK7dnTuAL
+\restrict khE1QpIGELCokd48MrLHckR4Uw5f4v47IvlIrYQIJpUtJM4gKsqOdOAZcee2he3
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1077,6 +1077,25 @@ $$;
 
 
 ALTER FUNCTION public.log_agent_modification(p_agent_id integer, p_modified_by text, p_field_changed text, p_old_value text, p_new_value text) OWNER TO nova;
+
+--
+-- Name: normalize_agent_chat_mentions(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.normalize_agent_chat_mentions() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.mentions IS NOT NULL THEN
+        NEW.mentions := ARRAY(SELECT LOWER(unnest(NEW.mentions)));
+    END IF;
+    NEW.sender := LOWER(NEW.sender);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.normalize_agent_chat_mentions() OWNER TO nova;
 
 --
 -- Name: notify_agent_chat(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -8251,6 +8270,13 @@ CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH
 
 
 --
+-- Name: agent_chat trg_normalize_mentions; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_normalize_mentions BEFORE INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.normalize_agent_chat_mentions();
+
+
+--
 -- Name: agent_chat trg_notify_agent_chat; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -10238,5 +10264,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict JvukuQTTve8SboAd1fC2yj1XxmisT9vuKY83mxU0K3CYQKk4ALMNPMwK7dnTuAL
+\unrestrict khE1QpIGELCokd48MrLHckR4Uw5f4v47IvlIrYQIJpUtJM4gKsqOdOAZcee2he3
 
