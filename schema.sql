@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict khE1QpIGELCokd48MrLHckR4Uw5f4v47IvlIrYQIJpUtJM4gKsqOdOAZcee2he3
+\restrict fwuQiOCONGwo88VLhiDnzGf6gcrOEo6OqfE2tgqR91dlOemhcbeQdfN2vtkdGdj
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -951,6 +951,33 @@ $$;
 
 
 ALTER FUNCTION public.get_ralph_state(p_series_id text) OWNER TO nova;
+
+--
+-- Name: insert_workflow_step(integer, integer, text, text, boolean, text, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean DEFAULT false, p_deliverable_type text DEFAULT NULL::text, p_deliverable_description text DEFAULT NULL::text) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  v_agent_id INT;
+  v_step_id INT;
+BEGIN
+  SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name;
+  IF v_agent_id IS NULL THEN
+    RAISE EXCEPTION 'Agent not found: %', p_agent_name;
+  END IF;
+  
+  INSERT INTO workflow_steps (workflow_id, step_order, agent_id, description, produces_deliverable, deliverable_type, deliverable_description)
+  VALUES (p_workflow_id, p_step_order, v_agent_id, p_description, p_produces_deliverable, p_deliverable_type, p_deliverable_description)
+  RETURNING id INTO v_step_id;
+  
+  RETURN v_step_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean, p_deliverable_type text, p_deliverable_description text) OWNER TO postgres;
 
 --
 -- Name: link_github_issue(integer, integer); Type: FUNCTION; Schema: public; Owner: nova
@@ -8820,6 +8847,13 @@ GRANT ALL ON FUNCTION public.get_agent_bootstrap(p_agent_name text) TO newhart;
 
 
 --
+-- Name: FUNCTION insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean, p_deliverable_type text, p_deliverable_description text); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean, p_deliverable_type text, p_deliverable_description text) TO nova;
+
+
+--
 -- Name: FUNCTION send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: ACL; Schema: public; Owner: nova
 --
 
@@ -10264,5 +10298,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict khE1QpIGELCokd48MrLHckR4Uw5f4v47IvlIrYQIJpUtJM4gKsqOdOAZcee2he3
+\unrestrict fwuQiOCONGwo88VLhiDnzGf6gcrOEo6OqfE2tgqR91dlOemhcbeQdfN2vtkdGdj
 
