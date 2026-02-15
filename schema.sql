@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fdnmGRI1vCkTMYg6bJKYfe1vd6O2xo4rOgaL4IH0j2enoNW7XYocfWbzzsnwsFK
+\restrict PZOjwhoiKuyu49XsA0yVlxOjbhAL7tsSWEbaVb3eTjrXWEgnxV9HRyFJFik5ed1
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -5916,6 +5916,7 @@ CREATE TABLE public.workflows (
     status text DEFAULT 'active'::text,
     tags text[] DEFAULT '{}'::text[],
     department text,
+    orchestrator_agent_id integer,
     CONSTRAINT workflows_status_check CHECK ((status = ANY (ARRAY['active'::text, 'deprecated'::text, 'archived'::text])))
 );
 
@@ -5927,6 +5928,13 @@ ALTER TABLE public.workflows OWNER TO nova;
 --
 
 COMMENT ON TABLE public.workflows IS 'Defines multi-agent workflows with ordered steps and deliverable handoffs';
+
+
+--
+-- Name: COLUMN workflows.orchestrator_agent_id; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.workflows.orchestrator_agent_id IS 'Agent that orchestrates/manages this workflow. Used by get_agent_bootstrap() to include workflows in orchestrator context.';
 
 
 --
@@ -8628,6 +8636,14 @@ ALTER TABLE ONLY public.workflow_steps
 
 
 --
+-- Name: workflows workflows_orchestrator_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.workflows
+    ADD CONSTRAINT workflows_orchestrator_agent_id_fkey FOREIGN KEY (orchestrator_agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
+
+
+--
 -- Name: works works_parent_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
 --
 
@@ -10091,5 +10107,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fdnmGRI1vCkTMYg6bJKYfe1vd6O2xo4rOgaL4IH0j2enoNW7XYocfWbzzsnwsFK
+\unrestrict PZOjwhoiKuyu49XsA0yVlxOjbhAL7tsSWEbaVb3eTjrXWEgnxV9HRyFJFik5ed1
 
