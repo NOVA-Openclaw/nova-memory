@@ -45,7 +45,7 @@ grammar_parser/venv/
 **/__pycache__/
 
 # SE workflow temporary files
-tests/TEST-CASES-*.md
+# tests/TEST-CASES-*.md  # Track test case definitions
 tests/TEST-RESULTS-*.md
 IMPLEMENTATION-*.md
 *-review.md

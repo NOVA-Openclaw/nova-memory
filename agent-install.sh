@@ -255,6 +255,46 @@ verify_files() {
         done
     fi
     
+    # Check skills
+    if [ -d "$SCRIPT_DIR/skills" ]; then
+        local skills_target="$HOME/.openclaw/skills"
+        for skill_dir in "$SCRIPT_DIR/skills"/*/; do
+            if [ ! -d "$skill_dir" ]; then
+                continue
+            fi
+            
+            skill_name=$(basename "$skill_dir")
+            target_skill="$skills_target/$skill_name"
+            
+            if [ ! -d "$target_skill" ]; then
+                echo -e "  ${WARNING} skill '$skill_name' not installed"
+                files_missing=$((files_missing + 1))
+                continue
+            fi
+            
+            # Check for SKILL.md file (required for OpenClaw skills)
+            if [ -f "$skill_dir/SKILL.md" ]; then
+                if [ -f "$target_skill/SKILL.md" ]; then
+                    source_hash=$(sha256sum "$skill_dir/SKILL.md" | awk '{print $1}')
+                    target_hash=$(sha256sum "$target_skill/SKILL.md" | awk '{print $1}')
+                    
+                    files_checked=$((files_checked + 1))
+                    
+                    if [ "$source_hash" = "$target_hash" ]; then
+                        echo -e "  ${CHECK_MARK} skill '$skill_name' SKILL.md matches"
+                        files_matching=$((files_matching + 1))
+                    else
+                        echo -e "  ${WARNING} skill '$skill_name' SKILL.md differs"
+                        files_different=$((files_different + 1))
+                    fi
+                else
+                    echo -e "  ${WARNING} skill '$skill_name' missing SKILL.md"
+                    files_missing=$((files_missing + 1))
+                fi
+            fi
+        done
+    fi
+    
     if [ $files_different -gt 0 ]; then
         echo -e "  ${INFO} Run with --force to overwrite modified files"
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + files_different))
@@ -929,6 +969,109 @@ else
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
     fi
 fi
+
+# ============================================
+# Part 4.7: Skills Installation
+# ============================================
+echo ""
+echo "Skills installation..."
+
+SKILLS_SOURCE="$SCRIPT_DIR/skills"
+SKILLS_TARGET="$HOME/.openclaw/skills"
+
+# Function to install skills (similar pattern to hooks)
+install_skills() {
+    if [ ! -d "$SKILLS_SOURCE" ]; then
+        echo -e "  ${WARNING} Skills source directory not found: $SKILLS_SOURCE"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+        return 1
+    fi
+    
+    # Check if source is empty
+    if [ -z "$(ls -A "$SKILLS_SOURCE" 2>/dev/null)" ]; then
+        echo -e "  ${WARNING} Skills source directory is empty"
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+        return 1
+    fi
+    
+    # Create target directory if needed
+    if [ ! -d "$SKILLS_TARGET" ]; then
+        mkdir -p "$SKILLS_TARGET"
+        echo -e "  ${CHECK_MARK} Created skills directory: $SKILLS_TARGET"
+    fi
+    
+    local skills_installed=0
+    local skills_skipped=0
+    local skills_updated=0
+    
+    # Iterate through each skill directory
+    for skill_dir in "$SKILLS_SOURCE"/*/; do
+        if [ ! -d "$skill_dir" ]; then
+            continue
+        fi
+        
+        skill_name=$(basename "$skill_dir")
+        target_skill="$SKILLS_TARGET/$skill_name"
+        
+        # Check if skill already exists
+        if [ -d "$target_skill" ]; then
+            if [ $FORCE_INSTALL -eq 1 ]; then
+                # Force mode: overwrite
+                rm -rf "$target_skill"
+                cp -r "$skill_dir" "$target_skill"
+                echo -e "  ${CHECK_MARK} $skill_name updated (forced)"
+                skills_updated=$((skills_updated + 1))
+            else
+                # Check if files match
+                local needs_update=0
+                
+                # Find all files in source skill and compare
+                while IFS= read -r -d '' source_file; do
+                    rel_path="${source_file#$skill_dir}"
+                    target_file="$target_skill/$rel_path"
+                    
+                    if [ ! -f "$target_file" ]; then
+                        needs_update=1
+                        break
+                    fi
+                    
+                    source_hash=$(sha256sum "$source_file" | awk '{print $1}')
+                    target_hash=$(sha256sum "$target_file" | awk '{print $1}')
+                    
+                    if [ "$source_hash" != "$target_hash" ]; then
+                        needs_update=1
+                        break
+                    fi
+                done < <(find "$skill_dir" -type f -print0)
+                
+                if [ $needs_update -eq 0 ]; then
+                    echo -e "  ${INFO} $skill_name up to date"
+                    skills_skipped=$((skills_skipped + 1))
+                else
+                    echo -e "  ${WARNING} $skill_name exists with local modifications (use --force to overwrite)"
+                    skills_skipped=$((skills_skipped + 1))
+                fi
+            fi
+        else
+            # New skill: install it
+            cp -r "$skill_dir" "$target_skill"
+            echo -e "  ${CHECK_MARK} $skill_name installed"
+            skills_installed=$((skills_installed + 1))
+        fi
+    done
+    
+    # Summary
+    if [ $skills_installed -gt 0 ] || [ $skills_updated -gt 0 ]; then
+        echo -e "  ${CHECK_MARK} Skills: $skills_installed installed, $skills_updated updated, $skills_skipped skipped"
+    elif [ $skills_skipped -gt 0 ]; then
+        echo -e "  ${INFO} Skills: all $skills_skipped skill(s) already present"
+    fi
+    
+    return 0
+}
+
+# Install skills
+install_skills
 
 # ============================================
 # Part 5: Python Virtual Environment Setup
