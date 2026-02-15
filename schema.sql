@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict FzRuD7AVIpFof7GE3gRSwUbNBRuK2Bt9EASfBXSQ63uhOuDc2RTYVM01o23bgml
+\restrict Q5oRYHYlzecPrIOvjrdnU00oBYsxjw2TelexzYrZ1BldiB5kOm4MhCGEOcf3DDm
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -853,10 +853,14 @@ ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
 CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    v_agent_id INTEGER;
 BEGIN
     IF NOT (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled') THEN
         RETURN;
     END IF;
+
+    SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name LIMIT 1;
 
     RETURN QUERY
     SELECT DISTINCT ON (subq.filename)
@@ -864,6 +868,7 @@ BEGIN
         subq.content,
         subq.source
     FROM (
+        -- 1. UNIVERSAL (highest priority)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'universal'::TEXT AS source, 1 AS priority
         FROM agent_bootstrap_context abc
@@ -871,6 +876,7 @@ BEGIN
 
         UNION ALL
 
+        -- 2. GLOBAL
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'global'::TEXT AS source, 2 AS priority
         FROM agent_bootstrap_context abc
@@ -878,22 +884,49 @@ BEGIN
 
         UNION ALL
 
+        -- 3. DOMAIN (matched via agent_domains)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'domain:' || abc.domain_name AS source, 3 AS priority
         FROM agent_bootstrap_context abc
         JOIN agent_domains ad ON ad.domain_topic = abc.domain_name
         WHERE abc.context_type = 'DOMAIN'
-          AND ad.agent_id = (SELECT id FROM agents WHERE name = p_agent_name LIMIT 1)
+          AND ad.agent_id = v_agent_id
 
         UNION ALL
 
-        SELECT abc.file_key || '.md' AS filename, abc.content,
-            'workflow'::TEXT AS source, 4 AS priority
-        FROM agent_bootstrap_context abc
-        WHERE abc.context_type = 'WORKFLOW'
+        -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
+        -- Matches workflows where agent is assigned to steps OR where workflow domains overlap agent domains
+        SELECT 
+            'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
+            w.name || ': ' || w.description || E'\n\nSteps:\n' ||
+            string_agg(
+                ws.step_order || '. ' || ws.description || 
+                COALESCE(' [agent: ' || a2.name || ']', '') ||
+                COALESCE(' [domain: ' || ws.domain || ']', ''),
+                E'\n' ORDER BY ws.step_order
+            ) AS content,
+            'workflow:' || w.name AS source,
+            4 AS priority
+        FROM workflows w
+        JOIN workflow_steps ws ON ws.workflow_id = w.id
+        LEFT JOIN agents a2 ON a2.id = ws.agent_id
+        WHERE w.status = 'active'
+          AND (
+            -- Agent is directly assigned to a step
+            ws.agent_id = v_agent_id
+            OR
+            -- Workflow step domains overlap with agent's domains
+            EXISTS (
+                SELECT 1 FROM agent_domains ad
+                WHERE ad.agent_id = v_agent_id
+                  AND (ad.domain_topic = ws.domain OR ad.domain_topic = ANY(ws.domains))
+            )
+          )
+        GROUP BY w.id, w.name, w.description
 
         UNION ALL
 
+        -- 5. AGENT-specific (lowest priority)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'agent'::TEXT AS source, 5 AS priority
         FROM agent_bootstrap_context abc
@@ -911,7 +944,7 @@ ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
 -- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Get all bootstrap files for an agent (universal + agent-specific)';
+COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Returns bootstrap context: UNIVERSAL + GLOBAL + DOMAIN + dynamic workflows (from workflows/workflow_steps) + AGENT. Issue #95.';
 
 
 --
@@ -1932,7 +1965,7 @@ CREATE TABLE public.agent_bootstrap_context (
     updated_at timestamp with time zone DEFAULT now(),
     updated_by text DEFAULT 'system'::text,
     agent_name text,
-    CONSTRAINT agent_bootstrap_context_context_type_check CHECK ((context_type = ANY (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'WORKFLOW'::text, 'AGENT'::text]))),
+    CONSTRAINT agent_bootstrap_context_context_type_check CHECK ((context_type = ANY (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'AGENT'::text]))),
     CONSTRAINT chk_agent_has_agent_name CHECK (((context_type <> 'AGENT'::text) OR (agent_name IS NOT NULL))),
     CONSTRAINT chk_domain_has_domain_name CHECK (((context_type <> 'DOMAIN'::text) OR (domain_name IS NOT NULL))),
     CONSTRAINT chk_universal_global_no_names CHECK (((context_type <> ALL (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text])) OR ((agent_name IS NULL) AND (domain_name IS NULL))))
@@ -10058,5 +10091,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict FzRuD7AVIpFof7GE3gRSwUbNBRuK2Bt9EASfBXSQ63uhOuDc2RTYVM01o23bgml
+\unrestrict Q5oRYHYlzecPrIOvjrdnU00oBYsxjw2TelexzYrZ1BldiB5kOm4MhCGEOcf3DDm
 
