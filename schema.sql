@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict J65xPGugHo5nt3hpd4S9o3xZUbs5b5eBLFoYineNCPui2zd8V7t4O7pNEiZVurd
+\restrict hzsi8nXbdpTcsuulqeul0ZJ3br2b37THgFKeBHnjkw5GQPFZuWicj8PecYwZkg8
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1340,6 +1340,24 @@ $$;
 ALTER FUNCTION public.prevent_locked_project_update() OWNER TO nova;
 
 --
+-- Name: protect_bootstrap_context_writes(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.protect_bootstrap_context_writes() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF current_user NOT IN ('newhart', 'postgres') THEN
+    RAISE EXCEPTION 'agent_bootstrap_context is managed by Newhart (Agent Design/Management). Contact Newhart for changes.';
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+
+ALTER FUNCTION public.protect_bootstrap_context_writes() OWNER TO postgres;
+
+--
 -- Name: queue_test_failure(text, integer, text, text, integer); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -1975,7 +1993,7 @@ ALTER TABLE public.agent_bootstrap_context OWNER TO nova;
 -- Name: TABLE agent_bootstrap_context; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON TABLE public.agent_bootstrap_context IS 'Domain-based bootstrap context. READ-ONLY except Newhart.';
+COMMENT ON TABLE public.agent_bootstrap_context IS 'Bootstrap context entries. READ-ONLY except Newhart (Agent Design/Management domain).';
 
 
 --
@@ -8115,6 +8133,13 @@ CREATE TRIGGER music_search_update BEFORE INSERT OR UPDATE ON public.music_libra
 
 
 --
+-- Name: agent_bootstrap_context protect_bootstrap_context; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER protect_bootstrap_context BEFORE INSERT OR DELETE OR UPDATE ON public.agent_bootstrap_context FOR EACH ROW EXECUTE FUNCTION public.protect_bootstrap_context_writes();
+
+
+--
 -- Name: publications publication_status_update; Type: TRIGGER; Schema: public; Owner: erato
 --
 
@@ -10095,5 +10120,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict J65xPGugHo5nt3hpd4S9o3xZUbs5b5eBLFoYineNCPui2zd8V7t4O7pNEiZVurd
+\unrestrict hzsi8nXbdpTcsuulqeul0ZJ3br2b37THgFKeBHnjkw5GQPFZuWicj8PecYwZkg8
 
