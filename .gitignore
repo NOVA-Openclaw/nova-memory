@@ -55,3 +55,6 @@ IMPLEMENTATION-*.md
 
 # Seed data files (removed from repo per #83, prevent re-addition)
 seed-data/
+
+# Local git hooks (not distributed)
+hooks/git/
