@@ -10,20 +10,20 @@
 
 **ID:** TC-70-001  
 **Priority:** High  
-**Prerequisite:** Agent "nhr-agent" exists with nickname "Newhart" in agent registry
+**Prerequisite:** Agent "newhart" exists with nickname "Newhart" in agent registry
 
 **Given:** 
 - The agent_chat plugin is initialized
-- Agent registry contains entry: `{agentName: "nhr-agent", nickname: "Newhart"}`
+- Agent registry contains entry: `{agentName: "newhart", nickname: "Newhart"}`
 - Current agent config has sender name configured
 
 **When:** 
 - User calls send tool with target "Newhart" and message "Hello from test"
 
 **Then:**
-- Target is resolved to agentName "nhr-agent"
+- Target is resolved to agentName "newhart"
 - Message is inserted into agent_chat table with:
-  - `mentions` array contains "nhr-agent"
+  - `mentions` array contains "newhart"
   - `sender` field contains current agent's name
   - `message` field contains "Hello from test"
 - Success confirmation is returned
@@ -35,21 +35,21 @@
 
 **ID:** TC-70-002  
 **Priority:** High  
-**Prerequisite:** Agent "nhr-agent" exists with database name "newhart"
+**Prerequisite:** Agent "newhart" exists with database name "newhart"
 
 **Given:**
 - The agent_chat plugin is initialized
-- Agent registry contains entry: `{agentName: "nhr-agent", dbName: "newhart"}`
+- Agent registry contains entry: `{agentName: "newhart", dbName: "newhart"}`
 - Current agent is authenticated
 
 **When:**
 - User calls send tool with target "newhart" and message "Testing db name"
 
 **Then:**
-- Target is resolved to agentName "nhr-agent"
+- Target is resolved to agentName "newhart"
 - Message is inserted successfully with proper mentions array
 - Lookup uses #69 infrastructure for name resolution
-- Response confirms delivery to "nhr-agent"
+- Response confirms delivery to "newhart"
 
 ---
 
@@ -57,18 +57,18 @@
 
 **ID:** TC-70-003  
 **Priority:** High  
-**Prerequisite:** Agent "nhr-agent" exists in registry
+**Prerequisite:** Agent "newhart" exists in registry
 
 **Given:**
 - The agent_chat plugin is initialized
-- Agent "nhr-agent" exists in agent registry
+- Agent "newhart" exists in agent registry
 
 **When:**
-- User calls send tool with target "nhr-agent" and message "Direct agentName test"
+- User calls send tool with target "newhart" and message "Direct agentName test"
 
 **Then:**
 - Target matches agentName directly (no lookup required)
-- Message is inserted with mentions=["nhr-agent"]
+- Message is inserted with mentions=["newhart"]
 - No additional resolution steps are performed
 - Success response is returned immediately
 
@@ -81,14 +81,14 @@
 **Prerequisite:** Agent has configured alias
 
 **Given:**
-- Agent registry contains: `{agentName: "nhr-agent", alias: "bob"}`
+- Agent registry contains: `{agentName: "newhart", alias: "bob"}`
 - Current agent has send permissions
 
 **When:**
 - User calls send tool with target "bob" and message "Alias test"
 
 **Then:**
-- Alias "bob" is resolved to agentName "nhr-agent"
+- Alias "bob" is resolved to agentName "newhart"
 - Message is inserted with correct mentions array
 - Lookup checks alias field in registry
 - Confirmation indicates delivery to resolved agent
@@ -99,7 +99,7 @@
 
 **ID:** TC-70-005  
 **Priority:** High  
-**Prerequisite:** Agent "nhr-agent" with nickname "Newhart" exists
+**Prerequisite:** Agent "newhart" with nickname "Newhart" exists
 
 **Given:**
 - Agent registry contains case-sensitive identifiers
@@ -110,10 +110,9 @@
   - "NEWHART" (all caps)
   - "newhart" (all lowercase)
   - "NewHart" (mixed case)
-  - "NHR-AGENT" (agentName caps)
 
 **Then:**
-- All variations resolve to agentName "nhr-agent"
+- All variations resolve to agentName "newhart"
 - Case-insensitive matching is applied to:
   - nickname
   - dbName
@@ -154,7 +153,7 @@
 
 **Given:**
 - Current agent config: `{agentName: "erato", displayName: "Erato"}`
-- Target agent "nhr-agent" exists and is valid
+- Target agent "newhart" exists and is valid
 
 **When:**
 - Agent sends message using send tool
@@ -174,7 +173,7 @@
 **Prerequisite:** Valid target agent exists
 
 **Given:**
-- Target agent "nhr-agent" is valid and active
+- Target agent "newhart" is valid and active
 - Message content is non-empty
 
 **When:**
@@ -185,7 +184,7 @@
   - Target agent name (resolved)
   - Message ID or timestamp
   - Success status
-- Example: "Message sent to nhr-agent (Newhart) at 2026-02-13T10:59:00Z"
+- Example: "Message sent to newhart (Newhart) at 2026-02-13T10:59:00Z"
 - Confirmation is returned to caller immediately after INSERT
 
 ---
@@ -202,13 +201,13 @@
 
 **When:**
 - Send tool is called with:
-  - target: "nhr-agent"
+  - target: "newhart"
   - message: "This is a reply"
   - replyTo: "msg-123" (optional parameter)
 
 **Then:**
 - New message is inserted with:
-  - mentions=["nhr-agent"]
+  - mentions=["newhart"]
   - replyTo or threadId field = "msg-123"
 - Thread relationship is preserved
 - Target agent can reconstruct conversation thread
@@ -223,7 +222,7 @@
 **Prerequisite:** Multiple agents exist
 
 **Given:**
-- Registry contains "nhr-agent" and "erato"
+- Registry contains "newhart" and "erato"
 - Send tool accepts single target parameter
 
 **When:**
@@ -245,7 +244,7 @@
 **Prerequisite:** Valid target exists
 
 **Given:**
-- Target "nhr-agent" is valid
+- Target "newhart" is valid
 
 **When:**
 - Send tool is called with:
