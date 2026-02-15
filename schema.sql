@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict PZOjwhoiKuyu49XsA0yVlxOjbhAL7tsSWEbaVb3eTjrXWEgnxV9HRyFJFik5ed1
+\restrict nitT6Y4dIvuNvbjcEpkrsUzKoDXT4My6EO9OLEXA07E41ZvXmmlqwsO8BGP4Plg
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -895,34 +895,49 @@ BEGIN
         UNION ALL
 
         -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
-        -- Matches workflows where agent is assigned to steps OR where workflow domains overlap agent domains
-        SELECT 
+        -- Matches workflows where agent is assigned to steps,
+        -- workflow domains overlap agent domains,
+        -- OR agent is the workflow orchestrator
+        SELECT
             'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
-            w.name || ': ' || w.description || E'\n\nSteps:\n' ||
-            string_agg(
-                ws.step_order || '. ' || ws.description || 
-                COALESCE(' [agent: ' || a2.name || ']', '') ||
-                COALESCE(' [domain: ' || ws.domain || ']', ''),
-                E'\n' ORDER BY ws.step_order
-            ) AS content,
+            w.name || ': ' || w.description ||
+            CASE WHEN steps_text IS NOT NULL
+                 THEN E'\n\nSteps:\n' || steps_text
+                 ELSE ''
+            END AS content,
             'workflow:' || w.name AS source,
             4 AS priority
         FROM workflows w
-        JOIN workflow_steps ws ON ws.workflow_id = w.id
-        LEFT JOIN agents a2 ON a2.id = ws.agent_id
+        LEFT JOIN LATERAL (
+            SELECT string_agg(
+                ws.step_order || '. ' || ws.description ||
+                COALESCE(' [agent: ' || a2.name || ']', '') ||
+                COALESCE(' [domain: ' || ws.domain || ']', ''),
+                E'\n' ORDER BY ws.step_order
+            ) AS steps_text
+            FROM workflow_steps ws
+            LEFT JOIN agents a2 ON a2.id = ws.agent_id
+            WHERE ws.workflow_id = w.id
+        ) ws_agg ON true
         WHERE w.status = 'active'
           AND (
+            -- Agent is the workflow orchestrator
+            w.orchestrator_agent_id = v_agent_id
+            OR
             -- Agent is directly assigned to a step
-            ws.agent_id = v_agent_id
+            EXISTS (
+                SELECT 1 FROM workflow_steps ws2
+                WHERE ws2.workflow_id = w.id AND ws2.agent_id = v_agent_id
+            )
             OR
             -- Workflow step domains overlap with agent's domains
             EXISTS (
-                SELECT 1 FROM agent_domains ad
-                WHERE ad.agent_id = v_agent_id
-                  AND (ad.domain_topic = ws.domain OR ad.domain_topic = ANY(ws.domains))
+                SELECT 1 FROM workflow_steps ws3
+                JOIN agent_domains ad ON ad.agent_id = v_agent_id
+                WHERE ws3.workflow_id = w.id
+                  AND (ad.domain_topic = ws3.domain OR ad.domain_topic = ANY(ws3.domains))
             )
           )
-        GROUP BY w.id, w.name, w.description
 
         UNION ALL
 
@@ -10107,5 +10122,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PZOjwhoiKuyu49XsA0yVlxOjbhAL7tsSWEbaVb3eTjrXWEgnxV9HRyFJFik5ed1
+\unrestrict nitT6Y4dIvuNvbjcEpkrsUzKoDXT4My6EO9OLEXA07E41ZvXmmlqwsO8BGP4Plg
 
