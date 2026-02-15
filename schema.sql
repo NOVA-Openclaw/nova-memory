@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fwuQiOCONGwo88VLhiDnzGf6gcrOEo6OqfE2tgqR91dlOemhcbeQdfN2vtkdGdj
+\restrict 52v0PMXQv66v5h2p9AJO1UIXLhK3axJzAvXk00upeInqOFcQ8Tp2e8qvRtI1vq7
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -5947,7 +5947,7 @@ CREATE TABLE public.workflow_steps (
     id integer NOT NULL,
     workflow_id integer NOT NULL,
     step_order integer NOT NULL,
-    agent_id integer NOT NULL,
+    agent_id integer,
     description text NOT NULL,
     produces_deliverable boolean DEFAULT false,
     deliverable_type text,
@@ -5958,6 +5958,7 @@ CREATE TABLE public.workflow_steps (
     requires_authorization boolean DEFAULT false,
     requires_discussion boolean DEFAULT false,
     domain text,
+    domains text[],
     CONSTRAINT workflow_steps_check CHECK ((((produces_deliverable = true) AND (deliverable_type IS NOT NULL)) OR (produces_deliverable = false)))
 );
 
@@ -8055,6 +8056,13 @@ CREATE INDEX idx_work_tags_work ON public.work_tags USING btree (work_id);
 --
 
 CREATE INDEX idx_workflow_steps_agent ON public.workflow_steps USING btree (agent_id);
+
+
+--
+-- Name: idx_workflow_steps_domains; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflow_steps_domains ON public.workflow_steps USING gin (domains);
 
 
 --
@@ -10298,5 +10306,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fwuQiOCONGwo88VLhiDnzGf6gcrOEo6OqfE2tgqR91dlOemhcbeQdfN2vtkdGdj
+\unrestrict 52v0PMXQv66v5h2p9AJO1UIXLhK3axJzAvXk00upeInqOFcQ8Tp2e8qvRtI1vq7
 
