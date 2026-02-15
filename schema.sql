@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ogkXvyBZzxdn4uhAciRKEykWfduyqr5gqODHUKrjylLVUU1ZOSeVW6WBvgfhc4O
+\restrict gcFFMyh1aT1Y21Xe7GShClgUSnEyWIRgnUcoiIwAbKPoRs1boMzaMiA3ka68pjv
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -6668,22 +6668,6 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: git_issue_queue coder_issue_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.git_issue_queue
-    ADD CONSTRAINT coder_issue_queue_pkey PRIMARY KEY (id);
-
-
---
--- Name: git_issue_queue coder_issue_queue_repo_issue_number_key; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.git_issue_queue
-    ADD CONSTRAINT coder_issue_queue_repo_issue_number_key UNIQUE (repo, issue_number);
-
-
---
 -- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -6817,6 +6801,22 @@ ALTER TABLE ONLY public.gambling_entries
 
 ALTER TABLE ONLY public.gambling_logs
     ADD CONSTRAINT gambling_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: git_issue_queue git_issue_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.git_issue_queue
+    ADD CONSTRAINT git_issue_queue_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: git_issue_queue git_issue_queue_repo_issue_number_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.git_issue_queue
+    ADD CONSTRAINT git_issue_queue_repo_issue_number_key UNIQUE (repo, issue_number);
 
 
 --
@@ -7396,20 +7396,6 @@ CREATE INDEX idx_chat_processed_agent ON public.agent_chat_processed USING btree
 
 
 --
--- Name: idx_coder_queue_priority; Type: INDEX; Schema: public; Owner: nova
---
-
-CREATE INDEX idx_coder_queue_priority ON public.git_issue_queue USING btree (priority DESC, created_at);
-
-
---
--- Name: idx_coder_queue_status; Type: INDEX; Schema: public; Owner: nova
---
-
-CREATE INDEX idx_coder_queue_status ON public.git_issue_queue USING btree (status);
-
-
---
 -- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -7568,6 +7554,20 @@ CREATE INDEX idx_gambling_entries_log ON public.gambling_entries USING btree (lo
 --
 
 CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entity_id);
+
+
+--
+-- Name: idx_git_queue_priority; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_git_queue_priority ON public.git_issue_queue USING btree (priority DESC, created_at);
+
+
+--
+-- Name: idx_git_queue_status; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_git_queue_status ON public.git_issue_queue USING btree (status);
 
 
 --
@@ -10238,5 +10238,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ogkXvyBZzxdn4uhAciRKEykWfduyqr5gqODHUKrjylLVUU1ZOSeVW6WBvgfhc4O
+\unrestrict gcFFMyh1aT1Y21Xe7GShClgUSnEyWIRgnUcoiIwAbKPoRs1boMzaMiA3ka68pjv
 
