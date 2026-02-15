@@ -1,0 +1,90 @@
+#!/bin/bash
+# pre-commit hook: Auto-update schema.sql if database schema changed
+# Install: ln -sf ../../hooks/git/pre-commit .git/hooks/pre-commit
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
+DB_USER="${PGUSER:-$(whoami)}"
+DB_NAME="${DB_USER//-/_}_memory"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Check if we're in the nova-memory repo
+if [[ ! -f "$SCHEMA_FILE" ]]; then
+    echo -e "${YELLOW}⚠️  schema.sql not found, skipping schema sync${NC}"
+    exit 0
+fi
+
+# Check if PostgreSQL is available
+if ! command -v pg_dump &> /dev/null; then
+    echo -e "${YELLOW}⚠️  pg_dump not found, skipping schema sync${NC}"
+    exit 0
+fi
+
+# Check if database exists
+if ! psql -U "$DB_USER" -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+    echo -e "${YELLOW}⚠️  Database '$DB_NAME' not found, skipping schema sync${NC}"
+    exit 0
+fi
+
+echo "🔍 Checking schema.sql against database..."
+
+# Generate current schema dump
+TEMP_SCHEMA=$(mktemp)
+pg_dump -U "$DB_USER" -d "$DB_NAME" \
+    --schema-only \
+    --no-owner \
+    --no-privileges \
+    --no-comments \
+    --no-tablespaces \
+    --no-security-labels \
+    2>/dev/null | \
+    # Normalize: remove SET statements, empty lines at start, trailing whitespace
+    grep -v "^SET " | \
+    grep -v "^SELECT pg_catalog" | \
+    sed 's/[[:space:]]*$//' > "$TEMP_SCHEMA"
+
+# Compare with existing schema.sql (normalized)
+TEMP_EXISTING=$(mktemp)
+grep -v "^SET " "$SCHEMA_FILE" 2>/dev/null | \
+    grep -v "^SELECT pg_catalog" | \
+    grep -v "^--" | \
+    sed 's/[[:space:]]*$//' | \
+    sed '/^$/d' > "$TEMP_EXISTING"
+
+TEMP_NEW=$(mktemp)
+cat "$TEMP_SCHEMA" | sed '/^$/d' > "$TEMP_NEW"
+
+# Check for structural differences (ignore whitespace/comments)
+if diff -q "$TEMP_EXISTING" "$TEMP_NEW" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ schema.sql is up to date${NC}"
+    rm -f "$TEMP_SCHEMA" "$TEMP_EXISTING" "$TEMP_NEW"
+    exit 0
+fi
+
+echo -e "${YELLOW}📝 Database schema changed, updating schema.sql...${NC}"
+
+# Generate full schema dump with nice formatting
+pg_dump -U "$DB_USER" -d "$DB_NAME" \
+    --schema-only \
+    --no-owner \
+    --no-privileges \
+    --no-tablespaces \
+    --no-security-labels \
+    2>/dev/null > "$SCHEMA_FILE"
+
+# Stage the updated schema.sql
+git add "$SCHEMA_FILE"
+
+echo -e "${GREEN}✅ schema.sql updated and staged${NC}"
+
+# Cleanup
+rm -f "$TEMP_SCHEMA" "$TEMP_EXISTING" "$TEMP_NEW"
+
+exit 0
