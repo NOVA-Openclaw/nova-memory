@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict K01u4NPfTtIxJ7enL1yCJ3VokU1pMNwF10pBlGqptWW8rXemfa3mz399E0A6SUu
+\restrict q9Q3cAtb7I1VqutyucNx0ZK49Q5X3b5K4vSMxW9BY19JzDy3Fy8a9mN9UpUckOf
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -8667,6 +8667,12 @@ ALTER TABLE ONLY public.works
 
 
 --
+-- Name: agent_jobs; Type: ROW SECURITY; Schema: public; Owner: nova
+--
+
+ALTER TABLE public.agent_jobs ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: agent_chat_pub; Type: PUBLICATION; Schema: -; Owner: postgres
 --
 
@@ -10122,5 +10128,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict K01u4NPfTtIxJ7enL1yCJ3VokU1pMNwF10pBlGqptWW8rXemfa3mz399E0A6SUu
+\unrestrict q9Q3cAtb7I1VqutyucNx0ZK49Q5X3b5K4vSMxW9BY19JzDy3Fy8a9mN9UpUckOf
 
