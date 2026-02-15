@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict TkMHZ6frDJQajgs97RNEoTdw4WncFbVo7fUXne3LbP6WuUefkAqLf3kbBMGQ9vI
+\restrict FzRuD7AVIpFof7GE3gRSwUbNBRuK2Bt9EASfBXSQ63uhOuDc2RTYVM01o23bgml
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -7866,6 +7866,13 @@ CREATE INDEX idx_workflow_steps_agent ON public.workflow_steps USING btree (agen
 
 
 --
+-- Name: idx_workflow_steps_domain; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_workflow_steps_domain ON public.workflow_steps USING btree (domain);
+
+
+--
 -- Name: idx_workflow_steps_domains; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -10051,5 +10058,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict TkMHZ6frDJQajgs97RNEoTdw4WncFbVo7fUXne3LbP6WuUefkAqLf3kbBMGQ9vI
+\unrestrict FzRuD7AVIpFof7GE3gRSwUbNBRuK2Bt9EASfBXSQ63uhOuDc2RTYVM01o23bgml
 
