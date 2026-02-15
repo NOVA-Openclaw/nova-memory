@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 52v0PMXQv66v5h2p9AJO1UIXLhK3axJzAvXk00upeInqOFcQ8Tp2e8qvRtI1vq7
+\restrict hBKD9GmlYcFf0LfQY7Zyn7yHbkZe3FXjGNKb992GI3F2OXr22TirbCyuD55Ht7g
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -854,32 +854,51 @@ CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(file
     LANGUAGE plpgsql
     AS $$
 BEGIN
+    IF NOT (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled') THEN
+        RETURN;
+    END IF;
+
     RETURN QUERY
     SELECT DISTINCT ON (subq.filename)
         subq.filename,
         subq.content,
         subq.source
     FROM (
-        -- Agent-specific files (higher priority)
-        SELECT 
-            file_key || '.md' as filename,
-            a.content,
-            'agent'::TEXT as source,
-            1 as priority
-        FROM bootstrap_context_agents a
-        WHERE a.agent_name = p_agent_name
-            AND (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
-        
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'universal'::TEXT AS source, 1 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'UNIVERSAL'
+
         UNION ALL
-        
-        -- Universal context files (lower priority)
-        SELECT 
-            file_key || '.md' as filename,
-            u.content,
-            'universal'::TEXT as source,
-            2 as priority
-        FROM bootstrap_context_universal u
-        WHERE (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled')
+
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'global'::TEXT AS source, 2 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'GLOBAL'
+
+        UNION ALL
+
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'domain:' || abc.domain_name AS source, 3 AS priority
+        FROM agent_bootstrap_context abc
+        JOIN agent_domains ad ON ad.domain_topic = abc.domain_name
+        WHERE abc.context_type = 'DOMAIN'
+          AND ad.agent_id = (SELECT id FROM agents WHERE name = p_agent_name LIMIT 1)
+
+        UNION ALL
+
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'workflow'::TEXT AS source, 4 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'WORKFLOW'
+
+        UNION ALL
+
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'agent'::TEXT AS source, 5 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'AGENT'
+          AND abc.agent_name = p_agent_name
     ) subq
     ORDER BY subq.filename, subq.priority;
 END;
@@ -1912,7 +1931,11 @@ CREATE TABLE public.agent_bootstrap_context (
     description text,
     updated_at timestamp with time zone DEFAULT now(),
     updated_by text DEFAULT 'system'::text,
-    CONSTRAINT agent_bootstrap_context_context_type_check CHECK ((context_type = ANY (ARRAY['GLOBAL'::text, 'DOMAIN'::text])))
+    agent_name text,
+    CONSTRAINT agent_bootstrap_context_context_type_check CHECK ((context_type = ANY (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'WORKFLOW'::text, 'AGENT'::text]))),
+    CONSTRAINT chk_agent_has_agent_name CHECK (((context_type <> 'AGENT'::text) OR (agent_name IS NOT NULL))),
+    CONSTRAINT chk_domain_has_domain_name CHECK (((context_type <> 'DOMAIN'::text) OR (domain_name IS NOT NULL))),
+    CONSTRAINT chk_universal_global_no_names CHECK (((context_type <> ALL (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text])) OR ((agent_name IS NULL) AND (domain_name IS NULL))))
 );
 
 
@@ -1966,30 +1989,6 @@ ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNED BY public.agent_bootstrap_context.id;
-
-
---
--- Name: agent_bootstrap_context_universal; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.agent_bootstrap_context_universal (
-    id integer NOT NULL,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now(),
-    updated_by text,
-    CONSTRAINT bootstrap_context_universal_file_key_check CHECK ((file_key <> ''::text))
-);
-
-
-ALTER TABLE public.agent_bootstrap_context_universal OWNER TO nova;
-
---
--- Name: TABLE agent_bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.agent_bootstrap_context_universal IS 'Universal workspace bootstrap files. READ-ONLY except Newhart.';
 
 
 --
@@ -2372,7 +2371,6 @@ CREATE TABLE public.agents (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     persistent boolean DEFAULT true,
-    bootstrap_context jsonb,
     instantiation_sop character varying(100),
     nickname character varying(50),
     instance_type character varying(20) DEFAULT 'subagent'::character varying,
@@ -2414,13 +2412,6 @@ COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdb
 --
 
 COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = instantiated on-demand';
-
-
---
--- Name: COLUMN agents.bootstrap_context; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.agents.bootstrap_context IS 'Agent-specific bootstrap context files (JSONB map of file_key -> content). Replaces bootstrap_context_agents table.';
 
 
 --
@@ -2684,53 +2675,6 @@ COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (s
 
 
 --
--- Name: bootstrap_context_agents; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.bootstrap_context_agents (
-    id integer NOT NULL,
-    agent_name text NOT NULL,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now(),
-    updated_by text,
-    CONSTRAINT bootstrap_context_agents_file_key_check CHECK ((file_key <> ''::text))
-);
-
-
-ALTER TABLE public.bootstrap_context_agents OWNER TO nova;
-
---
--- Name: TABLE bootstrap_context_agents; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.bootstrap_context_agents IS 'Per-agent context files (SEED_CONTEXT.md, domain knowledge)';
-
-
---
--- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
---
-
-CREATE SEQUENCE public.bootstrap_context_agents_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNER TO nova;
-
---
--- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
---
-
-ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNED BY public.bootstrap_context_agents.id;
-
-
---
 -- Name: bootstrap_context_audit; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2796,74 +2740,6 @@ ALTER TABLE public.bootstrap_context_config OWNER TO nova;
 --
 
 COMMENT ON TABLE public.bootstrap_context_config IS 'Configuration for bootstrap system behavior';
-
-
---
--- Name: bootstrap_context_universal; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.bootstrap_context_universal (
-    id integer NOT NULL,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now(),
-    updated_by text,
-    CONSTRAINT bootstrap_context_universal_file_key_check1 CHECK ((file_key <> ''::text))
-);
-
-
-ALTER TABLE public.bootstrap_context_universal OWNER TO nova;
-
---
--- Name: TABLE bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.bootstrap_context_universal IS 'Universal context files loaded for all agents (AGENTS.md, SOUL.md, etc.)';
-
-
---
--- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
---
-
-CREATE SEQUENCE public.bootstrap_context_universal_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNER TO nova;
-
---
--- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
---
-
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNED BY public.agent_bootstrap_context_universal.id;
-
-
---
--- Name: bootstrap_context_universal_id_seq1; Type: SEQUENCE; Schema: public; Owner: nova
---
-
-CREATE SEQUENCE public.bootstrap_context_universal_id_seq1
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq1 OWNER TO nova;
-
---
--- Name: bootstrap_context_universal_id_seq1; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
---
-
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq1 OWNED BY public.bootstrap_context_universal.id;
 
 
 --
@@ -6157,13 +6033,6 @@ ALTER TABLE ONLY public.agent_bootstrap_context ALTER COLUMN id SET DEFAULT next
 
 
 --
--- Name: agent_bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.agent_bootstrap_context_universal ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_universal_id_seq'::regclass);
-
-
---
 -- Name: agent_chat id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -6220,24 +6089,10 @@ ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artw
 
 
 --
--- Name: bootstrap_context_agents id; Type: DEFAULT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.bootstrap_context_agents ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_agents_id_seq'::regclass);
-
-
---
 -- Name: bootstrap_context_audit id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.bootstrap_context_audit ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_audit_id_seq'::regclass);
-
-
---
--- Name: bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.bootstrap_context_universal ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_universal_id_seq1'::regclass);
 
 
 --
@@ -6627,22 +6482,6 @@ ALTER TABLE ONLY public.asset_classes
 
 
 --
--- Name: bootstrap_context_agents bootstrap_context_agents_agent_name_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.bootstrap_context_agents
-    ADD CONSTRAINT bootstrap_context_agents_agent_name_file_key_key UNIQUE (agent_name, file_key);
-
-
---
--- Name: bootstrap_context_agents bootstrap_context_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.bootstrap_context_agents
-    ADD CONSTRAINT bootstrap_context_agents_pkey PRIMARY KEY (id);
-
-
---
 -- Name: bootstrap_context_audit bootstrap_context_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -6656,38 +6495,6 @@ ALTER TABLE ONLY public.bootstrap_context_audit
 
 ALTER TABLE ONLY public.bootstrap_context_config
     ADD CONSTRAINT bootstrap_context_config_pkey PRIMARY KEY (key);
-
-
---
--- Name: agent_bootstrap_context_universal bootstrap_context_universal_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.agent_bootstrap_context_universal
-    ADD CONSTRAINT bootstrap_context_universal_file_key_key UNIQUE (file_key);
-
-
---
--- Name: bootstrap_context_universal bootstrap_context_universal_file_key_key1; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.bootstrap_context_universal
-    ADD CONSTRAINT bootstrap_context_universal_file_key_key1 UNIQUE (file_key);
-
-
---
--- Name: agent_bootstrap_context_universal bootstrap_context_universal_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.agent_bootstrap_context_universal
-    ADD CONSTRAINT bootstrap_context_universal_pkey PRIMARY KEY (id);
-
-
---
--- Name: bootstrap_context_universal bootstrap_context_universal_pkey1; Type: CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.bootstrap_context_universal
-    ADD CONSTRAINT bootstrap_context_universal_pkey1 PRIMARY KEY (id);
 
 
 --
@@ -7222,7 +7029,7 @@ ALTER TABLE ONLY public.works
 -- Name: agent_bootstrap_context_unique_idx; Type: INDEX; Schema: public; Owner: nova
 --
 
-CREATE UNIQUE INDEX agent_bootstrap_context_unique_idx ON public.agent_bootstrap_context USING btree (context_type, COALESCE(domain_name, ''::text), file_key);
+CREATE UNIQUE INDEX agent_bootstrap_context_unique_idx ON public.agent_bootstrap_context USING btree (context_type, COALESCE(agent_name, ''::text), COALESCE(domain_name, ''::text), file_key);
 
 
 --
@@ -7237,6 +7044,13 @@ CREATE INDEX events_archive_event_date_idx ON public.events_archive USING btree 
 --
 
 CREATE INDEX events_archive_search_vector_idx ON public.events_archive USING gin (search_vector);
+
+
+--
+-- Name: idx_abc_agent_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_abc_agent_name ON public.agent_bootstrap_context USING btree (agent_name) WHERE (agent_name IS NOT NULL);
 
 
 --
@@ -7398,13 +7212,6 @@ CREATE INDEX idx_agents_role ON public.agents USING btree (role);
 --
 
 CREATE INDEX idx_agents_status ON public.agents USING btree (status);
-
-
---
--- Name: idx_bootstrap_agents_name; Type: INDEX; Schema: public; Owner: nova
---
-
-CREATE INDEX idx_bootstrap_agents_name ON public.bootstrap_context_agents USING btree (agent_name);
 
 
 --
@@ -8277,27 +8084,6 @@ CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR
 
 
 --
--- Name: bootstrap_context_agents trg_audit_bootstrap_agents; Type: TRIGGER; Schema: public; Owner: nova
---
-
-CREATE TRIGGER trg_audit_bootstrap_agents AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_agents FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_agents();
-
-
---
--- Name: agent_bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: nova
---
-
-CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON public.agent_bootstrap_context_universal FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_universal();
-
-
---
--- Name: bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: nova
---
-
-CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_universal FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_universal();
-
-
---
 -- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -8912,16 +8698,6 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_bootstrap_context_id_seq TO newhart;
 
 
 --
--- Name: TABLE agent_bootstrap_context_universal; Type: ACL; Schema: public; Owner: nova
---
-
-REVOKE ALL ON TABLE public.agent_bootstrap_context_universal FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_bootstrap_context_universal TO nova;
-GRANT ALL ON TABLE public.agent_bootstrap_context_universal TO newhart;
-GRANT SELECT ON TABLE public.agent_bootstrap_context_universal TO PUBLIC;
-
-
---
 -- Name: TABLE agent_chat; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -9123,23 +8899,6 @@ GRANT ALL ON TABLE public.asset_classes TO "nova-staging";
 
 
 --
--- Name: TABLE bootstrap_context_agents; Type: ACL; Schema: public; Owner: nova
---
-
-REVOKE ALL ON TABLE public.bootstrap_context_agents FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.bootstrap_context_agents TO nova;
-GRANT SELECT ON TABLE public.bootstrap_context_agents TO PUBLIC;
-GRANT ALL ON TABLE public.bootstrap_context_agents TO newhart;
-
-
---
--- Name: SEQUENCE bootstrap_context_agents_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_agents_id_seq TO newhart;
-
-
---
 -- Name: TABLE bootstrap_context_audit; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -9164,20 +8923,6 @@ REVOKE ALL ON TABLE public.bootstrap_context_config FROM nova;
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.bootstrap_context_config TO nova;
 GRANT ALL ON TABLE public.bootstrap_context_config TO newhart;
 GRANT SELECT ON TABLE public.bootstrap_context_config TO PUBLIC;
-
-
---
--- Name: SEQUENCE bootstrap_context_universal_id_seq; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_universal_id_seq TO newhart;
-
-
---
--- Name: SEQUENCE bootstrap_context_universal_id_seq1; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_universal_id_seq1 TO newhart;
 
 
 --
@@ -10306,5 +10051,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 52v0PMXQv66v5h2p9AJO1UIXLhK3axJzAvXk00upeInqOFcQ8Tp2e8qvRtI1vq7
+\unrestrict hBKD9GmlYcFf0LfQY7Zyn7yHbkZe3FXjGNKb992GI3F2OXr22TirbCyuD55Ht7g
 
