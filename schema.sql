@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict q9Q3cAtb7I1VqutyucNx0ZK49Q5X3b5K4vSMxW9BY19JzDy3Fy8a9mN9UpUckOf
+\restrict 4EUatNFIkMntIrkl7gM8wpruN479bDhbkhHTE9e7ohjShGcfQaRq34BXrjC1OaB
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -868,7 +868,6 @@ BEGIN
         subq.content,
         subq.source
     FROM (
-        -- 1. UNIVERSAL (highest priority)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'universal'::TEXT AS source, 1 AS priority
         FROM agent_bootstrap_context abc
@@ -876,7 +875,6 @@ BEGIN
 
         UNION ALL
 
-        -- 2. GLOBAL
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'global'::TEXT AS source, 2 AS priority
         FROM agent_bootstrap_context abc
@@ -884,7 +882,6 @@ BEGIN
 
         UNION ALL
 
-        -- 3. DOMAIN (matched via agent_domains)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'domain:' || abc.domain_name AS source, 3 AS priority
         FROM agent_bootstrap_context abc
@@ -894,54 +891,39 @@ BEGIN
 
         UNION ALL
 
-        -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
-        -- Matches workflows where agent is assigned to steps,
-        -- workflow domains overlap agent domains,
-        -- OR agent is the workflow orchestrator
-        SELECT
+        -- WORKFLOW (dynamic) — match by step domains OR orchestrator domain
+        SELECT 
             'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
-            w.name || ': ' || w.description ||
-            CASE WHEN steps_text IS NOT NULL
-                 THEN E'\n\nSteps:\n' || steps_text
-                 ELSE ''
-            END AS content,
+            w.name || ': ' || w.description || E'\n\nSteps:\n' ||
+            string_agg(
+                ws.step_order || '. ' || ws.description || 
+                COALESCE(' [domain: ' || ws.domain || ']', ''),
+                E'\n' ORDER BY ws.step_order
+            ) AS content,
             'workflow:' || w.name AS source,
             4 AS priority
         FROM workflows w
-        LEFT JOIN LATERAL (
-            SELECT string_agg(
-                ws.step_order || '. ' || ws.description ||
-                COALESCE(' [agent: ' || a2.name || ']', '') ||
-                COALESCE(' [domain: ' || ws.domain || ']', ''),
-                E'\n' ORDER BY ws.step_order
-            ) AS steps_text
-            FROM workflow_steps ws
-            LEFT JOIN agents a2 ON a2.id = ws.agent_id
-            WHERE ws.workflow_id = w.id
-        ) ws_agg ON true
+        JOIN workflow_steps ws ON ws.workflow_id = w.id
         WHERE w.status = 'active'
           AND (
-            -- Agent is the workflow orchestrator
-            w.orchestrator_agent_id = v_agent_id
-            OR
-            -- Agent is directly assigned to a step
+            -- Step domains overlap with agent's domains
             EXISTS (
-                SELECT 1 FROM workflow_steps ws2
-                WHERE ws2.workflow_id = w.id AND ws2.agent_id = v_agent_id
+                SELECT 1 FROM agent_domains ad
+                WHERE ad.agent_id = v_agent_id
+                  AND (ad.domain_topic = ws.domain OR ad.domain_topic = ANY(ws.domains))
             )
             OR
-            -- Workflow step domains overlap with agent's domains
+            -- Agent owns the orchestrator domain
             EXISTS (
-                SELECT 1 FROM workflow_steps ws3
-                JOIN agent_domains ad ON ad.agent_id = v_agent_id
-                WHERE ws3.workflow_id = w.id
-                  AND (ad.domain_topic = ws3.domain OR ad.domain_topic = ANY(ws3.domains))
+                SELECT 1 FROM agent_domains ad
+                WHERE ad.agent_id = v_agent_id
+                  AND ad.domain_topic = w.orchestrator_domain
             )
           )
+        GROUP BY w.id, w.name, w.description
 
         UNION ALL
 
-        -- 5. AGENT-specific (lowest priority)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'agent'::TEXT AS source, 5 AS priority
         FROM agent_bootstrap_context abc
@@ -959,7 +941,7 @@ ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
 -- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Returns bootstrap context: UNIVERSAL + GLOBAL + DOMAIN + dynamic workflows (from workflows/workflow_steps) + AGENT. Issue #95.';
+COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Returns bootstrap context: UNIVERSAL + GLOBAL + DOMAIN + dynamic workflows (step domains + orchestrator domain) + AGENT. Issues #95, #97, #99.';
 
 
 --
@@ -5931,7 +5913,7 @@ CREATE TABLE public.workflows (
     status text DEFAULT 'active'::text,
     tags text[] DEFAULT '{}'::text[],
     department text,
-    orchestrator_agent_id integer,
+    orchestrator_domain text,
     CONSTRAINT workflows_status_check CHECK ((status = ANY (ARRAY['active'::text, 'deprecated'::text, 'archived'::text])))
 );
 
@@ -5943,13 +5925,6 @@ ALTER TABLE public.workflows OWNER TO nova;
 --
 
 COMMENT ON TABLE public.workflows IS 'Defines multi-agent workflows with ordered steps and deliverable handoffs';
-
-
---
--- Name: COLUMN workflows.orchestrator_agent_id; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.workflows.orchestrator_agent_id IS 'Agent that orchestrates/manages this workflow. Used by get_agent_bootstrap() to include workflows in orchestrator context.';
 
 
 --
@@ -8651,14 +8626,6 @@ ALTER TABLE ONLY public.workflow_steps
 
 
 --
--- Name: workflows workflows_orchestrator_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.workflows
-    ADD CONSTRAINT workflows_orchestrator_agent_id_fkey FOREIGN KEY (orchestrator_agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
-
-
---
 -- Name: works works_parent_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: erato
 --
 
@@ -10128,5 +10095,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict q9Q3cAtb7I1VqutyucNx0ZK49Q5X3b5K4vSMxW9BY19JzDy3Fy8a9mN9UpUckOf
+\unrestrict 4EUatNFIkMntIrkl7gM8wpruN479bDhbkhHTE9e7ohjShGcfQaRq34BXrjC1OaB
 
