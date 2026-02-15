@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict iqp9TpLvwN2gtBDjjiIj9VZi96rnkSJaZID5aeRvyiMFJWfUSax2eoCQxlJ7GW6
+\restrict ogkXvyBZzxdn4uhAciRKEykWfduyqr5gqODHUKrjylLVUU1ZOSeVW6WBvgfhc4O
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -588,7 +588,7 @@ ALTER FUNCTION public.chat(p_message text, p_sender character varying) OWNER TO 
 CREATE FUNCTION public.claim_coder_issue(issue_id integer) RETURNS boolean
     LANGUAGE sql
     AS $$
-  UPDATE coder_issue_queue
+  UPDATE git_issue_queue
   SET status = 'implementing', started_at = NOW()
   WHERE id = issue_id AND status = 'tests_approved'
   RETURNING TRUE;
@@ -925,7 +925,7 @@ CREATE FUNCTION public.get_next_coder_issue() RETURNS TABLE(id integer, repo tex
     LANGUAGE sql
     AS $$
   SELECT id, repo, issue_number, title
-  FROM coder_issue_queue
+  FROM git_issue_queue
   WHERE status = 'tests_approved'
     AND NOT should_skip_issue(COALESCE(labels, '{}'))
   ORDER BY priority DESC, created_at
@@ -959,8 +959,8 @@ ALTER FUNCTION public.get_ralph_state(p_series_id text) OWNER TO nova;
 CREATE FUNCTION public.link_github_issue(p_queue_id integer, p_github_issue integer) RETURNS void
     LANGUAGE sql
     AS $$
-  UPDATE coder_issue_queue 
-  SET issue_number = p_github_issue 
+  UPDATE git_issue_queue
+  SET issue_number = p_github_issue
   WHERE id = p_queue_id;
 $$;
 
@@ -1206,19 +1206,14 @@ CREATE FUNCTION public.notify_workflow_step_change() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    -- Only notify on status changes that might need agent action
-    IF OLD.status IS DISTINCT FROM NEW.status THEN
-        PERFORM pg_notify('workflow_step', json_build_object(
-            'id', NEW.id,
-            'workflow_id', NEW.workflow_id,
-            'step_number', NEW.step_number,
-            'name', NEW.name,
-            'old_status', OLD.status,
-            'new_status', NEW.status,
-            'domain', NEW.domain,
-            'assigned_agent', NEW.assigned_agent
-        )::text);
-    END IF;
+    PERFORM pg_notify('workflow_step', json_build_object(
+        'id', NEW.id,
+        'workflow_id', NEW.workflow_id,
+        'step_order', NEW.step_order,
+        'agent_id', NEW.agent_id,
+        'description', NEW.description,
+        'domain', NEW.domain
+    )::text);
     RETURN NEW;
 END;
 $$;
@@ -1261,28 +1256,23 @@ DECLARE
   v_issue_number INTEGER;
   v_queue_id INTEGER;
 BEGIN
-  -- Generate title
   v_title := 'Test failure: ' || p_test_name;
-  
-  -- For now, use negative numbers as placeholder until GitHub issue is created
-  -- The actual issue creation happens via gh CLI externally
-  v_issue_number := -1 * (SELECT COALESCE(MAX(ABS(issue_number)), 0) + 1 
-                          FROM coder_issue_queue 
+
+  v_issue_number := -1 * (SELECT COALESCE(MAX(ABS(issue_number)), 0) + 1
+                          FROM git_issue_queue
                           WHERE repo = p_repo AND issue_number < 0);
-  
-  -- Insert into queue
-  INSERT INTO coder_issue_queue (
-    repo, issue_number, title, priority, status, source, 
+
+  INSERT INTO git_issue_queue (
+    repo, issue_number, title, priority, status, source,
     parent_issue_id, error_message
   ) VALUES (
     p_repo, v_issue_number, v_title, p_priority, 'pending_tests',
-    'test_failure', 
-    (SELECT id FROM coder_issue_queue WHERE repo = p_repo AND issue_number = p_parent_issue),
+    'test_failure',
+    (SELECT id FROM git_issue_queue WHERE repo = p_repo AND issue_number = p_parent_issue),
     p_error_message
   )
   RETURNING id INTO v_queue_id;
-  
-  -- Notify for external processing (gh issue create)
+
   PERFORM pg_notify('test_failure', json_build_object(
     'queue_id', v_queue_id,
     'repo', p_repo,
@@ -1290,7 +1280,7 @@ BEGIN
     'test_name', p_test_name,
     'error', LEFT(p_error_message, 500)
   )::text);
-  
+
   RETURN v_queue_id;
 END;
 $$;
@@ -1322,16 +1312,13 @@ DECLARE
   v_query_text TEXT;
 BEGIN
   v_title := 'Test failure: ' || p_test_name;
-  
-  -- Get parent issue title
-  SELECT title INTO v_parent_title 
-  FROM coder_issue_queue 
+
+  SELECT title INTO v_parent_title
+  FROM git_issue_queue
   WHERE repo = p_repo AND issue_number = p_parent_issue;
-  
-  -- Build query for semantic search
+
   v_query_text := p_test_name || ' ' || COALESCE(p_test_file, '') || ' ' || p_error_message;
-  
-  -- Get semantic context (top related memories)
+
   SELECT jsonb_agg(jsonb_build_object(
     'source_type', source_type,
     'source_id', source_id,
@@ -1346,8 +1333,7 @@ BEGIN
        OR content ILIKE '%' || COALESCE(p_test_file, 'NOMATCH') || '%'
     LIMIT 5
   ) relevant;
-  
-  -- Build full context
+
   v_full_context := p_context || jsonb_build_object(
     'parent_title', v_parent_title,
     'test_file', p_test_file,
@@ -1355,23 +1341,22 @@ BEGIN
     'queued_at', NOW(),
     'semantic_context', COALESCE(v_semantic_context, '[]'::jsonb)
   );
-  
-  -- Placeholder issue number
-  v_issue_number := -1 * (SELECT COALESCE(MAX(ABS(issue_number)), 0) + 1 
-                          FROM coder_issue_queue 
+
+  v_issue_number := -1 * (SELECT COALESCE(MAX(ABS(issue_number)), 0) + 1
+                          FROM git_issue_queue
                           WHERE repo = p_repo AND issue_number < 0);
-  
-  INSERT INTO coder_issue_queue (
-    repo, issue_number, title, priority, status, source, 
+
+  INSERT INTO git_issue_queue (
+    repo, issue_number, title, priority, status, source,
     parent_issue_id, error_message, test_file, code_files, context
   ) VALUES (
     p_repo, v_issue_number, v_title, p_priority, 'pending_tests',
-    'test_failure', 
-    (SELECT id FROM coder_issue_queue WHERE repo = p_repo AND issue_number = p_parent_issue),
+    'test_failure',
+    (SELECT id FROM git_issue_queue WHERE repo = p_repo AND issue_number = p_parent_issue),
     p_error_message, p_test_file, p_code_files, v_full_context
   )
   RETURNING id INTO v_queue_id;
-  
+
   PERFORM pg_notify('test_failure', json_build_object(
     'queue_id', v_queue_id,
     'repo', p_repo,
@@ -1383,7 +1368,7 @@ BEGIN
     'error', LEFT(p_error_message, 1000),
     'context', v_full_context
   )::text);
-  
+
   RETURN v_queue_id;
 END;
 $$;
@@ -2908,76 +2893,6 @@ ALTER SEQUENCE public.certificates_id_seq OWNED BY public.certificates.id;
 
 
 --
--- Name: coder_issue_queue; Type: TABLE; Schema: public; Owner: nova
---
-
-CREATE TABLE public.coder_issue_queue (
-    id integer NOT NULL,
-    repo text NOT NULL,
-    issue_number integer NOT NULL,
-    title text,
-    priority integer DEFAULT 5,
-    status text DEFAULT 'pending_tests'::text,
-    source text DEFAULT 'github'::text,
-    parent_issue_id integer,
-    labels text[],
-    created_at timestamp with time zone DEFAULT now(),
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
-    error_message text,
-    context jsonb DEFAULT '{}'::jsonb,
-    test_file text,
-    code_files text[],
-    CONSTRAINT coder_issue_queue_status_check CHECK ((status = ANY (ARRAY['pending_tests'::text, 'tests_approved'::text, 'implementing'::text, 'testing'::text, 'done'::text, 'failed'::text, 'paused'::text, 'blocked'::text])))
-);
-
-
-ALTER TABLE public.coder_issue_queue OWNER TO nova;
-
---
--- Name: TABLE coder_issue_queue; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON TABLE public.coder_issue_queue IS 'Issue queue for Coder agent. NOTIFY triggers dispatch work automatically.';
-
-
---
--- Name: COLUMN coder_issue_queue.status; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.coder_issue_queue.status IS 'pending_tests→tests_approved→implementing→testing→done/failed';
-
-
---
--- Name: COLUMN coder_issue_queue.labels; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON COLUMN public.coder_issue_queue.labels IS 'GitHub labels. Gem skips issues with paused, blocked, on-hold, wontfix labels.';
-
-
---
--- Name: coder_issue_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
---
-
-CREATE SEQUENCE public.coder_issue_queue_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.coder_issue_queue_id_seq OWNER TO nova;
-
---
--- Name: coder_issue_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
---
-
-ALTER SEQUENCE public.coder_issue_queue_id_seq OWNED BY public.coder_issue_queue.id;
-
-
---
 -- Name: conversations; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -3831,6 +3746,76 @@ ALTER SEQUENCE public.gambling_logs_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.gambling_logs_id_seq OWNED BY public.gambling_logs.id;
+
+
+--
+-- Name: git_issue_queue; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.git_issue_queue (
+    id integer NOT NULL,
+    repo text NOT NULL,
+    issue_number integer NOT NULL,
+    title text,
+    priority integer DEFAULT 5,
+    status text DEFAULT 'pending_tests'::text,
+    source text DEFAULT 'github'::text,
+    parent_issue_id integer,
+    labels text[],
+    created_at timestamp with time zone DEFAULT now(),
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    error_message text,
+    context jsonb DEFAULT '{}'::jsonb,
+    test_file text,
+    code_files text[],
+    CONSTRAINT coder_issue_queue_status_check CHECK ((status = ANY (ARRAY['pending_tests'::text, 'tests_approved'::text, 'implementing'::text, 'testing'::text, 'done'::text, 'failed'::text, 'paused'::text, 'blocked'::text])))
+);
+
+
+ALTER TABLE public.git_issue_queue OWNER TO nova;
+
+--
+-- Name: TABLE git_issue_queue; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.git_issue_queue IS 'Issue queue for git-based workflows. NOTIFY triggers dispatch work automatically.';
+
+
+--
+-- Name: COLUMN git_issue_queue.status; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.git_issue_queue.status IS 'pending_tests→tests_approved→implementing→testing→done/failed';
+
+
+--
+-- Name: COLUMN git_issue_queue.labels; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.git_issue_queue.labels IS 'GitHub labels. Gem skips issues with paused, blocked, on-hold, wontfix labels.';
+
+
+--
+-- Name: git_issue_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.git_issue_queue_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.git_issue_queue_id_seq OWNER TO nova;
+
+--
+-- Name: git_issue_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.git_issue_queue_id_seq OWNED BY public.git_issue_queue.id;
 
 
 --
@@ -5606,7 +5591,7 @@ CREATE VIEW public.v_pending_test_failures AS
     title,
     error_message,
     created_at
-   FROM public.coder_issue_queue
+   FROM public.git_issue_queue
   WHERE ((source = 'test_failure'::text) AND (issue_number < 0))
   ORDER BY created_at;
 
@@ -6216,13 +6201,6 @@ ALTER TABLE ONLY public.certificates ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- Name: coder_issue_queue id; Type: DEFAULT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.coder_issue_queue ALTER COLUMN id SET DEFAULT nextval('public.coder_issue_queue_id_seq'::regclass);
-
-
---
 -- Name: conversations id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -6290,6 +6268,13 @@ ALTER TABLE ONLY public.gambling_entries ALTER COLUMN id SET DEFAULT nextval('pu
 --
 
 ALTER TABLE ONLY public.gambling_logs ALTER COLUMN id SET DEFAULT nextval('public.gambling_logs_id_seq'::regclass);
+
+
+--
+-- Name: git_issue_queue id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.git_issue_queue ALTER COLUMN id SET DEFAULT nextval('public.git_issue_queue_id_seq'::regclass);
 
 
 --
@@ -6683,18 +6668,18 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: coder_issue_queue coder_issue_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: git_issue_queue coder_issue_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
-ALTER TABLE ONLY public.coder_issue_queue
+ALTER TABLE ONLY public.git_issue_queue
     ADD CONSTRAINT coder_issue_queue_pkey PRIMARY KEY (id);
 
 
 --
--- Name: coder_issue_queue coder_issue_queue_repo_issue_number_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: git_issue_queue coder_issue_queue_repo_issue_number_key; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
-ALTER TABLE ONLY public.coder_issue_queue
+ALTER TABLE ONLY public.git_issue_queue
     ADD CONSTRAINT coder_issue_queue_repo_issue_number_key UNIQUE (repo, issue_number);
 
 
@@ -7414,14 +7399,14 @@ CREATE INDEX idx_chat_processed_agent ON public.agent_chat_processed USING btree
 -- Name: idx_coder_queue_priority; Type: INDEX; Schema: public; Owner: nova
 --
 
-CREATE INDEX idx_coder_queue_priority ON public.coder_issue_queue USING btree (priority DESC, created_at);
+CREATE INDEX idx_coder_queue_priority ON public.git_issue_queue USING btree (priority DESC, created_at);
 
 
 --
 -- Name: idx_coder_queue_status; Type: INDEX; Schema: public; Owner: nova
 --
 
-CREATE INDEX idx_coder_queue_status ON public.coder_issue_queue USING btree (status);
+CREATE INDEX idx_coder_queue_status ON public.git_issue_queue USING btree (status);
 
 
 --
@@ -8175,10 +8160,10 @@ CREATE TRIGGER audit_agent_bootstrap_context AFTER INSERT OR DELETE OR UPDATE ON
 
 
 --
--- Name: coder_issue_queue coder_queue_notify; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: git_issue_queue coder_queue_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
-CREATE TRIGGER coder_queue_notify AFTER INSERT OR UPDATE ON public.coder_issue_queue FOR EACH ROW EXECUTE FUNCTION public.notify_coder_queue_change();
+CREATE TRIGGER coder_queue_notify AFTER INSERT OR UPDATE ON public.git_issue_queue FOR EACH ROW EXECUTE FUNCTION public.notify_coder_queue_change();
 
 
 --
@@ -8404,11 +8389,11 @@ ALTER TABLE ONLY public.certificates
 
 
 --
--- Name: coder_issue_queue coder_issue_queue_parent_issue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: git_issue_queue coder_issue_queue_parent_issue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
 --
 
-ALTER TABLE ONLY public.coder_issue_queue
-    ADD CONSTRAINT coder_issue_queue_parent_issue_id_fkey FOREIGN KEY (parent_issue_id) REFERENCES public.coder_issue_queue(id);
+ALTER TABLE ONLY public.git_issue_queue
+    ADD CONSTRAINT coder_issue_queue_parent_issue_id_fkey FOREIGN KEY (parent_issue_id) REFERENCES public.git_issue_queue(id);
 
 
 --
@@ -8838,6 +8823,7 @@ GRANT SELECT ON TABLE public.agent_actions TO PUBLIC;
 --
 
 GRANT ALL ON SEQUENCE public.agent_actions_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.agent_actions_id_seq TO newhart;
 
 
 --
@@ -8848,6 +8834,13 @@ REVOKE ALL ON TABLE public.agent_bootstrap_context FROM nova;
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_bootstrap_context TO nova;
 GRANT ALL ON TABLE public.agent_bootstrap_context TO newhart;
 GRANT SELECT ON TABLE public.agent_bootstrap_context TO PUBLIC;
+
+
+--
+-- Name: SEQUENCE agent_bootstrap_context_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.agent_bootstrap_context_id_seq TO newhart;
 
 
 --
@@ -8923,6 +8916,7 @@ GRANT SELECT ON TABLE public.agent_domains TO PUBLIC;
 --
 
 GRANT ALL ON SEQUENCE public.agent_domains_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.agent_domains_id_seq TO newhart;
 
 
 --
@@ -8967,6 +8961,14 @@ GRANT ALL ON TABLE public.agent_modifications TO newhart;
 --
 
 GRANT ALL ON SEQUENCE public.agent_modifications_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.agent_modifications_id_seq TO newhart;
+
+
+--
+-- Name: SEQUENCE agent_spawns_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.agent_spawns_id_seq TO newhart;
 
 
 --
@@ -9034,6 +9036,7 @@ GRANT ALL ON TABLE public.artwork TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.artwork_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.artwork_id_seq TO newhart;
 
 
 --
@@ -9062,6 +9065,13 @@ GRANT ALL ON TABLE public.bootstrap_context_agents TO newhart;
 
 
 --
+-- Name: SEQUENCE bootstrap_context_agents_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_agents_id_seq TO newhart;
+
+
+--
 -- Name: TABLE bootstrap_context_audit; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -9072,6 +9082,13 @@ GRANT ALL ON TABLE public.bootstrap_context_audit TO newhart;
 
 
 --
+-- Name: SEQUENCE bootstrap_context_audit_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_audit_id_seq TO newhart;
+
+
+--
 -- Name: TABLE bootstrap_context_config; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -9079,6 +9096,20 @@ REVOKE ALL ON TABLE public.bootstrap_context_config FROM nova;
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.bootstrap_context_config TO nova;
 GRANT ALL ON TABLE public.bootstrap_context_config TO newhart;
 GRANT SELECT ON TABLE public.bootstrap_context_config TO PUBLIC;
+
+
+--
+-- Name: SEQUENCE bootstrap_context_universal_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_universal_id_seq TO newhart;
+
+
+--
+-- Name: SEQUENCE bootstrap_context_universal_id_seq1; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_universal_id_seq1 TO newhart;
 
 
 --
@@ -9101,6 +9132,7 @@ GRANT ALL ON TABLE public.certificates TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.certificates_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.certificates_id_seq TO newhart;
 
 
 --
@@ -9123,6 +9155,7 @@ GRANT ALL ON TABLE public.conversations TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.conversations_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.conversations_id_seq TO newhart;
 
 
 --
@@ -9167,6 +9200,7 @@ GRANT ALL ON TABLE public.entities TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.entities_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.entities_id_seq TO newhart;
 
 
 --
@@ -9181,6 +9215,7 @@ GRANT ALL ON TABLE public.entity_fact_conflicts TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.entity_fact_conflicts_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.entity_fact_conflicts_id_seq TO newhart;
 
 
 --
@@ -9195,6 +9230,7 @@ GRANT ALL ON TABLE public.entity_facts_archive TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.entity_facts_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.entity_facts_id_seq TO newhart;
 
 
 --
@@ -9217,6 +9253,7 @@ GRANT ALL ON TABLE public.entity_relationships TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.entity_relationships_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.entity_relationships_id_seq TO newhart;
 
 
 --
@@ -9284,6 +9321,7 @@ GRANT ALL ON TABLE public.events TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.events_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.events_id_seq TO newhart;
 
 
 --
@@ -9291,6 +9329,20 @@ GRANT ALL ON SEQUENCE public.events_id_seq TO "nova-staging";
 --
 
 GRANT ALL ON TABLE public.events_archive TO "nova-staging";
+
+
+--
+-- Name: SEQUENCE extraction_metrics_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.extraction_metrics_id_seq TO newhart;
+
+
+--
+-- Name: SEQUENCE fact_change_log_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.fact_change_log_id_seq TO newhart;
 
 
 --
@@ -9313,6 +9365,7 @@ GRANT ALL ON TABLE public.gambling_entries TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.gambling_entries_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.gambling_entries_id_seq TO newhart;
 
 
 --
@@ -9335,6 +9388,14 @@ GRANT ALL ON TABLE public.gambling_logs TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.gambling_logs_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.gambling_logs_id_seq TO newhart;
+
+
+--
+-- Name: SEQUENCE git_issue_queue_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.git_issue_queue_id_seq TO newhart;
 
 
 --
@@ -9380,6 +9441,7 @@ GRANT ALL ON TABLE public.lessons TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.lessons_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.lessons_id_seq TO newhart;
 
 
 --
@@ -9409,6 +9471,7 @@ GRANT ALL ON TABLE public.media_consumed TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.media_consumed_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.media_consumed_id_seq TO newhart;
 
 
 --
@@ -9431,6 +9494,7 @@ GRANT ALL ON TABLE public.media_queue TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.media_queue_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.media_queue_id_seq TO newhart;
 
 
 --
@@ -9453,6 +9517,7 @@ GRANT ALL ON TABLE public.media_tags TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.media_tags_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.media_tags_id_seq TO newhart;
 
 
 --
@@ -9490,6 +9555,7 @@ GRANT ALL ON TABLE public.memory_embeddings_archive TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.models_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.models_id_seq TO newhart;
 
 
 --
@@ -9504,6 +9570,7 @@ GRANT ALL ON TABLE public.music_analysis TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.music_analysis_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.music_analysis_id_seq TO newhart;
 
 
 --
@@ -9518,6 +9585,7 @@ GRANT ALL ON TABLE public.music_library TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.music_library_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.music_library_id_seq TO newhart;
 
 
 --
@@ -9540,6 +9608,7 @@ GRANT ALL ON TABLE public.place_properties TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.place_properties_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.place_properties_id_seq TO newhart;
 
 
 --
@@ -9562,6 +9631,7 @@ GRANT ALL ON TABLE public.places TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.places_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.places_id_seq TO newhart;
 
 
 --
@@ -9584,6 +9654,7 @@ GRANT ALL ON TABLE public.portfolio_positions TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.portfolio_positions_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.portfolio_positions_id_seq TO newhart;
 
 
 --
@@ -9606,6 +9677,7 @@ GRANT ALL ON TABLE public.portfolio_snapshots TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.portfolio_snapshots_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.portfolio_snapshots_id_seq TO newhart;
 
 
 --
@@ -9628,6 +9700,7 @@ GRANT ALL ON TABLE public.positions TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.positions_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.positions_id_seq TO newhart;
 
 
 --
@@ -9650,6 +9723,7 @@ GRANT ALL ON TABLE public.preferences TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.preferences_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.preferences_id_seq TO newhart;
 
 
 --
@@ -9702,6 +9776,7 @@ GRANT ALL ON TABLE public.project_tasks TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.project_tasks_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.project_tasks_id_seq TO newhart;
 
 
 --
@@ -9724,6 +9799,7 @@ GRANT ALL ON TABLE public.projects TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.projects_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.projects_id_seq TO newhart;
 
 
 --
@@ -9739,6 +9815,7 @@ GRANT ALL ON TABLE public.publications TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.publications_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.publications_id_seq TO newhart;
 
 
 --
@@ -9753,6 +9830,7 @@ GRANT ALL ON TABLE public.ralph_sessions TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.ralph_sessions_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.ralph_sessions_id_seq TO newhart;
 
 
 --
@@ -9768,6 +9846,7 @@ GRANT ALL ON TABLE public.tags TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.tags_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.tags_id_seq TO newhart;
 
 
 --
@@ -9790,6 +9869,7 @@ GRANT ALL ON TABLE public.tasks TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.tasks_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.tasks_id_seq TO newhart;
 
 
 --
@@ -9804,6 +9884,7 @@ GRANT ALL ON TABLE public.unsolved_problems TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.unsolved_problems_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.unsolved_problems_id_seq TO newhart;
 
 
 --
@@ -10043,6 +10124,7 @@ GRANT ALL ON TABLE public.vehicles TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.vehicles_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.vehicles_id_seq TO newhart;
 
 
 --
@@ -10065,6 +10147,7 @@ GRANT ALL ON TABLE public.vocabulary TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.vocabulary_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.vocabulary_id_seq TO newhart;
 
 
 --
@@ -10123,6 +10206,7 @@ GRANT ALL ON TABLE public.works TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.works_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.works_id_seq TO newhart;
 
 
 --
@@ -10154,5 +10238,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict iqp9TpLvwN2gtBDjjiIj9VZi96rnkSJaZID5aeRvyiMFJWfUSax2eoCQxlJ7GW6
+\unrestrict ogkXvyBZzxdn4uhAciRKEykWfduyqr5gqODHUKrjylLVUU1ZOSeVW6WBvgfhc4O
 
