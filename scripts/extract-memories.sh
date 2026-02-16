@@ -9,10 +9,18 @@ SENDER="${SENDER_NAME:-unknown}"
 SENDER_ID="${SENDER_ID:-}"
 IS_GROUP="${IS_GROUP:-false}"
 
-# API key must be set in environment (inherited from OpenClaw)
+# Read Anthropic API key from OpenClaw provider config
+get_provider_key() {
+  local provider="$1"
+  local config="${HOME}/.openclaw/openclaw.json"
+  if [ ! -f "$config" ]; then echo ""; return; fi
+  jq -r ".models.providers.${provider}.apiKey // empty" "$config" 2>/dev/null
+}
+
+ANTHROPIC_API_KEY=$(get_provider_key anthropic)
 if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo "ERROR: ANTHROPIC_API_KEY not set in environment" >&2
-    echo "This script should be run from OpenClaw hooks which inherit the API key" >&2
+    echo "ERROR: Anthropic API key not found in provider config" >&2
+    echo "Expected: models.providers.anthropic.apiKey in ~/.openclaw/openclaw.json" >&2
     exit 1
 fi
 
