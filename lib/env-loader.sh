@@ -30,7 +30,7 @@ load_openclaw_env() {
 
   # Extract env.vars keys
   local keys
-  keys=$(echo "$json" | jq -r '.env.vars // {} | keys[]' 2>/dev/null) || return 0
+  keys=$(echo "$json" | jq -r '.env.vars | if type == "object" then keys[] else empty end' 2>/dev/null) || return 0
 
   local key val
   while IFS= read -r key; do
