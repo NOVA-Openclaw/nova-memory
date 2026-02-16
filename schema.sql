@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7cGRJocPzZUsUZuaL18kcB7CWEEFwDMJ2UgKBNhZiswWLhrJMAsPlvrKwW2flUx
+\restrict XlY291dugAZZJfaMNdu8xXLwI9HtMYb7G9yO9yv6iay6toqCij0CtHBXOWeqAsz
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -808,15 +808,30 @@ ALTER FUNCTION public.delete_universal_context(p_file_key text) OWNER TO nova;
 CREATE FUNCTION public.embed_chat_message() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    content_text TEXT;
+    content_hash_val VARCHAR(64);
 BEGIN
-    -- Insert into memory_embeddings for semantic search
-    -- (embedding will be null until batch embedding runs)
-    INSERT INTO memory_embeddings (source_type, source_id, content)
+    -- Prepare content for embedding
+    content_text := NEW.sender || ': ' || NEW.message;
+    content_hash_val := encode(sha256(content_text::bytea), 'hex');
+    
+    -- Insert embedding record (embedding vector will be populated by external process)
+    -- This just creates a placeholder that external embedding service can process
+    INSERT INTO memory_embeddings (content_hash, content, metadata, embedding)
     VALUES (
-        'agent_chat',
-        NEW.id::text,
-        NEW.sender || ' in #' || NEW.channel || ': ' || NEW.message
-    );
+        content_hash_val,
+        content_text,
+        json_build_object(
+            'chat_id', NEW.id,
+            'sender', NEW.sender,
+            'channel', NEW.channel,
+            'created_at', NEW.created_at
+        ),
+        NULL  -- Will be updated by embedding service
+    )
+    ON CONFLICT (content_hash) DO NOTHING; -- Skip if already exists
+    
     RETURN NEW;
 END;
 $$;
@@ -8049,13 +8064,6 @@ CREATE OR REPLACE VIEW public.v_media_with_tags AS
 
 
 --
--- Name: agent_chat agent_chat_notify; Type: TRIGGER; Schema: public; Owner: nova
---
-
-CREATE TRIGGER agent_chat_notify AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
-
-
---
 -- Name: agents agents_delegation_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -10120,5 +10128,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7cGRJocPzZUsUZuaL18kcB7CWEEFwDMJ2UgKBNhZiswWLhrJMAsPlvrKwW2flUx
+\unrestrict XlY291dugAZZJfaMNdu8xXLwI9HtMYb7G9yO9yv6iay6toqCij0CtHBXOWeqAsz
 
