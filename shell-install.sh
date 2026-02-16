@@ -120,4 +120,6 @@ else
 fi
 
 echo ""
-echo "Done. Next: run agent-install.sh to create the database and apply schema."
+echo "Config setup complete. Running agent-install.sh..."
+echo ""
+exec "$SCRIPT_DIR/agent-install.sh" "$@"
