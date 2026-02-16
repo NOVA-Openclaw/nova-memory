@@ -5,6 +5,10 @@
 
 set -e
 
+# Load centralized PostgreSQL configuration
+source "$(dirname "$0")/../lib/pg-env.sh"
+load_pg_env
+
 # Read JSON from stdin or argument
 if [ -n "$1" ]; then
     JSON_DATA="$1"
@@ -23,10 +27,6 @@ if ! echo "$JSON_DATA" | jq . >/dev/null 2>&1; then
     exit 1
 fi
 
-# Database configuration - use dynamic naming based on OS user
-DB_USER="${PGUSER:-$(whoami)}"
-DB="${DB_USER//-/_}_memory"
-DB_HOST="localhost"
 
 # Function to safely escape SQL strings
 sql_escape() {
@@ -40,7 +40,7 @@ fact_exists() {
     local value="$3"
     
     # Check for exact or similar match
-    local count=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+    local count=$(psql -t -A -c "
         SELECT COUNT(*) FROM entity_facts ef
         JOIN entities e ON e.id = ef.entity_id
         WHERE (LOWER(e.name) = LOWER('$(sql_escape "$entity_name")')
@@ -61,7 +61,7 @@ reinforce_fact() {
     local key="$2"
     local value="$3"
     
-    psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+    psql -t -A -c "
         UPDATE entity_facts ef
         SET vote_count = vote_count + 1,
             last_confirmed = NOW(),
@@ -82,7 +82,7 @@ reinforce_fact() {
 # Function to check if vocabulary word exists
 vocab_exists() {
     local word="$1"
-    local count=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+    local count=$(psql -t -A -c "
         SELECT COUNT(*) FROM vocabulary WHERE LOWER(word) = LOWER('$(sql_escape "$word")');
     " 2>/dev/null || echo "0")
     
@@ -101,7 +101,7 @@ resolve_source_entity_id() {
     
     # First try matching by sender_id (phone number) in entity_facts
     if [ -n "$sender_id" ] && [ "$sender_id" != "unknown" ]; then
-        local id_match=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+        local id_match=$(psql -t -A -c "
             SELECT DISTINCT entity_id FROM entity_facts 
             WHERE (key IN ('phone', 'has_phone_number', 'signal', 'signal_id') 
                    AND REPLACE(REPLACE(value, '-', ''), ' ', '') LIKE '%$(echo "$sender_id" | tr -d '+-  ')%')
@@ -115,7 +115,7 @@ resolve_source_entity_id() {
     fi
     
     # Fall back to name/nickname matching
-    psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+    psql -t -A -c "
         SELECT id FROM entities 
         WHERE LOWER(name) = LOWER('$(sql_escape "$source_name")')
            OR LOWER(full_name) = LOWER('$(sql_escape "$source_name")')
@@ -127,7 +127,7 @@ resolve_source_entity_id() {
 # Function to find existing entity by name or nickname
 find_entity() {
     local search_name="$1"
-    psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+    psql -t -A -c "
         SELECT name FROM entities 
         WHERE LOWER(name) = LOWER('$(sql_escape "$search_name")')
            OR LOWER(full_name) = LOWER('$(sql_escape "$search_name")')
@@ -149,13 +149,13 @@ SKIPPED_COUNT=0
 if [ -n "$SENDER_NAME" ] && [ "$SENDER_NAME" != "null" ] && [ "$SENDER_NAME" != "unknown" ]; then
     existing=$(find_entity "$SENDER_NAME")
     if [ -z "$existing" ]; then
-        psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q -c "
+        psql -q -c "
             INSERT INTO entities (name, type) VALUES ('$(sql_escape "$SENDER_NAME")', 'person')
             ON CONFLICT DO NOTHING;
         " 2>/dev/null
         # Store phone number as fact if available
         if [ -n "$SENDER_ID" ] && [ "$SENDER_ID" != "unknown" ]; then
-            psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q -c "
+            psql -q -c "
                 INSERT INTO entity_facts (entity_id, key, value, source)
                 SELECT id, 'phone', '$(sql_escape "$SENDER_ID")', 'auto-extracted'
                 FROM entities WHERE LOWER(name) = LOWER('$(sql_escape "$SENDER_NAME")')
@@ -174,9 +174,9 @@ echo "$JSON_DATA" | jq -c '.entities[]? // empty' | while read -r entity; do
     
     case "$type" in
         restaurant|cafe|bar|venue) 
-            existing=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "SELECT name FROM places WHERE LOWER(name) = LOWER('$(sql_escape "$name")') LIMIT 1;" 2>/dev/null)
+            existing=$(psql -t -A -c "SELECT name FROM places WHERE LOWER(name) = LOWER('$(sql_escape "$name")') LIMIT 1;" 2>/dev/null)
             if [ -z "$existing" ]; then
-                echo "INSERT INTO places (name, type, city) VALUES ('$(sql_escape "$name")', 'venue', '$(sql_escape "$location")') ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+                echo "INSERT INTO places (name, type, city) VALUES ('$(sql_escape "$name")', 'venue', '$(sql_escape "$location")') ON CONFLICT DO NOTHING;" | psql -q 2>/dev/null || true
                 echo "  + Place: $name (new)"
             else
                 echo "  = Place: $name (exists)"
@@ -185,7 +185,7 @@ echo "$JSON_DATA" | jq -c '.entities[]? // empty' | while read -r entity; do
         person|ai|organization)
             existing=$(find_entity "$name")
             if [ -z "$existing" ]; then
-                echo "INSERT INTO entities (name, type) VALUES ('$(sql_escape "$name")', '$type') ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+                echo "INSERT INTO entities (name, type) VALUES ('$(sql_escape "$name")', '$type') ON CONFLICT DO NOTHING;" | psql -q 2>/dev/null || true
                 echo "  + Entity: $name ($type) (new)"
             else
                 echo "  = Entity: $name -> exists as: $existing"
@@ -222,7 +222,7 @@ echo "$JSON_DATA" | jq -c '.facts[]? // empty' | while read -r fact; do
     
     echo "INSERT INTO entity_facts ($cols) SELECT $vals
           FROM entities WHERE name = '$(sql_escape "$actual_subject")'
-          ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+          ON CONFLICT DO NOTHING;" | psql -q 2>/dev/null || true
     echo "  + Fact: $actual_subject.$predicate = $value"
 done
 
@@ -256,7 +256,7 @@ echo "$JSON_DATA" | jq -c '.opinions[]? // empty' | while read -r opinion; do
     
     echo "INSERT INTO entity_facts ($cols) SELECT $vals
           FROM entities WHERE name = '$(sql_escape "$actual_holder")'
-          ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+          ON CONFLICT DO NOTHING;" | psql -q 2>/dev/null || true
     echo "  + Opinion: $actual_holder thinks '$opinion_text' about $subject"
 done
 
@@ -290,7 +290,7 @@ echo "$JSON_DATA" | jq -c '.preferences[]? // empty' | while read -r pref; do
     
     echo "INSERT INTO entity_facts ($cols) SELECT $vals
           FROM entities WHERE name = '$(sql_escape "$actual_person")'
-          ON CONFLICT DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+          ON CONFLICT DO NOTHING;" | psql -q 2>/dev/null || true
     echo "  + Preference: $actual_person prefers $preference"
 done
 
@@ -309,9 +309,9 @@ echo "$JSON_DATA" | jq -c '.vocabulary[]? // empty' | while read -r vocab; do
     misheard_pg=$(echo "$misheard_raw" | jq -r 'if type == "array" and length > 0 then "ARRAY[" + (map("'\''" + . + "'\''") | join(",")) + "]" else "NULL" end')
     
     if [ "$misheard_pg" != "NULL" ] && [ -n "$misheard_pg" ]; then
-        echo "INSERT INTO vocabulary (word, category, misheard_as) VALUES ('$(sql_escape "$word")', '$(sql_escape "$category")', $misheard_pg) ON CONFLICT (word) DO UPDATE SET misheard_as = EXCLUDED.misheard_as;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+        echo "INSERT INTO vocabulary (word, category, misheard_as) VALUES ('$(sql_escape "$word")', '$(sql_escape "$category")', $misheard_pg) ON CONFLICT (word) DO UPDATE SET misheard_as = EXCLUDED.misheard_as;" | psql -q 2>/dev/null || true
     else
-        echo "INSERT INTO vocabulary (word, category) VALUES ('$(sql_escape "$word")', '$(sql_escape "$category")') ON CONFLICT (word) DO NOTHING;" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -q 2>/dev/null || true
+        echo "INSERT INTO vocabulary (word, category) VALUES ('$(sql_escape "$word")', '$(sql_escape "$category")') ON CONFLICT (word) DO NOTHING;" | psql -q 2>/dev/null || true
     fi
     
     echo "  + Vocabulary (NEW): $word ($category)"

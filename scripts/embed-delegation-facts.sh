@@ -7,10 +7,10 @@
 
 set -e
 
-# Database configuration - use dynamic naming based on OS user
-DB_USER="${PGUSER:-$(whoami)}"
-DB_NAME="${DB_USER//-/_}_memory"
-DB_HOST="localhost"
+# Load centralized PostgreSQL configuration
+source "$(dirname "$0")/../lib/pg-env.sh"
+load_pg_env
+
 
 # API key must be set in environment (inherited from OpenClaw)
 if [ -z "$OPENAI_API_KEY" ]; then
@@ -38,7 +38,7 @@ ORDER BY ef.confidence DESC, ef.id;
 "
 
 # Export as JSON
-FACTS=$(psql -h $DB_HOST -U $DB_USER -d $DB_NAME -t -A -F'|' -c "$QUERY" 2>/dev/null)
+FACTS=$(psql -t -A -F'|' -c "$QUERY" 2>/dev/null)
 
 if [ -z "$FACTS" ]; then
     echo "✅ All delegation facts already embedded"
@@ -91,7 +91,7 @@ echo "$FACTS" | while IFS='|' read -r fact_id key value confidence source_id; do
     fi
     
     # Insert into memory_embeddings
-    psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "
+    psql -c "
         INSERT INTO memory_embeddings (source_type, source_id, content, embedding, confidence)
         VALUES (
             'entity_fact',

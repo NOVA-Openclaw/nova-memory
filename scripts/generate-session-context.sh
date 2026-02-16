@@ -5,6 +5,10 @@
 
 set -e
 
+# Load centralized PostgreSQL configuration
+source "$(dirname "$0")/../lib/pg-env.sh"
+load_pg_env
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_FILE="${1:-/tmp/session-context.md}"
 shift
@@ -20,12 +24,8 @@ if [ -z "$ENTITY_IDS" ]; then
 fi
 
 # Get participant names
-# Database configuration - use dynamic naming based on OS user
-DB_USER="${PGUSER:-$(whoami)}"
-DB="${DB_USER//-/_}_memory"
-DB_HOST="localhost"
 
-PARTICIPANT_NAMES=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t -A -c "
+PARTICIPANT_NAMES=$(psql -t -A -c "
     SELECT string_agg(name, ', ') FROM entities WHERE id IN ($ENTITY_IDS);
 " 2>/dev/null)
 

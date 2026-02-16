@@ -5,13 +5,13 @@
 
 set -e
 
+# Load centralized PostgreSQL configuration
+source "$(dirname "$0")/../lib/pg-env.sh"
+load_pg_env
+
 PARTICIPANT_IDS="${1:-}"
 QUERY="${2:-}"
 
-# Database configuration - use dynamic naming based on OS user
-DB_USER="${PGUSER:-$(whoami)}"
-DB="${DB_USER//-/_}_memory"
-DB_HOST="localhost"
 
 if [ -z "$PARTICIPANT_IDS" ]; then
     echo "Usage: get-visible-facts.sh <participant_entity_ids> [query]" >&2
@@ -41,7 +41,7 @@ else
 fi
 
 # Query with privacy filtering
-psql -h "$DB_HOST" -U "$DB_USER" -d "$DB" -t << EOF
+psql -t << EOF
 SELECT json_agg(row_to_json(t)) FROM (
     SELECT 
         e.name as entity_name,

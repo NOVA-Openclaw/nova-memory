@@ -5,6 +5,10 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Load centralized PostgreSQL configuration
+source "$SCRIPT_DIR/../lib/pg-env.sh"
+load_pg_env
+
 # Get input
 if [ -n "$1" ]; then
     INPUT="$1"
@@ -23,9 +27,6 @@ echo "=== Memory extraction with grammar parser ===" >&2
 echo "Input: ${INPUT:0:100}..." >&2
 echo "" >&2
 
-# Database configuration
-DB_USER="${PGUSER:-$(whoami)}"
-DB_NAME="${DB_USER//-/_}_memory"
 
 # Metrics tracking function
 log_metric() {
@@ -34,7 +35,7 @@ log_metric() {
     local avg_confidence="$3"
     local processing_time="$4"
     
-    psql -h localhost -U "$DB_USER" -d "$DB_NAME" -c "
+    psql -c "
         CREATE TABLE IF NOT EXISTS extraction_metrics (
             id SERIAL PRIMARY KEY,
             timestamp TIMESTAMPTZ DEFAULT NOW(),
