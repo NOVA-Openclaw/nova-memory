@@ -101,20 +101,20 @@ This means OpenClaw's `env.vars` in `openclaw.json` will always take priority. F
 
 ### Shared loader functions
 
-Language-specific helpers live in `lib/`:
+Language-specific helpers live in `lib/` (source) and are installed to `~/.openclaw/lib/` by `agent-install.sh`:
 
-| File | Language | Function | Usage |
-|------|----------|----------|-------|
-| `lib/pg-env.sh` | Bash | `load_pg_env` | `source lib/pg-env.sh && load_pg_env` |
-| `lib/pg_env.py` | Python | `load_pg_env()` | `from pg_env import load_pg_env; load_pg_env()` |
-| `lib/pg-env.ts` | TypeScript | `loadPgEnv()` | `import { loadPgEnv } from "./lib/pg-env"; loadPgEnv();` |
+| File | Language | Function | Installed location |
+|------|----------|----------|--------------------|
+| `pg-env.sh` | Bash | `load_pg_env` | `~/.openclaw/lib/pg-env.sh` |
+| `pg_env.py` | Python | `load_pg_env()` | `~/.openclaw/lib/pg_env.py` |
+| `pg-env.ts` | TypeScript | `loadPgEnv()` | `~/.openclaw/lib/pg-env.ts` |
 
 Each loader sets the standard `PG*` environment variables, which PostgreSQL client libraries (`psql`, `psycopg2`, `node-postgres`) honor natively — no custom connection logic needed.
 
 ### Install scripts
 
 - **`shell-install.sh`** — Creates the database and writes `~/.openclaw/postgres.json`
-- **`agent-install.sh`** — Reads `postgres.json` via the Bash loader; fails with guidance if the file is missing
+- **`agent-install.sh`** — Installs loader libs to `~/.openclaw/lib/`, reads `postgres.json` via the Bash loader; fails with guidance if the file is missing
 
 ## Overview
 
@@ -774,7 +774,7 @@ Combined pipeline: extract → store.
 - `ANTHROPIC_API_KEY` - Required for extraction scripts
 - `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, `PGPASSWORD` - PostgreSQL connection (see [Database Configuration](#database-configuration) above)
 
-> **Note:** All scripts use the centralized database configuration loaders (`lib/pg-env.sh` for Bash, `lib/pg_env.py` for Python). No script contains hardcoded connection logic — see #94 for the config system and #95 for the full migration.
+> **Note:** All scripts use the centralized database configuration loaders installed at `~/.openclaw/lib/` (`pg-env.sh` for Bash, `pg_env.py` for Python). No script contains hardcoded connection logic — see #94 for the config system, #95 for the full migration, and #102 for the lib install mechanism.
 
 **Multi-Agent Setup:** For shared database access with multiple agents, see [Database Aliasing Guide](docs/DATABASE-ALIASING.md).
 
