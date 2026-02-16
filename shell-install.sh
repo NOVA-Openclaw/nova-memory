@@ -151,11 +151,28 @@ else
     echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY set in environment"
 fi
 
-# Check ANTHROPIC_API_KEY (optional but common)
+# Check ANTHROPIC_API_KEY
 ANTHROPIC_KEY=$(jq -r '.env.vars.ANTHROPIC_API_KEY // empty' "$OPENCLAW_CONFIG" 2>/dev/null)
-if [ -n "$ANTHROPIC_KEY" ]; then
+if [ -z "$ANTHROPIC_KEY" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    echo -e "  ${YELLOW}⚠️  ANTHROPIC_API_KEY not found${NC}"
+    echo "      Required for memory extraction (LLM calls)."
+    echo "      Get a key from: https://console.anthropic.com/settings/keys"
+    echo ""
+    read -rp "    Enter your Anthropic API key (or press Enter to skip): " INPUT_ANTHROPIC_KEY
+    if [ -n "$INPUT_ANTHROPIC_KEY" ]; then
+        # Write to openclaw.json env.vars
+        TMP_CONFIG=$(mktemp)
+        jq --arg key "$INPUT_ANTHROPIC_KEY" '.env.vars.ANTHROPIC_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
+        mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
+        export ANTHROPIC_API_KEY="$INPUT_ANTHROPIC_KEY"
+        echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY written to $OPENCLAW_CONFIG"
+    else
+        echo -e "  ${YELLOW}⚠️  Skipped — memory extraction will not work without ANTHROPIC_API_KEY${NC}"
+    fi
+elif [ -n "$ANTHROPIC_KEY" ]; then
+    export ANTHROPIC_API_KEY="$ANTHROPIC_KEY"
     echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY found in $OPENCLAW_CONFIG"
-elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+else
     echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY set in environment"
 fi
 
