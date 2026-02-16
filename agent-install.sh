@@ -113,7 +113,7 @@ GATEWAY_RESTART_NEEDED=0
 install_lib_files() {
     local lib_src="$SCRIPT_DIR/lib"
     local lib_dst="$HOME/.openclaw/lib"
-    local files=("pg-env.sh" "pg_env.py" "pg-env.ts")
+    local files=("pg-env.sh" "pg_env.py" "pg-env.ts" "env-loader.sh" "env_loader.py")
 
     mkdir -p "$lib_dst"
     chmod 755 "$lib_dst"
