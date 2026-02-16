@@ -1129,6 +1129,23 @@ echo "Python virtual environment setup..."
 VENV_DIR="$HOME/.local/share/$USER/venv"
 REQUIRED_PACKAGES=("openai" "tiktoken" "psycopg2-binary" "pillow")
 
+# Package-to-module name mapping for packages where the import name
+# differs from the pip package name. The default is ${package//-/_}.
+declare -A PACKAGE_MODULE_MAP=(
+    ["psycopg2-binary"]="psycopg2"
+    ["pillow"]="PIL"
+)
+
+# Resolve the Python import name for a pip package
+pkg_import_name() {
+    local pkg="$1"
+    if [[ -v PACKAGE_MODULE_MAP["$pkg"] ]]; then
+        echo "${PACKAGE_MODULE_MAP[$pkg]}"
+    else
+        echo "${pkg//-/_}"
+    fi
+}
+
 # Check if Python3 is available
 if command -v python3 &> /dev/null; then
     PYTHON_VERSION=$(python3 --version | awk '{print $2}')
@@ -1183,7 +1200,8 @@ PACKAGES_INSTALLED=()
 
 for package in "${REQUIRED_PACKAGES[@]}"; do
     # Check if package is already installed in venv
-    if "$VENV_PYTHON" -c "import ${package//-/_}" &> /dev/null; then
+    mod=$(pkg_import_name "$package")
+    if "$VENV_PYTHON" -c "import $mod" &> /dev/null; then
         PACKAGES_INSTALLED+=("$package")
     else
         PACKAGES_TO_INSTALL+=("$package")
@@ -1210,7 +1228,8 @@ fi
 # Verify all packages are now available
 MISSING_PACKAGES=()
 for package in "${REQUIRED_PACKAGES[@]}"; do
-    if ! "$VENV_PYTHON" -c "import ${package//-/_}" &> /dev/null; then
+    mod=$(pkg_import_name "$package")
+    if ! "$VENV_PYTHON" -c "import $mod" &> /dev/null; then
         MISSING_PACKAGES+=("$package")
     fi
 done
