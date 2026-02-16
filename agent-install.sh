@@ -4,11 +4,40 @@
 
 set -e
 
-VERSION="2.0"
+VERSION="2.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Use current OS user for both DB user and name
+
+# Load centralized PG config (ENV → postgres.json → defaults)
+PG_CONFIG="${HOME}/.openclaw/postgres.json"
+if [ -f "$PG_CONFIG" ] && [ -r "$PG_CONFIG" ]; then
+    # Source the shared loader if available, otherwise inline
+    if [ -f "$SCRIPT_DIR/lib/pg-env.sh" ]; then
+        source "$SCRIPT_DIR/lib/pg-env.sh"
+        load_pg_env
+    else
+        # Inline fallback: read config file for any unset PG* vars
+        _pg_val() { jq -r ".$1 // empty" "$PG_CONFIG" 2>/dev/null; }
+        val=$(_pg_val host);     [ -z "${PGHOST:-}" ]     && [ -n "$val" ] && export PGHOST="$val"
+        val=$(_pg_val port);     [ -z "${PGPORT:-}" ]     && [ -n "$val" ] && export PGPORT="$val"
+        val=$(_pg_val database); [ -z "${PGDATABASE:-}" ] && [ -n "$val" ] && export PGDATABASE="$val"
+        val=$(_pg_val user);     [ -z "${PGUSER:-}" ]     && [ -n "$val" ] && export PGUSER="$val"
+        val=$(_pg_val password); [ -z "${PGPASSWORD:-}" ] && [ -n "$val" ] && export PGPASSWORD="$val"
+        export PGHOST="${PGHOST:-localhost}"
+        export PGPORT="${PGPORT:-5432}"
+        export PGUSER="${PGUSER:-$(whoami)}"
+    fi
+else
+    echo "ERROR: Config file not found: $PG_CONFIG" >&2
+    echo "Run shell-install.sh first or create ~/.openclaw/postgres.json" >&2
+    echo "" >&2
+    echo "Example ~/.openclaw/postgres.json:" >&2
+    echo '  { "host": "localhost", "port": 5432, "database": "mydb", "user": "myuser", "password": "" }' >&2
+    exit 1
+fi
+
+# Use loaded env vars
 DB_USER="${PGUSER:-$(whoami)}"
-DB_NAME="${DB_USER//-/_}_memory"  # Replace hyphens with underscores (nova-staging → nova_staging_memory)
+DB_NAME="${PGDATABASE:-${DB_USER//-/_}_memory}"  # Replace hyphens with underscores (nova-staging → nova_staging_memory)
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace-claude-code}"
 
 # Parse arguments
