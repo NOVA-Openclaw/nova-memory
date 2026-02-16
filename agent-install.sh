@@ -526,7 +526,14 @@ else
 fi
 
 # ============================================
-# Part 1.5: API Key Check and Configuration
+# Part 1.5: Install Shared PG Loader Libraries
+# ============================================
+echo ""
+echo "Installing shared PG loader libraries..."
+install_lib_files
+
+# ============================================
+# Part 1.6: API Key Check and Configuration
 # ============================================
 echo ""
 echo "API key configuration..."
@@ -607,13 +614,6 @@ if [ $VERIFY_ONLY -eq 1 ]; then
         exit 0
     fi
 fi
-
-# ============================================
-# Part 1.6: Install Shared PG Loader Libraries
-# ============================================
-echo ""
-echo "Installing shared PG loader libraries..."
-install_lib_files
 
 # ============================================
 # Part 2: Database Setup (Idempotent)
