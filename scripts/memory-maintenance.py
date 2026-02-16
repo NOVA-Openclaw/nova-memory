@@ -23,6 +23,11 @@ import sys
 import os
 from pathlib import Path
 
+# Load centralized PostgreSQL configuration
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+from pg_env import load_pg_env
+load_pg_env()
+
 # Configuration
 ARCHIVE_THRESHOLD = 0.1  # Archive when confidence drops below this
 MIN_AGE_DAYS = 7         # Don't archive anything less than 7 days old
@@ -585,19 +590,7 @@ def main():
         logger.info("Running in DRY RUN mode - no changes will be made")
     
     try:
-        # Database configuration - use dynamic naming based on OS user
-        db_user = os.environ.get('PGUSER')
-        if not db_user:
-            try:
-                import subprocess
-                db_user = subprocess.check_output(['whoami'], text=True).strip()
-            except:
-                db_user = 'nova'  # fallback
-        # Replace hyphens with underscores (PostgreSQL doesn't allow hyphens)
-        db_user = db_user.replace('-', '_')
-        db_name = f"{db_user}_memory"
-        
-        conn = psycopg2.connect(dbname=db_name)
+        conn = psycopg2.connect()
         
         # 1. Merge duplicates (unless skipped)
         if skip_dedup:

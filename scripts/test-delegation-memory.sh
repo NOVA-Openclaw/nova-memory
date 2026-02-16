@@ -6,9 +6,10 @@
 
 set -e
 
-DB_NAME="nova_memory"
-DB_HOST="localhost"
-DB_USER="nova"
+# Load centralized PostgreSQL configuration
+source "$(dirname "$0")/../lib/pg-env.sh"
+load_pg_env
+
 
 echo "🧪 Testing Delegation Memory System"
 echo "===================================="
@@ -16,10 +17,10 @@ echo ""
 
 # Test 1: Check if delegation facts exist
 echo "📊 Test 1: Check delegation facts in database"
-FACT_COUNT=$(psql -h $DB_HOST -U $DB_USER -d $DB_NAME -t -A -c "SELECT COUNT(*) FROM entity_facts WHERE entity_id = 1 AND key IN ('delegates_to', 'task_delegation', 'agent_capability');" 2>/dev/null)
+FACT_COUNT=$(psql -t -A -c "SELECT COUNT(*) FROM entity_facts WHERE entity_id = 1 AND key IN ('delegates_to', 'task_delegation', 'agent_capability');" 2>/dev/null)
 echo "   Found $FACT_COUNT delegation facts"
 if [ "$FACT_COUNT" -lt 1 ]; then
-    echo "   ⚠️  No delegation facts found. Run: psql -h localhost -U $DB_USER -d $DB_NAME -f scripts/seed-delegation-knowledge.sql"
+    echo "   ⚠️  No delegation facts found. Run: psql -f scripts/seed-delegation-knowledge.sql"
 else
     echo "   ✅ Delegation facts exist"
 fi
@@ -27,7 +28,7 @@ echo ""
 
 # Test 2: Check embeddings
 echo "📊 Test 2: Check delegation embeddings"
-EMBED_COUNT=$(psql -h $DB_HOST -U $DB_USER -d $DB_NAME -t -A -c "SELECT COUNT(*) FROM memory_embeddings WHERE source_type = 'entity_fact' AND source_id LIKE 'entity_1_fact_%';" 2>/dev/null)
+EMBED_COUNT=$(psql -t -A -c "SELECT COUNT(*) FROM memory_embeddings WHERE source_type = 'entity_fact' AND source_id LIKE 'entity_1_fact_%';" 2>/dev/null)
 echo "   Found $EMBED_COUNT embeddings for NOVA's facts"
 if [ "$EMBED_COUNT" -lt 1 ]; then
     echo "   ⚠️  No embeddings found. Run: ./scripts/embed-delegation-facts.sh"
@@ -39,7 +40,7 @@ echo ""
 # Test 3: Sample delegation facts
 echo "📊 Test 3: Sample delegation knowledge"
 echo "   Delegates to:"
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -t -c "
+psql -t -c "
     SELECT '     • ' || value 
     FROM entity_facts 
     WHERE entity_id = 1 AND key = 'delegates_to' 
@@ -112,6 +113,6 @@ if [ "$FACT_COUNT" -gt 0 ] && [ "$EMBED_COUNT" -gt 0 ]; then
     echo "  • 'research this topic' → should surface Scout"
 else
     echo "⚠️  System needs setup. Run:"
-    echo "  1. psql -h localhost -U $DB_USER -d $DB_NAME -f scripts/seed-delegation-knowledge.sql"
+    echo "  1. psql -f scripts/seed-delegation-knowledge.sql"
     echo "  2. ./scripts/embed-delegation-facts.sh"
 fi

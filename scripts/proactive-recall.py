@@ -19,24 +19,13 @@ import argparse
 from pathlib import Path
 import psycopg2
 import openai
-import subprocess
+
+# Load centralized PostgreSQL configuration
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+from pg_env import load_pg_env
+load_pg_env()
 
 EMBEDDING_MODEL = "text-embedding-3-small"
-
-# Database configuration - use dynamic naming based on OS user
-def get_db_name():
-    """Get database name based on current OS user."""
-    db_user = os.environ.get('PGUSER')
-    if not db_user:
-        try:
-            db_user = subprocess.check_output(['whoami'], text=True).strip()
-        except:
-            db_user = 'nova'  # fallback
-    # Replace hyphens with underscores (PostgreSQL doesn't allow hyphens)
-    db_user = db_user.replace('-', '_')
-    return f"{db_user}_memory"
-
-DB_NAME = get_db_name()
 
 # Default configuration
 DEFAULT_MAX_RESULTS = 10  # Fetch more, then filter by token budget
@@ -136,7 +125,7 @@ def recall(message, token_budget=DEFAULT_TOKEN_BUDGET, threshold=DEFAULT_THRESHO
         return {"error": "No OpenAI API key", "memories": []}
     
     try:
-        conn = psycopg2.connect(dbname=DB_NAME, host="localhost", user="nova")
+        conn = psycopg2.connect()
         query_embedding = get_embedding(client, message)
         
         cur = conn.cursor()

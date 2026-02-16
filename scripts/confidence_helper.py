@@ -7,29 +7,21 @@ Based on source authority (entity trust level and source type).
 
 import psycopg2
 import os
-import subprocess
+import sys
 from typing import Optional
+
+# Load centralized PostgreSQL configuration
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+from pg_env import load_pg_env
+load_pg_env()
 
 
 OWNER_ENTITY_ID = 2  # I)ruid
 
 
-def get_db_name():
-    """Get database name based on current OS user."""
-    db_user = os.environ.get('PGUSER')
-    if not db_user:
-        try:
-            db_user = subprocess.check_output(['whoami'], text=True).strip()
-        except:
-            db_user = 'nova'  # fallback
-    # Replace hyphens with underscores (PostgreSQL doesn't allow hyphens)
-    db_user = db_user.replace('-', '_')
-    return f"{db_user}_memory"
-
-
 def get_db_connection():
-    """Get database connection to nova_memory."""
-    return psycopg2.connect(dbname=get_db_name())
+    """Get database connection using PG* env vars."""
+    return psycopg2.connect()
 
 
 def get_entity_trust_level(entity_id: int, conn=None) -> str:
