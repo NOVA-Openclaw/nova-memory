@@ -79,6 +79,21 @@ VERIFICATION_ERRORS=0
 # Track if gateway restart is needed
 GATEWAY_RESTART_NEEDED=0
 
+# Copy a directory tree excluding node_modules and dist directories
+# Usage: copy_excluding <source_dir> <target_dir>
+copy_excluding() {
+    local source="$1"
+    local target="$2"
+    mkdir -p "$target"
+    (cd "$source" && find . -type f \
+        -not -path '*/node_modules/*' \
+        -not -path '*/dist/*' \
+        -print0 | while IFS= read -r -d '' f; do
+        mkdir -p "$target/$(dirname "$f")"
+        cp "$f" "$target/$f"
+    done)
+}
+
 echo ""
 echo "═══════════════════════════════════════════"
 if [ $VERIFY_ONLY -eq 1 ]; then
@@ -653,8 +668,8 @@ install_hook() {
         rm -rf "$target"
     fi
     
-    # Copy hook directory
-    cp -r "$source" "$target"
+    # Copy hook directory (excluding node_modules and dist)
+    copy_excluding "$source" "$target"
     if [ $was_existing -eq 1 ]; then
         echo -e "  ${CHECK_MARK} $hook_name updated"
     else
@@ -1018,7 +1033,7 @@ install_skills() {
             if [ $FORCE_INSTALL -eq 1 ]; then
                 # Force mode: overwrite
                 rm -rf "$target_skill"
-                cp -r "$skill_dir" "$target_skill"
+                copy_excluding "$skill_dir" "$target_skill"
                 echo -e "  ${CHECK_MARK} $skill_name updated (forced)"
                 skills_updated=$((skills_updated + 1))
             else
@@ -1053,8 +1068,8 @@ install_skills() {
                 fi
             fi
         else
-            # New skill: install it
-            cp -r "$skill_dir" "$target_skill"
+            # New skill: install it (excluding node_modules and dist)
+            copy_excluding "$skill_dir" "$target_skill"
             echo -e "  ${CHECK_MARK} $skill_name installed"
             skills_installed=$((skills_installed + 1))
         fi
