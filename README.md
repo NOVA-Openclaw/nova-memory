@@ -113,8 +113,8 @@ Each loader sets the standard `PG*` environment variables, which PostgreSQL clie
 
 ### Install scripts
 
-- **`shell-install.sh`** — Creates the database and writes `~/.openclaw/postgres.json`
-- **`agent-install.sh`** — Installs loader libs to `~/.openclaw/lib/`, reads `postgres.json` via the Bash loader; fails with guidance if the file is missing
+- **`shell-install.sh`** — Creates the database, writes `~/.openclaw/postgres.json`, then execs `agent-install.sh` automatically
+- **`agent-install.sh`** — Installs loader libs to `~/.openclaw/lib/`, reads `postgres.json` via the Bash loader; fails with guidance if the file is missing (called automatically by `shell-install.sh`)
 
 ## Overview
 
