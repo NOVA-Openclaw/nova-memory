@@ -337,20 +337,29 @@ verify_config() {
         echo -e "  ${CHECK_MARK} PGUSER set: $PGUSER"
     fi
     
-    if [ -z "$ANTHROPIC_API_KEY" ]; then
-        echo -e "  ${WARNING} ANTHROPIC_API_KEY not set in environment"
-        echo -e "      Hooks will inherit from OpenClaw's environment"
-        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+    # Check API keys in provider config
+    local config="$HOME/.openclaw/openclaw.json"
+    if [ -f "$config" ] && command -v jq &> /dev/null; then
+        local anthropic_key openai_key
+        anthropic_key=$(jq -r '.models.providers.anthropic.apiKey // empty' "$config" 2>/dev/null)
+        openai_key=$(jq -r '.models.providers.openai.apiKey // empty' "$config" 2>/dev/null)
+        
+        if [ -n "$anthropic_key" ]; then
+            echo -e "  ${CHECK_MARK} Anthropic API key in provider config: ${anthropic_key:0:8}..."
+        else
+            echo -e "  ${WARNING} Anthropic API key not in provider config (models.providers.anthropic.apiKey)"
+            VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+        fi
+        
+        if [ -n "$openai_key" ]; then
+            echo -e "  ${CHECK_MARK} OpenAI API key in provider config: ${openai_key:0:8}..."
+        else
+            echo -e "  ${WARNING} OpenAI API key not in provider config (models.providers.openai.apiKey)"
+            VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
+        fi
     else
-        echo -e "  ${CHECK_MARK} ANTHROPIC_API_KEY set: ${ANTHROPIC_API_KEY:0:8}..."
-    fi
-    
-    if [ -z "$OPENAI_API_KEY" ]; then
-        echo -e "  ${WARNING} OPENAI_API_KEY not set in environment"
-        echo -e "      Hooks will inherit from OpenClaw's environment"
+        echo -e "  ${WARNING} Cannot check provider config (missing config or jq)"
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
-    else
-        echo -e "  ${CHECK_MARK} OPENAI_API_KEY set: ${OPENAI_API_KEY:0:8}..."
     fi
     
     if [ -z "$OPENCLAW_WORKSPACE" ]; then
@@ -459,61 +468,39 @@ else
 fi
 
 # ============================================
-# Part 1.5: API Key Check and Configuration
+# Part 1.5: API Key Check (Provider Config)
 # ============================================
 echo ""
 echo "API key configuration..."
 
-# Check if OPENAI_API_KEY is set in environment
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo -e "  ${WARNING} OPENAI_API_KEY not set"
-    echo ""
-    echo "OpenAI API key is required for semantic recall (embeddings)."
-    echo "Get your API key from: https://platform.openai.com/api-keys"
-    echo ""
-    read -p "Enter your OpenAI API key (or press Enter to cancel): " user_api_key
-    
-    if [ -z "$user_api_key" ]; then
-        echo -e "  ${CROSS_MARK} Installation cancelled - OPENAI_API_KEY is required"
-        echo ""
-        echo "Please set OPENAI_API_KEY and run the installer again:"
-        echo "  export OPENAI_API_KEY='your-key-here'"
-        echo "  ./install.sh"
-        exit 1
-    fi
-    
-    # Configure the key in OpenClaw config
-    OPENCLAW_CONFIG="$HOME/.openclaw/openclaw.json"
-    
-    if [ ! -f "$OPENCLAW_CONFIG" ]; then
-        echo -e "  ${WARNING} OpenClaw config not found at $OPENCLAW_CONFIG"
-        echo "      Creating new config file..."
-        mkdir -p "$HOME/.openclaw"
-        echo '{}' > "$OPENCLAW_CONFIG"
-    fi
-    
-    # Check if jq is available
-    if ! command -v jq &> /dev/null; then
-        echo -e "  ${CROSS_MARK} jq not installed (required to configure API key)"
-        echo "      Install: sudo apt install jq"
-        echo ""
-        echo "      After installing jq, you can manually add the key to $OPENCLAW_CONFIG:"
-        echo "      Or set it in your environment and restart the gateway"
-        exit 1
-    fi
-    
-    # Backup config before modification
-    cp "$OPENCLAW_CONFIG" "$OPENCLAW_CONFIG.backup-$(date +%s)"
-    
-    # Add API key to config using jq
-    TMP_CONFIG=$(mktemp)
-    jq --arg key "$user_api_key" '.env.OPENAI_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
-    mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
-    
-    echo -e "  ${CHECK_MARK} OPENAI_API_KEY configured in $OPENCLAW_CONFIG"
-    GATEWAY_RESTART_NEEDED=1
+OPENCLAW_CONFIG="$HOME/.openclaw/openclaw.json"
+
+# Require jq for config reading
+if ! command -v jq &> /dev/null; then
+    echo -e "  ${CROSS_MARK} jq is required but not installed"
+    echo "      Install: sudo apt install jq"
+    exit 1
+fi
+
+# Read OpenAI API key from provider config
+OPENAI_KEY=""
+if [ -f "$OPENCLAW_CONFIG" ]; then
+    OPENAI_KEY=$(jq -r '.models.providers.openai.apiKey // empty' "$OPENCLAW_CONFIG" 2>/dev/null)
+fi
+
+if [ -n "$OPENAI_KEY" ]; then
+    echo -e "  ${CHECK_MARK} OpenAI API key configured: ${OPENAI_KEY:0:8}..."
 else
-    echo -e "  ${CHECK_MARK} OPENAI_API_KEY set: ${OPENAI_API_KEY:0:8}..."
+    echo -e "  ${CROSS_MARK} OpenAI API key not found in provider config"
+    echo ""
+    echo "  Expected config path: models.providers.openai.apiKey"
+    echo "  Config file: $OPENCLAW_CONFIG"
+    echo ""
+    echo "  To configure, either:"
+    echo "    1. Run ./shell-install.sh (interactive setup)"
+    echo "    2. Manually add to $OPENCLAW_CONFIG:"
+    echo '       {"models": {"providers": {"openai": {"apiKey": "sk-proj-..."}}}}'
+    exit 1
 fi
 
 # ============================================
