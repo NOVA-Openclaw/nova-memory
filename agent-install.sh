@@ -108,6 +108,44 @@ VERIFICATION_ERRORS=0
 # Track if gateway restart is needed
 GATEWAY_RESTART_NEEDED=0
 
+# Install shared PG loader files to ~/.openclaw/lib/
+# Uses SHA-256 hash comparison: install if missing, update if changed, skip if identical
+install_lib_files() {
+    local lib_src="$SCRIPT_DIR/lib"
+    local lib_dst="$HOME/.openclaw/lib"
+    local files=("pg-env.sh" "pg_env.py" "pg-env.ts")
+
+    mkdir -p "$lib_dst"
+    chmod 755 "$lib_dst"
+
+    for f in "${files[@]}"; do
+        local src="$lib_src/$f"
+        local dst="$lib_dst/$f"
+
+        if [ ! -f "$src" ]; then
+            echo -e "  ${WARNING} [lib] $f: source not found in repo, skipping"
+            continue
+        fi
+
+        if [ ! -f "$dst" ]; then
+            cp "$src" "$dst"
+            chmod 644 "$dst"
+            echo -e "  ${CHECK_MARK} [lib] $f: installed"
+        else
+            local src_hash dst_hash
+            src_hash=$(sha256sum "$src" | awk '{print $1}')
+            dst_hash=$(sha256sum "$dst" | awk '{print $1}')
+            if [ "$src_hash" != "$dst_hash" ]; then
+                cp "$src" "$dst"
+                chmod 644 "$dst"
+                echo -e "  ${CHECK_MARK} [lib] $f: updated (hash changed)"
+            else
+                echo -e "  ${INFO} [lib] $f: up to date"
+            fi
+        fi
+    done
+}
+
 # Copy a directory tree excluding node_modules and dist directories
 # Usage: copy_excluding <source_dir> <target_dir>
 copy_excluding() {
@@ -569,6 +607,13 @@ if [ $VERIFY_ONLY -eq 1 ]; then
         exit 0
     fi
 fi
+
+# ============================================
+# Part 1.6: Install Shared PG Loader Libraries
+# ============================================
+echo ""
+echo "Installing shared PG loader libraries..."
+install_lib_files
 
 # ============================================
 # Part 2: Database Setup (Idempotent)

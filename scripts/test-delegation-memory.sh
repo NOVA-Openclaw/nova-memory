@@ -7,7 +7,7 @@
 set -e
 
 # Load centralized PostgreSQL configuration
-source "$(dirname "$0")/../lib/pg-env.sh"
+source "$HOME/.openclaw/lib/pg-env.sh"
 load_pg_env
 
 
