@@ -71,6 +71,51 @@ openclaw hooks enable session-init
 
 </details>
 
+## Database Configuration
+
+Database credentials are managed through a centralized config file with environment variable overrides.
+
+### Config file: `~/.openclaw/postgres.json`
+
+```json
+{
+  "host": "localhost",
+  "port": 5432,
+  "database": "nova_memory",
+  "user": "nova",
+  "password": "secret"
+}
+```
+
+This file is **auto-generated** by `shell-install.sh` after database setup. You can also create it manually.
+
+### Resolution order
+
+All scripts and hooks follow the same precedence:
+
+1. **Environment variables** (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) — checked first
+2. **Config file** (`~/.openclaw/postgres.json`) — fills in any vars not set by the environment
+3. **Built-in defaults** — `localhost:5432`, current OS username (no defaults for database or password)
+
+This means OpenClaw's `env.vars` in `openclaw.json` will always take priority. For standalone usage (cron, manual scripts), the config file provides the connection details automatically.
+
+### Shared loader functions
+
+Language-specific helpers live in `lib/`:
+
+| File | Language | Function | Usage |
+|------|----------|----------|-------|
+| `lib/pg-env.sh` | Bash | `load_pg_env` | `source lib/pg-env.sh && load_pg_env` |
+| `lib/pg_env.py` | Python | `load_pg_env()` | `from pg_env import load_pg_env; load_pg_env()` |
+| `lib/pg-env.ts` | TypeScript | `loadPgEnv()` | `import { loadPgEnv } from "./lib/pg-env"; loadPgEnv();` |
+
+Each loader sets the standard `PG*` environment variables, which PostgreSQL client libraries (`psql`, `psycopg2`, `node-postgres`) honor natively — no custom connection logic needed.
+
+### Install scripts
+
+- **`shell-install.sh`** — Creates the database and writes `~/.openclaw/postgres.json`
+- **`agent-install.sh`** — Reads `postgres.json` via the Bash loader; fails with guidance if the file is missing
+
 ## Overview
 
 This system allows an AI to:
