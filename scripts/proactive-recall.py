@@ -53,31 +53,16 @@ CONTENT_LIMITS = {
     "max_full": 600,      # Full content when few results
 }
 
-def get_openai_api_key():
-    """Read OpenAI API key from OpenClaw provider config (~/.openclaw/openclaw.json).
-    
-    Returns the key string or None if not found.
-    """
-    config_path = os.path.join(os.path.expanduser("~"), ".openclaw", "openclaw.json")
-    try:
-        with open(config_path, "r") as f:
-            config = json.load(f)
-        return (config.get("models", {})
-                      .get("providers", {})
-                      .get("openai", {})
-                      .get("apiKey") or None)
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        return None
-
 def get_openai_client():
-    """Get OpenAI client with API key from provider config.
+    """Get OpenAI client with API key from environment.
     
-    Reads from models.providers.openai.apiKey in ~/.openclaw/openclaw.json.
-    Returns None if API key is not configured.
+    API key must be set in environment (inherited from OpenClaw).
+    Returns None if API key is not set.
     """
-    api_key = get_openai_api_key()
+    api_key = os.environ.get("OPENAI_API_KEY")
     
     if not api_key:
+        # Don't print to stderr anymore - caller handles the error
         return None
     
     return openai.OpenAI(api_key=api_key)

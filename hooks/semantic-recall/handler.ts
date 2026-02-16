@@ -1,5 +1,4 @@
 import { execSync } from "child_process";
-import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as os from "os";
@@ -26,18 +25,6 @@ const WORKSPACE_VENV = join(WORKSPACE, 'scripts/tts-venv/bin/python');
 import { existsSync } from 'fs';
 const PYTHON_VENV = existsSync(STANDARD_VENV) ? STANDARD_VENV : WORKSPACE_VENV;
 
-// Read OpenAI API key from provider config
-function getOpenAIKeyFromConfig(): string | null {
-  const configPath = join(process.env.HOME || os.homedir(), '.openclaw', 'openclaw.json');
-  try {
-    const raw = readFileSync(configPath, 'utf-8');
-    const config = JSON.parse(raw);
-    return config?.models?.providers?.openai?.apiKey || null;
-  } catch {
-    return null;
-  }
-}
-
 // Configurable via environment variables
 const TOKEN_BUDGET = parseInt(process.env.SEMANTIC_RECALL_TOKEN_BUDGET || "1000", 10);
 const HIGH_CONFIDENCE_THRESHOLD = parseFloat(process.env.SEMANTIC_RECALL_HIGH_CONFIDENCE || "0.7");
@@ -59,10 +46,9 @@ function formatEntityContext(entity: Entity, facts: EntityFacts): string {
 }
 
 const handler = async (event) => {
-  // Read OpenAI API key from provider config
-  const openaiKey = getOpenAIKeyFromConfig();
-  if (!openaiKey) {
-    console.error("[semantic-recall] ERROR: OpenAI API key not found in models.providers.openai.apiKey - semantic recall disabled");
+  // Check if OPENAI_API_KEY is set before executing
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("[semantic-recall] ERROR: OPENAI_API_KEY not set - semantic recall disabled");
     return;
   }
 
@@ -126,7 +112,7 @@ const handler = async (event) => {
       { 
         encoding: "utf-8",
         timeout: 5000,  // 5 second timeout
-        env: { ...process.env, OPENAI_API_KEY: openaiKey }
+        env: { ...process.env }
       }
     );
     recallResult = JSON.parse(result);

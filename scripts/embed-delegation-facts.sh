@@ -12,18 +12,10 @@ DB_USER="${PGUSER:-$(whoami)}"
 DB_NAME="${DB_USER//-/_}_memory"
 DB_HOST="localhost"
 
-# Read OpenAI API key from OpenClaw provider config
-get_provider_key() {
-  local provider="$1"
-  local config="${HOME}/.openclaw/openclaw.json"
-  if [ ! -f "$config" ]; then echo ""; return; fi
-  jq -r ".models.providers.${provider}.apiKey // empty" "$config" 2>/dev/null
-}
-
-OPENAI_API_KEY=$(get_provider_key openai)
+# API key must be set in environment (inherited from OpenClaw)
 if [ -z "$OPENAI_API_KEY" ]; then
-    echo "ERROR: OpenAI API key not found in provider config" >&2
-    echo "Expected: models.providers.openai.apiKey in ~/.openclaw/openclaw.json" >&2
+    echo "ERROR: OPENAI_API_KEY not set in environment" >&2
+    echo "This script should be run from OpenClaw hooks which inherit the API key" >&2
     exit 1
 fi
 

@@ -12,22 +12,6 @@ if [[ "$1" == "--log" ]]; then
     VERBOSE_LOG=true
 fi
 
-# Read API key from OpenClaw provider config
-get_provider_key() {
-  local provider="$1"
-  local config="${HOME}/.openclaw/openclaw.json"
-  if [ ! -f "$config" ]; then echo ""; return; fi
-  jq -r ".models.providers.${provider}.apiKey // empty" "$config" 2>/dev/null
-}
-
-ANTHROPIC_API_KEY=$(get_provider_key anthropic)
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo "ERROR: Anthropic API key not found in provider config" >&2
-    echo "Expected: models.providers.anthropic.apiKey in ~/.openclaw/openclaw.json" >&2
-    exit 1
-fi
-export ANTHROPIC_API_KEY
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="${HOME}/.openclaw/memory-catchup-state.json"
 CACHE_FILE="${HOME}/.openclaw/memory-message-cache.json"
@@ -213,7 +197,13 @@ while IFS= read -r line; do
         # SENDER_ID should come from the hook for user messages
     fi
     
-    # Run extraction
+    # Run extraction (API key must be in environment, inherited from OpenClaw)
+    if [ -z "$ANTHROPIC_API_KEY" ]; then
+        echo "ERROR: ANTHROPIC_API_KEY not set in environment" >&2
+        echo "This script should be run from OpenClaw hooks which inherit the API key" >&2
+        exit 1
+    fi
+    
     if [ "$VERBOSE_LOG" = true ]; then
         EXTRACT_LOG="${HOME}/.openclaw/logs/memory-extractions.log"
         echo "---" >> "$EXTRACT_LOG"

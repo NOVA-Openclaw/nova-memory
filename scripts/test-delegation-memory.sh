@@ -6,14 +6,6 @@
 
 set -e
 
-# Read API keys from OpenClaw provider config
-get_provider_key() {
-  local provider="$1"
-  local config="${HOME}/.openclaw/openclaw.json"
-  if [ ! -f "$config" ]; then echo ""; return; fi
-  jq -r ".models.providers.${provider}.apiKey // empty" "$config" 2>/dev/null
-}
-
 DB_NAME="nova_memory"
 DB_HOST="localhost"
 DB_USER="nova"
@@ -60,10 +52,9 @@ echo ""
 if [ -f ~/clawd/nova-memory/scripts/proactive-recall.py ]; then
     echo "📊 Test 4: Semantic search for delegation"
     
-    OPENAI_API_KEY=$(get_provider_key openai)
     if [ -z "$OPENAI_API_KEY" ]; then
-        echo "   ⚠️  OpenAI API key not in provider config, skipping semantic search test"
-        echo "      Configure models.providers.openai.apiKey in ~/.openclaw/openclaw.json"
+        echo "   ⚠️  OPENAI_API_KEY not set in environment, skipping semantic search test"
+        echo "      Set OPENAI_API_KEY environment variable to run this test"
     else
         export OPENAI_API_KEY
         echo "   Query: 'help me debug this Python code'"

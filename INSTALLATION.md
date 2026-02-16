@@ -12,16 +12,20 @@ Before installing nova-memory, ensure you have the following:
   - Install: `sudo apt install postgresql postgresql-contrib` (Ubuntu/Debian)
   - Install: `brew install postgresql` (macOS)
 
-- **OpenAI API key** — Required for semantic recall (embeddings via `text-embedding-3-small`)
-  - Get your key from: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-  - Must be configured in `~/.openclaw/openclaw.json` at `models.providers.openai.apiKey`
-  - Run `./shell-install.sh` to set this interactively
+- **OPENAI_API_KEY** - OpenAI API key for embeddings
+  - **Required for semantic recall** - generates embeddings using `text-embedding-3-small`
+  - Get your API key from: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+  - The installer will prompt you for this if not set in your environment
+  - Alternatively, set it before running the installer:
+    ```bash
+    export OPENAI_API_KEY='your-key-here'
+    ```
 
 ### Recommended
 
-- **Anthropic API key** — Used by the memory-extract hook to analyze messages
-  - Get your key from: [https://console.anthropic.com/](https://console.anthropic.com/)
-  - Configure at `models.providers.anthropic.apiKey` in `~/.openclaw/openclaw.json`
+- **ANTHROPIC_API_KEY** - Claude API key for memory extraction
+  - Used by the memory-extract hook to analyze messages
+  - Get your API key from: [https://console.anthropic.com/](https://console.anthropic.com/)
 
 - **pgvector extension** - For semantic search performance
   - Install: `sudo apt install postgresql-16-pgvector` (Ubuntu/Debian)
@@ -35,19 +39,12 @@ Before installing nova-memory, ensure you have the following:
 
 ## Quick Install
 
-**For humans** (interactive — prompts for API keys):
 ```bash
 cd ~/clawd/nova-memory
-./shell-install.sh
+./install.sh
 ```
 
-**For agents** (non-interactive — keys must already be in provider config):
-```bash
-cd ~/clawd/nova-memory
-./agent-install.sh
-```
-
-Both installers are **idempotent** — safe to run multiple times.
+The installer is **idempotent** - safe to run multiple times.
 
 ## Recent Changes
 

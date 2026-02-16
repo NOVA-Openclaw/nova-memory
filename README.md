@@ -6,23 +6,12 @@ A PostgreSQL-based long-term memory system for AI assistants, with natural langu
 
 ## ⚡ Quick Start (Recommended - NEW!)
 
-**For humans (interactive):**
+**One-command installation:**
 
 ```bash
 cd ~/clawd/nova-memory
-./shell-install.sh
+./install.sh
 ```
-
-This prompts for API keys, saves them to OpenClaw provider config, then runs the agent installer.
-
-**For agents (non-interactive):**
-
-```bash
-cd ~/clawd/nova-memory
-./agent-install.sh
-```
-
-Requires API keys to already be configured in `~/.openclaw/openclaw.json` under `models.providers.<provider>.apiKey`.
 
 The installer will:
 - ✅ Check all prerequisites (PostgreSQL, psql, pgvector)
@@ -67,17 +56,14 @@ DB_NAME="${DB_USER//-/_}_memory"
 createdb "$DB_NAME"
 psql -d "$DB_NAME" -f schema.sql
 
-# 3. Configure API keys in OpenClaw provider config
-# (or run ./shell-install.sh to do this interactively)
-jq '.models.providers.anthropic.apiKey = "sk-ant-..."
-  | .models.providers.openai.apiKey = "sk-proj-..."' \
-  ~/.openclaw/openclaw.json > /tmp/oc.json && mv /tmp/oc.json ~/.openclaw/openclaw.json
+# 3. Set your Anthropic API key
+export ANTHROPIC_API_KEY="your-key-here"
 
 # 4. Test extraction
 ./scripts/process-input.sh "John mentioned he loves coffee from Blue Bottle in Brooklyn"
 
 # 5. Install OpenClaw hooks
-./agent-install.sh
+./install.sh
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
@@ -709,7 +695,7 @@ psql -d nova_memory -f schema.sql
 Uses Claude API to parse natural language into structured JSON.
 
 ```bash
-# API key is read from ~/.openclaw/openclaw.json models.providers.anthropic.apiKey
+export ANTHROPIC_API_KEY="your-key"
 ./scripts/extract-memories.sh "John said he loves pizza from Mario's in Brooklyn"
 ```
 
@@ -738,30 +724,9 @@ Combined pipeline: extract → store.
 ./scripts/process-input.sh "I)ruid mentioned Niché has great steak au poivre"
 ```
 
-## API Key Configuration
-
-API keys are read from the OpenClaw provider config file (`~/.openclaw/openclaw.json`):
-
-```json
-{
-  "models": {
-    "providers": {
-      "openai": { "apiKey": "sk-proj-..." },
-      "anthropic": { "apiKey": "sk-ant-..." }
-    }
-  }
-}
-```
-
-- **OpenAI key** (`models.providers.openai.apiKey`) — Required for semantic recall (embeddings)
-- **Anthropic key** (`models.providers.anthropic.apiKey`) — Required for memory extraction
-
-Run `./shell-install.sh` to configure these interactively.
-
-**Resolution order:** Scripts read keys by: (1) the OpenClaw `cfg` object / `resolveApiKeyForProvider()` in TypeScript hooks, or (2) reading the config JSON file directly via `jq` in shell scripts / `json.load` in Python.
-
 ## Environment Variables
 
+- `ANTHROPIC_API_KEY` - Required for extraction scripts
 - `PGHOST`, `PGUSER`, `PGDATABASE` - PostgreSQL connection (defaults to localhost/nova/nova_memory)
 
 **Multi-Agent Setup:** For shared database access with multiple agents, see [Database Aliasing Guide](docs/DATABASE-ALIASING.md).
