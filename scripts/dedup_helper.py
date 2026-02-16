@@ -12,7 +12,7 @@ import sys
 from typing import Optional, Dict, Any
 
 # Load centralized PostgreSQL configuration
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+sys.path.insert(0, os.path.expanduser("~/.openclaw/lib"))
 from pg_env import load_pg_env
 load_pg_env()
 

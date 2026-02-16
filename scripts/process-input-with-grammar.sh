@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Load centralized PostgreSQL configuration
-source "$SCRIPT_DIR/../lib/pg-env.sh"
+source "$HOME/.openclaw/lib/pg-env.sh"
 load_pg_env
 
 # Get input

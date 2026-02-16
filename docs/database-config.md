@@ -37,7 +37,7 @@ Null/missing JSON values are treated as absent (fall through to step 3).
 ### Bash
 
 ```bash
-source lib/pg-env.sh
+source ~/.openclaw/lib/pg-env.sh
 load_pg_env
 # PG* env vars are now set; use psql, pg_dump, etc. directly
 psql -c "SELECT 1"
@@ -46,7 +46,8 @@ psql -c "SELECT 1"
 ### Python
 
 ```python
-from lib.pg_env import load_pg_env
+import sys; sys.path.insert(0, os.path.expanduser("~/.openclaw/lib"))
+from pg_env import load_pg_env
 
 load_pg_env()
 # os.environ now has PG* vars; use psycopg2, asyncpg, etc.
@@ -57,7 +58,7 @@ conn = psycopg2.connect()  # reads PG* env vars automatically
 ### TypeScript
 
 ```typescript
-import { loadPgEnv } from "./lib/pg-env";
+import { loadPgEnv } from "~/.openclaw/lib/pg-env";
 
 loadPgEnv();
 // process.env now has PG* vars; node-postgres reads them automatically
@@ -80,10 +81,11 @@ shell-install.sh
   └─ Creates DB → writes ~/.openclaw/postgres.json
 
 agent-install.sh
-  └─ source lib/pg-env.sh → load_pg_env() → reads postgres.json → runs migrations
+  └─ Installs lib/ → ~/.openclaw/lib/
+  └─ source ~/.openclaw/lib/pg-env.sh → load_pg_env() → reads postgres.json → runs migrations
 
 hooks & scripts
-  └─ source lib/pg-env.sh (or import equivalent) → PG* vars set → use psql/psycopg2/pg natively
+  └─ source ~/.openclaw/lib/pg-env.sh (or import equivalent) → PG* vars set → use psql/psycopg2/pg natively
 ```
 
 ## Error Handling
