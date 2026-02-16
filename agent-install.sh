@@ -185,24 +185,7 @@ verify_schema() {
         return 1
     fi
     
-    # Count expected tables from schema.sql
-    EXPECTED_TABLES=$(grep "^CREATE TABLE" "$SCRIPT_DIR/schema.sql" 2>/dev/null | wc -l)
-    
-    # Count actual tables in database
-    ACTUAL_TABLES=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
-    
-    if [ "$ACTUAL_TABLES" -eq "$EXPECTED_TABLES" ]; then
-        echo -e "  ${CHECK_MARK} All $EXPECTED_TABLES tables present"
-    elif [ "$ACTUAL_TABLES" -lt "$EXPECTED_TABLES" ]; then
-        echo -e "  ${WARNING} Only $ACTUAL_TABLES/$EXPECTED_TABLES tables found (missing tables)"
-        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
-    else
-        echo -e "  ${WARNING} Found $ACTUAL_TABLES tables (expected $EXPECTED_TABLES, extra tables present)"
-        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + 1))
-    fi
-    
-    # Verify individual table existence (detailed check)
-    # Extract table names from schema.sql
+    # Extract expected table names from schema.sql
     TABLE_NAMES=$(grep "^CREATE TABLE" "$SCRIPT_DIR/schema.sql" | sed -E 's/CREATE TABLE [^.]+\.([^ ]+).*/\1/' | sort)
     
     local tables_missing=()
@@ -225,6 +208,27 @@ verify_schema() {
             echo "      • $table"
         done
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + ${#tables_missing[@]}))
+    fi
+    
+    # Reverse check: warn about extra tables not defined in schema.sql
+    local db_tables
+    db_tables=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name")
+    
+    local tables_extra=()
+    for db_table in $db_tables; do
+        if ! echo "$TABLE_NAMES" | grep -qxF "$db_table"; then
+            tables_extra+=("$db_table")
+        fi
+    done
+    
+    if [ ${#tables_extra[@]} -gt 0 ]; then
+        echo -e "  ${WARNING} Extra tables not in schema.sql (not managed by installer):"
+        for table in "${tables_extra[@]}"; do
+            echo "      • $table"
+        done
+        VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + ${#tables_extra[@]}))
+    else
+        echo -e "  ${CHECK_MARK} No extra tables found outside schema.sql"
     fi
     
     # Sample column count check for a few key tables
