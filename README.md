@@ -772,7 +772,9 @@ Combined pipeline: extract → store.
 ## Environment Variables
 
 - `ANTHROPIC_API_KEY` - Required for extraction scripts
-- `PGHOST`, `PGUSER`, `PGDATABASE` - PostgreSQL connection (defaults to localhost/nova/nova_memory)
+- `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, `PGPASSWORD` - PostgreSQL connection (see [Database Configuration](#database-configuration) above)
+
+> **Note:** All scripts use the centralized database configuration loaders (`lib/pg-env.sh` for Bash, `lib/pg_env.py` for Python). No script contains hardcoded connection logic — see #94 for the config system and #95 for the full migration.
 
 **Multi-Agent Setup:** For shared database access with multiple agents, see [Database Aliasing Guide](docs/DATABASE-ALIASING.md).
 
