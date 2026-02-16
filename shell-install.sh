@@ -1,13 +1,17 @@
 #!/bin/bash
-# shell-install.sh — Interactive config file generation for nova-memory
-# Prompts for PostgreSQL connection details and writes ~/.openclaw/postgres.json
-# Does NOT create databases or apply schemas — that's agent-install.sh's job.
+# shell-install.sh — Interactive setup for nova-memory
+# Human-facing entry point that ensures all config is in place, then execs agent-install.sh.
+#
+# 1. Check/prompt for database config → write to ~/.openclaw/postgres.json
+# 2. Check/prompt for API keys → write to ~/.openclaw/openclaw.json env.vars
+# 3. Load all config into ENV
+# 4. exec agent-install.sh (which does all the real work)
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CONFIG_DIR="$HOME/.openclaw"
-CONFIG_FILE="$CONFIG_DIR/postgres.json"
+PG_CONFIG="$CONFIG_DIR/postgres.json"
 OPENCLAW_CONFIG="$CONFIG_DIR/openclaw.json"
 
 # Color codes
@@ -21,45 +25,65 @@ echo "  nova-memory shell-install"
 echo "═══════════════════════════════════════════"
 echo ""
 
-# ============================================
-# Part 1: Prompt for database connection details
-# ============================================
+# Create config directory if needed
+if [ ! -d "$CONFIG_DIR" ]; then
+    mkdir -p "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR"
+    echo -e "  ${GREEN}✅${NC} Created $CONFIG_DIR"
+fi
 
-DEFAULT_HOST="localhost"
-DEFAULT_PORT="5432"
-DEFAULT_USER="$(whoami)"
-DEFAULT_DB="${DEFAULT_USER//-/_}_memory"
-DEFAULT_PASS=""
+# ============================================
+# Part 1: Database config (postgres.json)
+# ============================================
+echo "Database configuration..."
 
-if [ -f "$CONFIG_FILE" ]; then
-    echo -e "${YELLOW}⚠️  $CONFIG_FILE already exists — will not overwrite.${NC}"
-    echo "   Delete it manually if you want to reconfigure."
-    echo ""
+# Check if postgres.json exists and has all required fields
+PG_COMPLETE=true
+if [ -f "$PG_CONFIG" ]; then
+    if command -v jq &>/dev/null; then
+        for field in host port database user; do
+            val=$(jq -r ".$field // empty" "$PG_CONFIG" 2>/dev/null)
+            if [ -z "$val" ]; then
+                echo -e "  ${YELLOW}⚠️  $PG_CONFIG is missing '$field'${NC}"
+                PG_COMPLETE=false
+            fi
+        done
+        if [ "$PG_COMPLETE" = true ]; then
+            echo -e "  ${GREEN}✅${NC} $PG_CONFIG exists and is complete"
+        fi
+    else
+        echo -e "  ${YELLOW}⚠️  jq not installed — cannot validate $PG_CONFIG${NC}"
+        PG_COMPLETE=false
+    fi
 else
-    echo "Enter PostgreSQL connection details (press Enter for defaults):"
+    PG_COMPLETE=false
+fi
+
+if [ "$PG_COMPLETE" = false ]; then
+    # Prompt for database connection details
+    DEFAULT_HOST="localhost"
+    DEFAULT_PORT="5432"
+    DEFAULT_USER="$(whoami)"
+    DEFAULT_DB="${DEFAULT_USER//-/_}_memory"
+
+    echo ""
+    echo "  Enter PostgreSQL connection details (press Enter for defaults):"
     echo ""
 
-    read -rp "  Host [$DEFAULT_HOST]: " INPUT_HOST
-    read -rp "  Port [$DEFAULT_PORT]: " INPUT_PORT
-    read -rp "  Database [$DEFAULT_DB]: " INPUT_DB
-    read -rp "  User [$DEFAULT_USER]: " INPUT_USER
-    read -rsp "  Password []: " INPUT_PASS
+    read -rp "    Host [$DEFAULT_HOST]: " INPUT_HOST
+    read -rp "    Port [$DEFAULT_PORT]: " INPUT_PORT
+    read -rp "    Database [$DEFAULT_DB]: " INPUT_DB
+    read -rp "    User [$DEFAULT_USER]: " INPUT_USER
+    read -rsp "    Password []: " INPUT_PASS
     echo ""
 
     DB_HOST="${INPUT_HOST:-$DEFAULT_HOST}"
     DB_PORT="${INPUT_PORT:-$DEFAULT_PORT}"
     DB_NAME="${INPUT_DB:-$DEFAULT_DB}"
     DB_USER="${INPUT_USER:-$DEFAULT_USER}"
-    DB_PASS="${INPUT_PASS:-$DEFAULT_PASS}"
+    DB_PASS="${INPUT_PASS:-}"
 
-    # Create config directory if needed
-    if [ ! -d "$CONFIG_DIR" ]; then
-        mkdir -p "$CONFIG_DIR"
-        chmod 700 "$CONFIG_DIR"
-        echo -e "  ${GREEN}✅${NC} Created $CONFIG_DIR"
-    fi
-
-    cat > "$CONFIG_FILE" <<EOF
+    cat > "$PG_CONFIG" <<EOF
 {
   "host": "$DB_HOST",
   "port": $DB_PORT,
@@ -68,57 +92,76 @@ else
   "password": "$DB_PASS"
 }
 EOF
-    chmod 600 "$CONFIG_FILE"
-    echo -e "  ${GREEN}✅${NC} Wrote $CONFIG_FILE (chmod 600)"
+    chmod 600 "$PG_CONFIG"
+    echo -e "  ${GREEN}✅${NC} Wrote $PG_CONFIG (chmod 600)"
 fi
 
-# ============================================
-# Part 2: Check for required API keys
-# ============================================
-echo ""
-echo "Checking API keys..."
-
-if [ -f "$OPENCLAW_CONFIG" ]; then
-    if command -v jq &>/dev/null; then
-        OPENAI_KEY=$(jq -r '.env.vars.OPENAI_API_KEY // empty' "$OPENCLAW_CONFIG" 2>/dev/null)
-        if [ -z "$OPENAI_KEY" ]; then
-            echo -e "  ${YELLOW}⚠️  OPENAI_API_KEY not found in $OPENCLAW_CONFIG (env.vars section)${NC}"
-            echo "     nova-memory needs this for embeddings. Add it before running agent-install.sh."
-        else
-            echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY is set"
-        fi
-    else
-        echo -e "  ${YELLOW}⚠️  jq not installed — cannot check $OPENCLAW_CONFIG${NC}"
-    fi
-else
-    echo -e "  ${YELLOW}⚠️  $OPENCLAW_CONFIG not found — cannot check API keys${NC}"
-fi
-
-# ============================================
-# Part 3: Verify config loads via pg-env.sh
-# ============================================
-echo ""
-echo "Verifying config loads correctly..."
-
+# Load database config into ENV
 PG_ENV="$SCRIPT_DIR/lib/pg-env.sh"
 if [ -f "$PG_ENV" ]; then
-    # Subshell so we don't pollute current env
-    (
-        source "$PG_ENV"
-        load_pg_env
-        echo "  Resolved values:"
-        echo "    Host:     $PGHOST"
-        echo "    Port:     $PGPORT"
-        echo "    Database: ${PGDATABASE:-(not set)}"
-        echo "    User:     $PGUSER"
-        echo "    Password: ${PGPASSWORD:+(set)}"
-        [ -z "${PGPASSWORD:-}" ] && echo "    Password: (empty)"
-    )
-    echo -e "  ${GREEN}✅${NC} Config loaded successfully"
+    source "$PG_ENV"
+    load_pg_env
 else
-    echo -e "  ${RED}❌${NC} $PG_ENV not found — cannot verify config"
+    echo -e "  ${RED}❌${NC} $PG_ENV not found"
+    exit 1
 fi
 
+echo "  Resolved: PGHOST=$PGHOST PGDATABASE=${PGDATABASE:-(not set)} PGUSER=$PGUSER"
+
+# ============================================
+# Part 2: API keys (openclaw.json env.vars)
+# ============================================
+echo ""
+echo "API key configuration..."
+
+# Ensure openclaw.json exists
+if [ ! -f "$OPENCLAW_CONFIG" ]; then
+    echo -e "  ${YELLOW}⚠️  $OPENCLAW_CONFIG not found — creating minimal config${NC}"
+    echo '{}' > "$OPENCLAW_CONFIG"
+fi
+
+if ! command -v jq &>/dev/null; then
+    echo -e "  ${RED}❌${NC} jq is required to manage openclaw.json"
+    echo "      Install: sudo apt install jq"
+    exit 1
+fi
+
+# Check OPENAI_API_KEY
+OPENAI_KEY=$(jq -r '.env.vars.OPENAI_API_KEY // empty' "$OPENCLAW_CONFIG" 2>/dev/null)
+if [ -z "$OPENAI_KEY" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo -e "  ${YELLOW}⚠️  OPENAI_API_KEY not found${NC}"
+    echo "      Required for semantic recall (embeddings)."
+    echo "      Get a key from: https://platform.openai.com/api-keys"
+    echo ""
+    read -rp "    Enter your OpenAI API key (or press Enter to skip): " INPUT_OPENAI_KEY
+    if [ -n "$INPUT_OPENAI_KEY" ]; then
+        # Write to openclaw.json env.vars
+        TMP_CONFIG=$(mktemp)
+        jq --arg key "$INPUT_OPENAI_KEY" '.env.vars.OPENAI_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
+        mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
+        export OPENAI_API_KEY="$INPUT_OPENAI_KEY"
+        echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY written to $OPENCLAW_CONFIG"
+    else
+        echo -e "  ${YELLOW}⚠️  Skipped — semantic recall will not work without OPENAI_API_KEY${NC}"
+    fi
+elif [ -n "$OPENAI_KEY" ]; then
+    export OPENAI_API_KEY="$OPENAI_KEY"
+    echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY found in $OPENCLAW_CONFIG"
+else
+    echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY set in environment"
+fi
+
+# Check ANTHROPIC_API_KEY (optional but common)
+ANTHROPIC_KEY=$(jq -r '.env.vars.ANTHROPIC_API_KEY // empty' "$OPENCLAW_CONFIG" 2>/dev/null)
+if [ -n "$ANTHROPIC_KEY" ]; then
+    echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY found in $OPENCLAW_CONFIG"
+elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY set in environment"
+fi
+
+# ============================================
+# Part 3: Hand off to agent-install.sh
+# ============================================
 echo ""
 echo "Config setup complete. Running agent-install.sh..."
 echo ""
