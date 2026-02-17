@@ -49,7 +49,20 @@ if [ -f "$PG_CONFIG" ]; then
             fi
         done
         if [ "$PG_COMPLETE" = true ]; then
-            echo -e "  ${GREEN}✅${NC} $PG_CONFIG exists and is complete"
+            # Verify the configured DB is reachable
+            CONFIGURED_DB=$(jq -r '.database // empty' "$PG_CONFIG" 2>/dev/null)
+            CONFIGURED_USER=$(jq -r '.user // empty' "$PG_CONFIG" 2>/dev/null)
+            CONFIGURED_HOST=$(jq -r '.host // "localhost"' "$PG_CONFIG" 2>/dev/null)
+            CONFIGURED_PORT=$(jq -r '.port // 5432' "$PG_CONFIG" 2>/dev/null)
+
+            if [ -n "$CONFIGURED_DB" ] && psql -h "$CONFIGURED_HOST" -p "$CONFIGURED_PORT" -U "$CONFIGURED_USER" -d "$CONFIGURED_DB" -c "SELECT 1" &>/dev/null; then
+                echo -e "  ${GREEN}✅${NC} $PG_CONFIG exists and is complete"
+                echo "  Resolved: PGHOST=$CONFIGURED_HOST PGDATABASE=$CONFIGURED_DB PGUSER=$CONFIGURED_USER"
+            else
+                echo -e "  ${YELLOW}⚠️  $PG_CONFIG exists but database '$CONFIGURED_DB' is not reachable${NC}"
+                echo "  Reconfiguring database settings..."
+                PG_COMPLETE=false
+            fi
         fi
     else
         echo -e "  ${YELLOW}⚠️  jq not installed — cannot validate $PG_CONFIG${NC}"

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict XlY291dugAZZJfaMNdu8xXLwI9HtMYb7G9yO9yv6iay6toqCij0CtHBXOWeqAsz
+\restrict yiCOxMPqZpHIFyTvHELjOAVnWXzEeUucItPP288L9Zczl3oHqNTgFItu9oGEj1u
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -713,15 +713,12 @@ DECLARE
     v_file_key TEXT;
     v_result TEXT;
 BEGIN
-    -- Extract file key from path (strip .md extension)
     v_file_key := upper(regexp_replace(
         regexp_replace(p_file_path, '^.*/([^/]+)\.md$', '\1'),
         '-', '_', 'g'
     ));
     
-    -- Determine if universal or agent-specific
     IF p_agent_name IS NULL THEN
-        -- Universal context
         PERFORM update_universal_context(
             v_file_key,
             p_file_content,
@@ -730,7 +727,6 @@ BEGIN
         );
         v_result := 'universal:' || v_file_key;
     ELSE
-        -- Agent-specific context
         PERFORM update_agent_context(
             p_agent_name,
             v_file_key,
@@ -883,6 +879,7 @@ BEGIN
         subq.content,
         subq.source
     FROM (
+        -- 1. UNIVERSAL (highest priority)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'universal'::TEXT AS source, 1 AS priority
         FROM agent_bootstrap_context abc
@@ -890,6 +887,7 @@ BEGIN
 
         UNION ALL
 
+        -- 2. GLOBAL
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'global'::TEXT AS source, 2 AS priority
         FROM agent_bootstrap_context abc
@@ -897,6 +895,7 @@ BEGIN
 
         UNION ALL
 
+        -- 3. DOMAIN (matched via agent_domains)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'domain:' || abc.domain_name AS source, 3 AS priority
         FROM agent_bootstrap_context abc
@@ -906,39 +905,54 @@ BEGIN
 
         UNION ALL
 
-        -- WORKFLOW (dynamic) — match by step domains OR orchestrator domain
-        SELECT 
+        -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
+        -- Matches workflows where agent is assigned to steps,
+        -- workflow domains overlap agent domains,
+        -- OR agent is the workflow orchestrator
+        SELECT
             'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
-            w.name || ': ' || w.description || E'\n\nSteps:\n' ||
-            string_agg(
-                ws.step_order || '. ' || ws.description || 
-                COALESCE(' [domain: ' || ws.domain || ']', ''),
-                E'\n' ORDER BY ws.step_order
-            ) AS content,
+            w.name || ': ' || w.description ||
+            CASE WHEN steps_text IS NOT NULL
+                 THEN E'\n\nSteps:\n' || steps_text
+                 ELSE ''
+            END AS content,
             'workflow:' || w.name AS source,
             4 AS priority
         FROM workflows w
-        JOIN workflow_steps ws ON ws.workflow_id = w.id
+        LEFT JOIN LATERAL (
+            SELECT string_agg(
+                ws.step_order || '. ' || ws.description ||
+                COALESCE(' [agent: ' || a2.name || ']', '') ||
+                COALESCE(' [domain: ' || ws.domain || ']', ''),
+                E'\n' ORDER BY ws.step_order
+            ) AS steps_text
+            FROM workflow_steps ws
+            LEFT JOIN agents a2 ON a2.id = ws.agent_id
+            WHERE ws.workflow_id = w.id
+        ) ws_agg ON true
         WHERE w.status = 'active'
           AND (
-            -- Step domains overlap with agent's domains
+            -- Agent is the workflow orchestrator
+            w.orchestrator_agent_id = v_agent_id
+            OR
+            -- Agent is directly assigned to a step
             EXISTS (
-                SELECT 1 FROM agent_domains ad
-                WHERE ad.agent_id = v_agent_id
-                  AND (ad.domain_topic = ws.domain OR ad.domain_topic = ANY(ws.domains))
+                SELECT 1 FROM workflow_steps ws2
+                WHERE ws2.workflow_id = w.id AND ws2.agent_id = v_agent_id
             )
             OR
-            -- Agent owns the orchestrator domain
+            -- Workflow step domains overlap with agent's domains
             EXISTS (
-                SELECT 1 FROM agent_domains ad
-                WHERE ad.agent_id = v_agent_id
-                  AND ad.domain_topic = w.orchestrator_domain
+                SELECT 1 FROM workflow_steps ws3
+                JOIN agent_domains ad ON ad.agent_id = v_agent_id
+                WHERE ws3.workflow_id = w.id
+                  AND (ad.domain_topic = ws3.domain OR ad.domain_topic = ANY(ws3.domains))
             )
           )
-        GROUP BY w.id, w.name, w.description
 
         UNION ALL
 
+        -- 5. AGENT-specific (lowest priority)
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'agent'::TEXT AS source, 5 AS priority
         FROM agent_bootstrap_context abc
@@ -956,7 +970,7 @@ ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
 -- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Returns bootstrap context: UNIVERSAL + GLOBAL + DOMAIN + dynamic workflows (step domains + orchestrator domain) + AGENT. Issues #95, #97, #99.';
+COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Get all bootstrap files for an agent: universal + GLOBAL + agent domains + workflows (dynamic, includes orchestrator_agent_id matching) + agent-specific. Issue #97: orchestrator_agent_id support.';
 
 
 --
@@ -2738,6 +2752,53 @@ COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (s
 
 
 --
+-- Name: bootstrap_context_agents; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.bootstrap_context_agents (
+    id integer NOT NULL,
+    agent_name text NOT NULL,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    description text,
+    updated_at timestamp with time zone DEFAULT now(),
+    updated_by text,
+    CONSTRAINT bootstrap_context_agents_file_key_check CHECK ((file_key <> ''::text))
+);
+
+
+ALTER TABLE public.bootstrap_context_agents OWNER TO nova;
+
+--
+-- Name: TABLE bootstrap_context_agents; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.bootstrap_context_agents IS 'Per-agent context files (SEED_CONTEXT.md, domain knowledge)';
+
+
+--
+-- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.bootstrap_context_agents_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNER TO nova;
+
+--
+-- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNED BY public.bootstrap_context_agents.id;
+
+
+--
 -- Name: bootstrap_context_audit; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -2803,6 +2864,52 @@ ALTER TABLE public.bootstrap_context_config OWNER TO nova;
 --
 
 COMMENT ON TABLE public.bootstrap_context_config IS 'Configuration for bootstrap system behavior';
+
+
+--
+-- Name: bootstrap_context_universal; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.bootstrap_context_universal (
+    id integer NOT NULL,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    description text,
+    updated_at timestamp with time zone DEFAULT now(),
+    updated_by text,
+    CONSTRAINT bootstrap_context_universal_file_key_check CHECK ((file_key <> ''::text))
+);
+
+
+ALTER TABLE public.bootstrap_context_universal OWNER TO nova;
+
+--
+-- Name: TABLE bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.bootstrap_context_universal IS 'Universal context files loaded for all agents (AGENTS.md, SOUL.md, etc.)';
+
+
+--
+-- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.bootstrap_context_universal_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNER TO nova;
+
+--
+-- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNED BY public.bootstrap_context_universal.id;
 
 
 --
@@ -6153,10 +6260,24 @@ ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artw
 
 
 --
+-- Name: bootstrap_context_agents id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_agents ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_agents_id_seq'::regclass);
+
+
+--
 -- Name: bootstrap_context_audit id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
 ALTER TABLE ONLY public.bootstrap_context_audit ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_audit_id_seq'::regclass);
+
+
+--
+-- Name: bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_universal ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_universal_id_seq'::regclass);
 
 
 --
@@ -6546,6 +6667,22 @@ ALTER TABLE ONLY public.asset_classes
 
 
 --
+-- Name: bootstrap_context_agents bootstrap_context_agents_agent_name_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_agents
+    ADD CONSTRAINT bootstrap_context_agents_agent_name_file_key_key UNIQUE (agent_name, file_key);
+
+
+--
+-- Name: bootstrap_context_agents bootstrap_context_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_agents
+    ADD CONSTRAINT bootstrap_context_agents_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: bootstrap_context_audit bootstrap_context_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
 --
 
@@ -6559,6 +6696,22 @@ ALTER TABLE ONLY public.bootstrap_context_audit
 
 ALTER TABLE ONLY public.bootstrap_context_config
     ADD CONSTRAINT bootstrap_context_config_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: bootstrap_context_universal bootstrap_context_universal_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_universal
+    ADD CONSTRAINT bootstrap_context_universal_file_key_key UNIQUE (file_key);
+
+
+--
+-- Name: bootstrap_context_universal bootstrap_context_universal_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.bootstrap_context_universal
+    ADD CONSTRAINT bootstrap_context_universal_pkey PRIMARY KEY (id);
 
 
 --
@@ -7276,6 +7429,13 @@ CREATE INDEX idx_agents_role ON public.agents USING btree (role);
 --
 
 CREATE INDEX idx_agents_status ON public.agents USING btree (status);
+
+
+--
+-- Name: idx_bootstrap_agents_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_bootstrap_agents_name ON public.bootstrap_context_agents USING btree (agent_name);
 
 
 --
@@ -8155,10 +8315,26 @@ CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR
 
 
 --
+-- Name: bootstrap_context_agents trg_audit_bootstrap_agents; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_audit_bootstrap_agents AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_agents FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_agents();
+
+
+--
+-- Name: bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_universal FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_universal();
+
+
+--
 -- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: nova
 --
 
 CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.embed_chat_message();
+
+ALTER TABLE public.agent_chat ENABLE REPLICA TRIGGER trg_embed_chat_message;
 
 
 --
@@ -8173,6 +8349,8 @@ CREATE TRIGGER trg_normalize_mentions BEFORE INSERT ON public.agent_chat FOR EAC
 --
 
 CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+
+ALTER TABLE public.agent_chat ENABLE ALWAYS TRIGGER trg_notify_agent_chat;
 
 
 --
@@ -10128,5 +10306,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict XlY291dugAZZJfaMNdu8xXLwI9HtMYb7G9yO9yv6iay6toqCij0CtHBXOWeqAsz
+\unrestrict yiCOxMPqZpHIFyTvHELjOAVnWXzEeUucItPP288L9Zczl3oHqNTgFItu9oGEj1u
 
