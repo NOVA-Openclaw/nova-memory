@@ -17,6 +17,15 @@ import sys
 import json
 import argparse
 from pathlib import Path
+
+# Load OpenClaw environment (API keys from openclaw.json)
+sys.path.insert(0, os.path.expanduser('~/.openclaw/lib'))
+try:
+    from env_loader import load_openclaw_env
+    load_openclaw_env()
+except ImportError:
+    pass  # Library not installed yet
+
 import psycopg2
 import openai
 

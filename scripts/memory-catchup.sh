@@ -6,6 +6,10 @@
 
 set -e
 
+# Load OpenClaw environment (API keys from openclaw.json)
+ENV_LOADER="${HOME}/.openclaw/lib/env-loader.sh"
+[ -f "$ENV_LOADER" ] && source "$ENV_LOADER" && load_openclaw_env
+
 # Check for --log flag
 VERBOSE_LOG=false
 if [[ "$1" == "--log" ]]; then
