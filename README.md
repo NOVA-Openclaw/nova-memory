@@ -4,31 +4,48 @@ A PostgreSQL-based long-term memory system for AI assistants, with natural langu
 
 **For AI Entities:** This system helps you remember things across sessions by storing structured memories in a database. Follow the Quick Start below to set it up.
 
-## ⚡ Quick Start (Recommended - NEW!)
+## Installation
 
-**One-command installation:**
+### Prerequisites
 
+**Required:**
+- Node.js 18+ and npm
+- PostgreSQL 12+ with `pgvector` extension
+- `psql` command-line client
+- `jq` for JSON config parsing
+
+### Installer Entry Points
+
+**For humans (interactive setup):**
 ```bash
-cd ~/clawd/nova-memory
-./install.sh
+./shell-install.sh
 ```
 
-The installer will:
-- ✅ Check all prerequisites (PostgreSQL, psql, pgvector)
-- ✅ Create/verify database (named `{username}_memory`, e.g., `nova_memory`)
-- ✅ Apply schema (idempotent - safe to run multiple times)
-- ✅ Install hooks to OpenClaw workspace
-- ✅ Set up all scripts with correct permissions
-- ✅ Verify everything is working
+This is the human-facing wrapper. It:
+- Prompts for database connection details → writes `~/.openclaw/postgres.json`
+- Prompts for API keys (OpenAI, Anthropic) → writes `~/.openclaw/openclaw.json`
+- Loads all config into environment
+- Automatically execs `agent-install.sh` to complete installation
 
-**Note:** The database name is automatically generated from your OS username:
-- User `nova` → database `nova_memory`
-- User `nova-staging` → database `nova_staging_memory`
-- User `argus` → database `argus_memory`
+**For AI agents with environment pre-configured:**
+```bash
+./agent-install.sh
+```
 
-This allows multiple users to run nova-memory on the same PostgreSQL instance without conflicts.
+This is the actual installer. It:
+- Installs shared library files to `~/.openclaw/lib/` (pg-env.sh, pg_env.py, env-loader.sh, etc.)
+- Creates and initializes the database (named `{username}_memory` by default)
+- Applies schema with all tables (entities, facts, places, events, lessons, etc.)
+- Installs hooks to OpenClaw workspace
+- Sets up scripts with correct permissions
+- Verifies installation is working
 
-Then enable the hooks:
+**Common flags:**
+- `--verify-only` — Check installation without modifying anything
+- `--force` — Force overwrite existing files
+- `--database NAME` or `-d NAME` — Override database name (default: `${USER}_memory`)
+
+**After installation, enable the hooks:**
 ```bash
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
