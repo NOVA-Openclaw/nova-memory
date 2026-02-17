@@ -19,10 +19,6 @@ try:
 except ImportError:
     pass  # Library not installed yet
 
-# Load centralized PostgreSQL configuration
-sys.path.insert(0, os.path.expanduser("~/.openclaw/lib"))
-from pg_env import load_pg_env
-load_pg_env()
 
 from confidence_helper import get_initial_confidence
 
