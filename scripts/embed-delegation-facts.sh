@@ -7,6 +7,10 @@
 
 set -e
 
+# Load OpenClaw environment (API keys from openclaw.json)
+ENV_LOADER="${HOME}/.openclaw/lib/env-loader.sh"
+[ -f "$ENV_LOADER" ] && source "$ENV_LOADER" && load_openclaw_env
+
 # Load centralized PostgreSQL configuration
 source "$HOME/.openclaw/lib/pg-env.sh"
 load_pg_env

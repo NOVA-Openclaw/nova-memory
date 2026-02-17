@@ -2,6 +2,10 @@
 # process-input.sh - Main entry point for memory extraction pipeline
 # Extracts entities/facts/opinions from text and stores in database
 
+# Load OpenClaw environment (API keys from openclaw.json)
+ENV_LOADER="${HOME}/.openclaw/lib/env-loader.sh"
+[ -f "$ENV_LOADER" ] && source "$ENV_LOADER" && load_openclaw_env
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Get input

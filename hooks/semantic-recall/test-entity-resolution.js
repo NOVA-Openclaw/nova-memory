@@ -10,10 +10,10 @@ import pg from "pg";
 const { Pool } = pg;
 
 const pool = new Pool({
-  host: process.env.POSTGRES_HOST || "localhost",
-  database: process.env.POSTGRES_DB || "nova_memory",
-  user: process.env.POSTGRES_USER || "nova",
-  password: process.env.POSTGRES_PASSWORD,
+  host: process.env.PGHOST || "localhost",
+  database: process.env.PGDATABASE || "nova_memory",
+  user: process.env.PGUSER || "nova",
+  password: process.env.PGPASSWORD,
   max: 5,
 });
 

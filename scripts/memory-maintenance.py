@@ -14,6 +14,15 @@ Options:
     --skip-dedup  Skip the duplicate merge phase
 """
 
+# Load OpenClaw environment (API keys from openclaw.json)
+import sys, os
+sys.path.insert(0, os.path.expanduser('~/.openclaw/lib'))
+try:
+    from env_loader import load_openclaw_env
+    load_openclaw_env()
+except ImportError:
+    pass  # Library not installed yet
+
 import psycopg2
 import psycopg2.extras
 from datetime import datetime, timedelta, timezone
