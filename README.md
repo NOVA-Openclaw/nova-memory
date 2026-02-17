@@ -10,6 +10,7 @@ A PostgreSQL-based long-term memory system for AI assistants, with natural langu
 
 **Required:**
 - Node.js 18+ and npm
+- Python 3 with `python3-venv` module
 - PostgreSQL 12+ with `pgvector` extension
 - `psql` command-line client
 - `jq` for JSON config parsing
@@ -36,8 +37,13 @@ This is the actual installer. It:
 - Installs shared library files to `~/.openclaw/lib/` (pg-env.sh, pg_env.py, env-loader.sh, etc.)
 - Creates and initializes the database (named `{username}_memory` by default)
 - Applies schema with all tables (entities, facts, places, events, lessons, etc.)
-- Installs hooks to OpenClaw workspace
-- Sets up scripts with correct permissions
+- Installs hooks to OpenClaw hooks directory
+- Copies scripts to `~/.openclaw/scripts/` and workspace `scripts/`
+- Installs grammar parser to `~/.local/share/$USER/grammar_parser/`
+- Installs skills to `~/.openclaw/skills/`
+- Sets up a Python virtual environment with required dependencies
+- Patches OpenClaw config to auto-enable hooks (if `enable-hooks.sh` is present)
+- Configures a cron job for daily memory maintenance
 - Verifies installation is working
 
 **Common flags:**
@@ -45,7 +51,7 @@ This is the actual installer. It:
 - `--force` — Force overwrite existing files
 - `--database NAME` or `-d NAME` — Override database name (default: `${USER}_memory`)
 
-**After installation, enable the hooks:**
+**After installation, enable the hooks** (the installer auto-enables these if `enable-hooks.sh` succeeds; run manually if needed):
 ```bash
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
@@ -130,8 +136,8 @@ Each loader sets the standard `PG*` environment variables, which PostgreSQL clie
 
 ### Install scripts
 
-- **`shell-install.sh`** — Creates the database, writes `~/.openclaw/postgres.json`, then execs `agent-install.sh` automatically
-- **`agent-install.sh`** — Installs loader libs to `~/.openclaw/lib/`, reads `postgres.json` via the Bash loader; fails with guidance if the file is missing (called automatically by `shell-install.sh`)
+- **`shell-install.sh`** — Prompts for database and API key config, writes `~/.openclaw/postgres.json` and `~/.openclaw/openclaw.json`, then execs `agent-install.sh` automatically
+- **`agent-install.sh`** — Installs loader libs to `~/.openclaw/lib/`, creates the database, applies schema, installs hooks/scripts/skills, and sets up the Python environment; reads `postgres.json` via the Bash loader and fails with guidance if the file is missing (called automatically by `shell-install.sh`)
 
 ## Overview
 
