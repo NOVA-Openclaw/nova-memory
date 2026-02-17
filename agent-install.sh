@@ -87,6 +87,11 @@ if [ -n "$DB_NAME_OVERRIDE" ]; then
     DB_NAME="$DB_NAME_OVERRIDE"
 fi
 
+# Temp file cleanup
+TMPFILES=()
+cleanup_tmp() { rm -f "${TMPFILES[@]}"; }
+trap cleanup_tmp EXIT
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -1296,7 +1301,8 @@ PGDATABASE=$DB_NAME
         echo ""
         
         # Try to save to a temp file for easy installation
-        TEMP_CRON="/tmp/nova-memory-cron-$(date +%s)"
+        TEMP_CRON=$(mktemp /tmp/nova-memory-cron-XXXXXX)
+        TMPFILES+=("$TEMP_CRON")
         echo "$CRON_CONTENT" > "$TEMP_CRON"
         echo "      Temp cron file created at: $TEMP_CRON"
         echo "      Run: sudo cp $TEMP_CRON $CRON_FILE && sudo chmod 644 $CRON_FILE"
