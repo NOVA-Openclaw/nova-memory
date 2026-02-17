@@ -6,7 +6,6 @@ ENV_LOADER="${HOME}/.openclaw/lib/env-loader.sh"
 [ -f "$ENV_LOADER" ] && source "$ENV_LOADER" && load_openclaw_env
 
 # Load centralized PostgreSQL configuration
-load_pg_env
 
 INPUT_TEXT="${1:-$(cat)}"
 [ -z "$INPUT_TEXT" ] && exit 1

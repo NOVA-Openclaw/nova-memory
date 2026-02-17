@@ -6,7 +6,6 @@
 set -e
 
 # Load centralized PostgreSQL configuration
-load_pg_env
 
 
 ENTITY_IDS=""

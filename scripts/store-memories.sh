@@ -10,7 +10,6 @@ ENV_LOADER="${HOME}/.openclaw/lib/env-loader.sh"
 [ -f "$ENV_LOADER" ] && source "$ENV_LOADER" && load_openclaw_env
 
 # Load centralized PostgreSQL configuration
-load_pg_env
 
 # Read JSON from stdin or argument
 if [ -n "$1" ]; then
