@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ieVZ7j4kAO7pQMRXiKTdPvMnhHoq8cG6hT4I6sSoE3Ojr9BK33Hr0dSvlyQRZmv
+\restrict 0tMEtiacrQjvgWAONIbhDmr9ngICGSdvDu0dG1VpMCqgXhYoPUzfxK7cukCgX74
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2457,7 +2457,9 @@ CREATE TABLE public.agents (
     config_reasoning text,
     fallback_model character varying(100),
     collaborate jsonb,
-    decision_criteria text
+    decision_criteria text,
+    thinking character varying(20),
+    CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY ((ARRAY['off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying])::text[])))
 );
 
 
@@ -5253,6 +5255,51 @@ ALTER SEQUENCE public.ralph_sessions_id_seq OWNER TO nova;
 
 ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
 
+
+--
+-- Name: shopping_history_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
+--
+
+CREATE SEQUENCE public.shopping_history_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.shopping_history_id_seq OWNER TO "nova-staging";
+
+--
+-- Name: shopping_preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
+--
+
+CREATE SEQUENCE public.shopping_preferences_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.shopping_preferences_id_seq OWNER TO "nova-staging";
+
+--
+-- Name: shopping_wishlist_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
+--
+
+CREATE SEQUENCE public.shopping_wishlist_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.shopping_wishlist_id_seq OWNER TO "nova-staging";
 
 --
 -- Name: tags; Type: TABLE; Schema: public; Owner: erato
@@ -9239,6 +9286,7 @@ GRANT SELECT ON TABLE public.entity_facts TO gidget;
 GRANT SELECT ON TABLE public.entity_facts TO ticker;
 GRANT SELECT ON TABLE public.entity_facts TO athena;
 GRANT ALL ON TABLE public.entity_facts TO "nova-staging";
+GRANT SELECT ON TABLE public.entity_facts TO graybeard;
 
 
 --
@@ -9261,6 +9309,7 @@ GRANT SELECT ON TABLE public.entities TO gidget;
 GRANT SELECT ON TABLE public.entities TO ticker;
 GRANT SELECT ON TABLE public.entities TO athena;
 GRANT ALL ON TABLE public.entities TO "nova-staging";
+GRANT SELECT ON TABLE public.entities TO graybeard;
 
 
 --
@@ -9314,6 +9363,7 @@ GRANT SELECT ON TABLE public.entity_relationships TO gidget;
 GRANT SELECT ON TABLE public.entity_relationships TO ticker;
 GRANT SELECT ON TABLE public.entity_relationships TO athena;
 GRANT ALL ON TABLE public.entity_relationships TO "nova-staging";
+GRANT SELECT ON TABLE public.entity_relationships TO graybeard;
 
 
 --
@@ -10306,5 +10356,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ieVZ7j4kAO7pQMRXiKTdPvMnhHoq8cG6hT4I6sSoE3Ojr9BK33Hr0dSvlyQRZmv
+\unrestrict 0tMEtiacrQjvgWAONIbhDmr9ngICGSdvDu0dG1VpMCqgXhYoPUzfxK7cukCgX74
 
