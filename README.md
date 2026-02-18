@@ -445,7 +445,7 @@ Agents can now be mentioned using any of their identifiers, matched case-insensi
 - **Config agentName** (from Clawdbot config)
 
 **Benefits:**
-- `@nhr-agent`, `@NHR-AGENT`, `@Nhr-Agent` all work
+- `@newhart`, `@NEWHART`, `@Newhart` all work
 - `@Newhart` matches if "Newhart" is the nickname
 - `@bob` matches if "bob" is an alias
 
@@ -480,34 +480,34 @@ Agents can now send messages using human-friendly identifiers instead of exact d
 **Enhanced sendText() Function:**
 ```typescript
 // Old way: Need exact database name
-sendText({ to: "nhr-agent", text: "Hello" })
+sendText({ to: "newhart", text: "Hello" })
 
 // New way: Use friendly identifiers  
 sendText({ to: "Newhart", text: "Hello" })     // nickname
 sendText({ to: "bob", text: "Hello" })         // alias
-sendText({ to: "NHR-AGENT", text: "Hello" })  // case-insensitive name
+sendText({ to: "NEWHART", text: "Hello" })  // case-insensitive name
 ```
 
 **Examples:**
 
 ```sql
 -- Setup: Agent with multiple identifiers
-INSERT INTO agents (name, nickname) VALUES ('nhr-agent', 'Newhart');
+INSERT INTO agents (name, nickname) VALUES ('newhart', 'Newhart');
 INSERT INTO agent_aliases (agent_id, alias) 
-SELECT id, 'bob' FROM agents WHERE name = 'nhr-agent';
+SELECT id, 'bob' FROM agents WHERE name = 'newhart';
 
 -- All these resolve to the same agent:
-SELECT resolveAgentName('nhr-agent');  -- → 'nhr-agent'
-SELECT resolveAgentName('Newhart');    -- → 'nhr-agent'  
-SELECT resolveAgentName('BOB');        -- → 'nhr-agent'
+SELECT resolveAgentName('newhart');  -- → 'newhart'
+SELECT resolveAgentName('Newhart');    -- → 'newhart'  
+SELECT resolveAgentName('BOB');        -- → 'newhart'
 ```
 
 **Full Workflow:**
 1. **Send:** `sendText({ to: "Newhart", text: "Hello" })`
-2. **Resolve:** "Newhart" → resolves to "nhr-agent" 
-3. **Route:** Message stored with `mentions: ["nhr-agent"]`
-4. **Receive:** nhr-agent's identifiers include "newhart" → message matches
-5. **Deliver:** Message delivered to nhr-agent session
+2. **Resolve:** "Newhart" → resolves to "newhart" 
+3. **Route:** Message stored with `mentions: ["newhart"]`
+4. **Receive:** newhart's identifiers include "newhart" → message matches
+5. **Deliver:** Message delivered to newhart session
 
 **Backward Compatibility:** All existing code continues to work unchanged.
 
@@ -846,7 +846,7 @@ Run the installation script to symlink hooks to your OpenClaw workspace:
 ./install-hooks.sh
 ```
 
-This creates symlinks from `~/.openclaw/workspace-claude-code/hooks/` to `nova-memory/hooks/`. Symlinks ensure:
+This creates symlinks from `~/.openclaw/workspace-coder/hooks/` to `nova-memory/hooks/`. Symlinks ensure:
 - Hooks stay under version control
 - Changes are tracked in git
 - Updates propagate automatically
@@ -884,7 +884,7 @@ Memories are automatically extracted and stored from conversations.
 To remove hooks:
 
 ```bash
-cd ~/.openclaw/workspace-claude-code/hooks/
+cd ~/.openclaw/workspace-coder/hooks/
 rm memory-extract semantic-recall session-init
 ```
 

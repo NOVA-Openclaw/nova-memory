@@ -27,19 +27,19 @@ The function should:
 **Priority:** Critical
 
 **Given:** 
-- Agent exists in database with name "nhr-agent"
+- Agent exists in database with name "newhart"
 
 **When:** 
-- `resolveAgentName(client, "nhr-agent")` is called
+- `resolveAgentName(client, "newhart")` is called
 
 **Then:**
-- Returns "nhr-agent"
+- Returns "newhart"
 - No error is thrown
 
 **Variations:**
-- "nhr-agent" → "nhr-agent" ✓
-- "NHR-AGENT" → "nhr-agent" ✓ (case-insensitive)
-- "Nhr-Agent" → "nhr-agent" ✓ (case-insensitive)
+- "newhart" → "newhart" ✓
+- "NEWHART" → "newhart" ✓ (case-insensitive)
+- "Newhart" → "newhart" ✓ (case-insensitive)
 
 ---
 
@@ -50,20 +50,20 @@ The function should:
 
 **Given:**
 - Agent exists with:
-  - `name`: "nhr-agent"
+  - `name`: "newhart"
   - `nickname`: "Newhart"
 
 **When:**
 - `resolveAgentName(client, "Newhart")` is called
 
 **Then:**
-- Returns "nhr-agent" (the canonical name)
+- Returns "newhart" (the canonical name)
 - Nickname matching is case-insensitive
 
 **Variations:**
-- "Newhart" → "nhr-agent" ✓
-- "newhart" → "nhr-agent" ✓
-- "NEWHART" → "nhr-agent" ✓
+- "Newhart" → "newhart" ✓
+- "newhart" → "newhart" ✓
+- "NEWHART" → "newhart" ✓
 
 ---
 
@@ -73,7 +73,7 @@ The function should:
 **Priority:** High
 
 **Given:**
-- Agent "nhr-agent" has aliases:
+- Agent "newhart" has aliases:
   - "bob" (from agent_aliases table)
   - "newhart-bot" (from agent_aliases table)
 
@@ -81,14 +81,14 @@ The function should:
 - `resolveAgentName(client, "bob")` is called
 
 **Then:**
-- Returns "nhr-agent"
+- Returns "newhart"
 - Alias matching is case-insensitive
 
 **Variations:**
-- "bob" → "nhr-agent" ✓
-- "BOB" → "nhr-agent" ✓
-- "newhart-bot" → "nhr-agent" ✓
-- "NEWHART-BOT" → "nhr-agent" ✓
+- "bob" → "newhart" ✓
+- "BOB" → "newhart" ✓
+- "newhart-bot" → "newhart" ✓
+- "NEWHART-BOT" → "newhart" ✓
 
 ---
 
@@ -200,10 +200,10 @@ LIMIT 1;
 ### Test with Various Inputs
 ```typescript
 // Test cases to run
-await resolveAgentName(client, "nhr-agent");    // Should return "nhr-agent"
-await resolveAgentName(client, "Newhart");      // Should return "nhr-agent"
-await resolveAgentName(client, "NEWHART");      // Should return "nhr-agent"
-await resolveAgentName(client, "bob");          // Should return "nhr-agent" (if alias exists)
+await resolveAgentName(client, "newhart");    // Should return "newhart"
+await resolveAgentName(client, "Newhart");      // Should return "newhart"
+await resolveAgentName(client, "NEWHART");      // Should return "newhart"
+await resolveAgentName(client, "bob");          // Should return "newhart" (if alias exists)
 await resolveAgentName(client, "nonexistent");  // Should throw error
 await resolveAgentName(client, "");             // Should throw "Target cannot be empty"
 ```

@@ -291,9 +291,9 @@ The new `install.sh` copies hooks instead, which is more reliable.
 If you previously used symlinks, remove them first:
 
 ```bash
-rm -rf ~/.openclaw/workspace-claude-code/hooks/memory-extract
-rm -rf ~/.openclaw/workspace-claude-code/hooks/semantic-recall
-rm -rf ~/.openclaw/workspace-claude-code/hooks/session-init
+rm -rf ~/.openclaw/workspace-coder/hooks/memory-extract
+rm -rf ~/.openclaw/workspace-coder/hooks/semantic-recall
+rm -rf ~/.openclaw/workspace-coder/hooks/session-init
 ```
 
 Then run the new installer:
@@ -420,7 +420,7 @@ nova-memory/
 
 ### After Installation (Workspace)
 ```
-~/.openclaw/workspace-claude-code/
+~/.openclaw/workspace-coder/
 ├── hooks/                  # Installed hooks
 │   ├── memory-extract/     # → Uses ../../scripts/process-input.sh
 │   ├── semantic-recall/    # → Uses ../../scripts/proactive-recall.py
