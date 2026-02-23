@@ -51,6 +51,8 @@ This is the actual installer. It:
 - `--force` — Force overwrite existing files
 - `--database NAME` or `-d NAME` — Override database name (default: `${USER}_memory`)
 
+> **Upgrading?** Re-running `agent-install.sh` on an existing installation is safe. It automatically detects and applies any missing schema columns — no manual `ALTER TABLE` commands needed. (#127)
+
 **After installation, enable the hooks** (the installer auto-enables these if `enable-hooks.sh` succeeds; run manually if needed):
 ```bash
 openclaw hooks enable memory-extract
