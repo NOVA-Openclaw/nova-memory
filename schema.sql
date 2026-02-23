@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0tMEtiacrQjvgWAONIbhDmr9ngICGSdvDu0dG1VpMCqgXhYoPUzfxK7cukCgX74
+\restrict n6vlFx6I8Ao2L4O7bqJDeDqr09PhZJ0WNUrluAaw3M8xLd1mugU8gzXgg3LApNb
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -858,20 +858,16 @@ $$;
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
 
 --
--- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: public; Owner: nova
+-- Name: get_agent_bootstrap(character varying); Type: FUNCTION; Schema: public; Owner: nova
 --
 
-CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
-    LANGUAGE plpgsql
+CREATE FUNCTION public.get_agent_bootstrap(p_agent_name character varying) RETURNS TABLE(filename text, content text, source text)
+    LANGUAGE plpgsql STABLE
     AS $$
 DECLARE
-    v_agent_id INTEGER;
+    v_agent_id INT;
 BEGIN
-    IF NOT (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled') THEN
-        RETURN;
-    END IF;
-
-    SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name LIMIT 1;
+    SELECT id INTO v_agent_id FROM agents WHERE name ILIKE p_agent_name;
 
     RETURN QUERY
     SELECT DISTINCT ON (subq.filename)
@@ -906,14 +902,11 @@ BEGIN
         UNION ALL
 
         -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
-        -- Matches workflows where agent is assigned to steps,
-        -- workflow domains overlap agent domains,
-        -- OR agent is the workflow orchestrator
         SELECT
             'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
             w.name || ': ' || w.description ||
-            CASE WHEN steps_text IS NOT NULL
-                 THEN E'\n\nSteps:\n' || steps_text
+            CASE WHEN ws_agg.steps_text IS NOT NULL
+                 THEN E'\n\nSteps:\n' || ws_agg.steps_text
                  ELSE ''
             END AS content,
             'workflow:' || w.name AS source,
@@ -932,8 +925,11 @@ BEGIN
         ) ws_agg ON true
         WHERE w.status = 'active'
           AND (
-            -- Agent is the workflow orchestrator
-            w.orchestrator_agent_id = v_agent_id
+            -- Agent has the orchestrator domain
+            EXISTS (
+                SELECT 1 FROM agent_domains ad 
+                WHERE ad.agent_id = v_agent_id AND ad.domain_topic = w.orchestrator_domain
+            )
             OR
             -- Agent is directly assigned to a step
             EXISTS (
@@ -964,14 +960,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
-
---
--- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.get_agent_bootstrap(p_agent_name text) IS 'Get all bootstrap files for an agent: universal + GLOBAL + agent domains + workflows (dynamic, includes orchestrator_agent_id matching) + agent-specific. Issue #97: orchestrator_agent_id support.';
-
+ALTER FUNCTION public.get_agent_bootstrap(p_agent_name character varying) OWNER TO nova;
 
 --
 -- Name: get_bootstrap_config(); Type: FUNCTION; Schema: public; Owner: nova
@@ -8936,13 +8925,6 @@ GRANT ALL ON FUNCTION public.chat(p_message text, p_sender character varying) TO
 
 
 --
--- Name: FUNCTION get_agent_bootstrap(p_agent_name text); Type: ACL; Schema: public; Owner: nova
---
-
-GRANT ALL ON FUNCTION public.get_agent_bootstrap(p_agent_name text) TO newhart;
-
-
---
 -- Name: FUNCTION insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean, p_deliverable_type text, p_deliverable_description text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -10356,5 +10338,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0tMEtiacrQjvgWAONIbhDmr9ngICGSdvDu0dG1VpMCqgXhYoPUzfxK7cukCgX74
+\unrestrict n6vlFx6I8Ao2L4O7bqJDeDqr09PhZJ0WNUrluAaw3M8xLd1mugU8gzXgg3LApNb
 
