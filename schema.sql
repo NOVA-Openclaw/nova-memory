@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict n6vlFx6I8Ao2L4O7bqJDeDqr09PhZJ0WNUrluAaw3M8xLd1mugU8gzXgg3LApNb
+\restrict May4TSqEc6LQPnleg81CwNjrmQuYFFYEw3fPJPlgy08buXjiP4J8mjd4O1kraDk
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1213,6 +1213,41 @@ $$;
 ALTER FUNCTION public.notify_agent_chat() OWNER TO postgres;
 
 --
+-- Name: notify_agent_config_changed(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.notify_agent_config_changed() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM pg_notify('agent_config_changed', json_build_object(
+            'agent_id', OLD.id,
+            'agent_name', OLD.name,
+            'operation', TG_OP
+        )::text);
+        RETURN OLD;
+    END IF;
+    
+    IF TG_OP = 'INSERT' OR
+       OLD.model IS DISTINCT FROM NEW.model OR
+       OLD.fallback_models IS DISTINCT FROM NEW.fallback_models OR
+       OLD.thinking IS DISTINCT FROM NEW.thinking OR
+       OLD.instance_type IS DISTINCT FROM NEW.instance_type THEN
+        PERFORM pg_notify('agent_config_changed', json_build_object(
+            'agent_id', NEW.id,
+            'agent_name', NEW.name,
+            'operation', TG_OP
+        )::text);
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.notify_agent_config_changed() OWNER TO nova;
+
+--
 -- Name: notify_coder_queue_change(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -1910,7 +1945,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: agent_actions; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_actions; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_actions (
@@ -1925,17 +1960,17 @@ CREATE TABLE public.agent_actions (
 );
 
 
-ALTER TABLE public.agent_actions OWNER TO nova;
+ALTER TABLE public.agent_actions OWNER TO newhart;
 
 --
--- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_actions IS 'Agent action definitions. READ-ONLY except Newhart.';
 
 
 --
--- Name: agent_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agent_actions_id_seq
@@ -1947,17 +1982,17 @@ CREATE SEQUENCE public.agent_actions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_actions_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agent_actions_id_seq OWNER TO newhart;
 
 --
--- Name: agent_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agent_actions_id_seq OWNED BY public.agent_actions.id;
 
 
 --
--- Name: agent_aliases; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_aliases; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_aliases (
@@ -1968,24 +2003,24 @@ CREATE TABLE public.agent_aliases (
 );
 
 
-ALTER TABLE public.agent_aliases OWNER TO nova;
+ALTER TABLE public.agent_aliases OWNER TO newhart;
 
 --
--- Name: TABLE agent_aliases; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_aliases; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_aliases IS 'Agent aliases for flexible mention matching. Supports case-insensitive routing.';
 
 
 --
--- Name: COLUMN agent_aliases.alias; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_aliases.alias; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_aliases.alias IS 'Alternative name/identifier for the agent (e.g., "assistant", "helper")';
 
 
 --
--- Name: agent_bootstrap_context; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_bootstrap_context (
@@ -2005,38 +2040,38 @@ CREATE TABLE public.agent_bootstrap_context (
 );
 
 
-ALTER TABLE public.agent_bootstrap_context OWNER TO nova;
+ALTER TABLE public.agent_bootstrap_context OWNER TO newhart;
 
 --
--- Name: TABLE agent_bootstrap_context; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_bootstrap_context; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_bootstrap_context IS 'Bootstrap context entries. READ-ONLY except Newhart (Agent Design/Management domain).';
 
 
 --
--- Name: COLUMN agent_bootstrap_context.context_type; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_bootstrap_context.context_type; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_bootstrap_context.context_type IS 'GLOBAL (all agents) or DOMAIN (agents in specific domain)';
 
 
 --
--- Name: COLUMN agent_bootstrap_context.domain_name; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_bootstrap_context.domain_name; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_bootstrap_context.domain_name IS 'NULL for GLOBAL, domain name from agent_domains for DOMAIN type';
 
 
 --
--- Name: COLUMN agent_bootstrap_context.file_key; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_bootstrap_context.file_key; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_bootstrap_context.file_key IS 'Identifier for context block, becomes filename in bootstrap';
 
 
 --
--- Name: agent_bootstrap_context_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agent_bootstrap_context_id_seq
@@ -2048,10 +2083,10 @@ CREATE SEQUENCE public.agent_bootstrap_context_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNER TO newhart;
 
 --
--- Name: agent_bootstrap_context_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNED BY public.agent_bootstrap_context.id;
@@ -2128,7 +2163,7 @@ COMMENT ON TABLE public.agent_chat_processed IS 'Message processing state. Agent
 
 
 --
--- Name: agent_domains; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_domains; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_domains (
@@ -2143,38 +2178,38 @@ CREATE TABLE public.agent_domains (
 );
 
 
-ALTER TABLE public.agent_domains OWNER TO nova;
+ALTER TABLE public.agent_domains OWNER TO newhart;
 
 --
--- Name: TABLE agent_domains; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_domains; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_domains IS 'Agent domain assignments. READ-ONLY except Newhart.';
 
 
 --
--- Name: COLUMN agent_domains.domain_topic; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_domains.domain_topic; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_domains.domain_topic IS 'The topic/responsibility this agent owns';
 
 
 --
--- Name: COLUMN agent_domains.source_entity_id; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_domains.source_entity_id; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_domains.source_entity_id IS 'Entity who assigned this domain (for attribution)';
 
 
 --
--- Name: COLUMN agent_domains.vote_count; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_domains.vote_count; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_domains.vote_count IS 'Reinforcement count - incremented when domain assignment is reconfirmed';
 
 
 --
--- Name: agent_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agent_domains_id_seq
@@ -2186,17 +2221,17 @@ CREATE SEQUENCE public.agent_domains_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_domains_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agent_domains_id_seq OWNER TO newhart;
 
 --
--- Name: agent_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agent_domains_id_seq OWNED BY public.agent_domains.id;
 
 
 --
--- Name: agent_jobs; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_jobs; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_jobs (
@@ -2221,17 +2256,17 @@ CREATE TABLE public.agent_jobs (
 );
 
 
-ALTER TABLE public.agent_jobs OWNER TO nova;
+ALTER TABLE public.agent_jobs OWNER TO newhart;
 
 --
--- Name: TABLE agent_jobs; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_jobs; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_jobs IS 'Agent job definitions. READ-ONLY except Newhart.';
 
 
 --
--- Name: agent_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agent_jobs_id_seq
@@ -2243,17 +2278,17 @@ CREATE SEQUENCE public.agent_jobs_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_jobs_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agent_jobs_id_seq OWNER TO newhart;
 
 --
--- Name: agent_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agent_jobs_id_seq OWNED BY public.agent_jobs.id;
 
 
 --
--- Name: agent_modifications; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_modifications; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_modifications (
@@ -2267,17 +2302,17 @@ CREATE TABLE public.agent_modifications (
 );
 
 
-ALTER TABLE public.agent_modifications OWNER TO nova;
+ALTER TABLE public.agent_modifications OWNER TO newhart;
 
 --
--- Name: TABLE agent_modifications; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_modifications; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_modifications IS 'Agent modification history. READ-ONLY except Newhart.';
 
 
 --
--- Name: agent_modifications_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_modifications_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agent_modifications_id_seq
@@ -2289,17 +2324,17 @@ CREATE SEQUENCE public.agent_modifications_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_modifications_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agent_modifications_id_seq OWNER TO newhart;
 
 --
--- Name: agent_modifications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_modifications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agent_modifications_id_seq OWNED BY public.agent_modifications.id;
 
 
 --
--- Name: agent_spawns; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_spawns; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_spawns (
@@ -2321,17 +2356,17 @@ CREATE TABLE public.agent_spawns (
 );
 
 
-ALTER TABLE public.agent_spawns OWNER TO nova;
+ALTER TABLE public.agent_spawns OWNER TO newhart;
 
 --
--- Name: TABLE agent_spawns; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_spawns; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_spawns IS 'Tracks all agent spawns from the general-purpose spawner daemon';
 
 
 --
--- Name: agent_spawns_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agent_spawns_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agent_spawns_id_seq
@@ -2343,17 +2378,17 @@ CREATE SEQUENCE public.agent_spawns_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agent_spawns_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agent_spawns_id_seq OWNER TO newhart;
 
 --
--- Name: agent_spawns_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agent_spawns_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agent_spawns_id_seq OWNED BY public.agent_spawns.id;
 
 
 --
--- Name: agent_system_config; Type: TABLE; Schema: public; Owner: nova
+-- Name: agent_system_config; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agent_system_config (
@@ -2366,59 +2401,59 @@ CREATE TABLE public.agent_system_config (
 );
 
 
-ALTER TABLE public.agent_system_config OWNER TO nova;
+ALTER TABLE public.agent_system_config OWNER TO newhart;
 
 --
--- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agent_system_config IS 'Agent system configuration. READ-ONLY except Newhart.';
 
 
 --
--- Name: COLUMN agent_system_config.key; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.key; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_system_config.key IS 'Unique configuration key identifier';
 
 
 --
--- Name: COLUMN agent_system_config.value; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.value; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_system_config.value IS 'Configuration value (stored as text, cast based on value_type)';
 
 
 --
--- Name: COLUMN agent_system_config.value_type; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.value_type; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_system_config.value_type IS 'Type hint: text, json, boolean, number';
 
 
 --
--- Name: COLUMN agent_system_config.description; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.description; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_system_config.description IS 'Human-readable description of what this config controls';
 
 
 --
--- Name: COLUMN agent_system_config.updated_at; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.updated_at; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_system_config.updated_at IS 'Last modification timestamp';
 
 
 --
--- Name: COLUMN agent_system_config.updated_by; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agent_system_config.updated_by; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agent_system_config.updated_by IS 'Agent or system that last modified this config';
 
 
 --
--- Name: agents; Type: TABLE; Schema: public; Owner: nova
+-- Name: agents; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.agents (
@@ -2448,112 +2483,114 @@ CREATE TABLE public.agents (
     collaborate jsonb,
     decision_criteria text,
     thinking character varying(20),
+    fallback_models text[],
+    pronouns character varying(50),
     CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY ((ARRAY['off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying])::text[])))
 );
 
 
-ALTER TABLE public.agents OWNER TO nova;
+ALTER TABLE public.agents OWNER TO newhart;
 
 --
--- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.agents IS 'Agent definitions. READ-ONLY except Newhart (Agent Design/Management domain).';
 
 
 --
--- Name: COLUMN agents.access_details; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.access_details; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_command, endpoint URL, etc.';
 
 
 --
--- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
 
 
 --
--- Name: COLUMN agents.persistent; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.persistent; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = instantiated on-demand';
 
 
 --
--- Name: COLUMN agents.instantiation_sop; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.instantiation_sop; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.instantiation_sop IS 'SOP name for how to instantiate this agent (for ephemeral agents)';
 
 
 --
--- Name: COLUMN agents.nickname; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.nickname; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.nickname IS 'Short friendly name for easy reference';
 
 
 --
--- Name: COLUMN agents.instance_type; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.instance_type; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.instance_type IS 'subagent (spawned session) or peer (separate Clawdbot instance)';
 
 
 --
--- Name: COLUMN agents.home_dir; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.home_dir; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.home_dir IS 'Workspace path for peer agents';
 
 
 --
--- Name: COLUMN agents.unix_user; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.unix_user; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.unix_user IS 'Unix username for peer agents';
 
 
 --
--- Name: COLUMN agents.collaborative; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.collaborative; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.collaborative IS 'TRUE = work WITH NOVA in dialogue, FALSE = work FOR NOVA on tasks';
 
 
 --
--- Name: COLUMN agents.config_reasoning; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.config_reasoning; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.config_reasoning IS 'Newhart-maintained notes explaining why this agent is configured as it is (model, persistent, collaborative, etc.)';
 
 
 --
--- Name: COLUMN agents.fallback_model; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.fallback_model; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.fallback_model IS 'Fallback model if primary fails (auth issues, rate limits, etc.)';
 
 
 --
--- Name: COLUMN agents.collaborate; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.collaborate; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.collaborate IS 'Collaboration scope: null = task-only, JSONB defines topics/areas where this agent can collaborate vs just execute. Example: {"allowed": ["architecture", "design"], "excluded": ["execution"]}';
 
 
 --
--- Name: COLUMN agents.decision_criteria; Type: COMMENT; Schema: public; Owner: nova
+-- Name: COLUMN agents.decision_criteria; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON COLUMN public.agents.decision_criteria IS 'Criteria for when to spawn this agent - helps NOVA route tasks';
 
 
 --
--- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.agents_id_seq
@@ -2565,10 +2602,10 @@ CREATE SEQUENCE public.agents_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.agents_id_seq OWNER TO nova;
+ALTER SEQUENCE public.agents_id_seq OWNER TO newhart;
 
 --
--- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
@@ -2743,7 +2780,7 @@ COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (s
 
 
 --
--- Name: bootstrap_context_agents; Type: TABLE; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.bootstrap_context_agents (
@@ -2758,17 +2795,17 @@ CREATE TABLE public.bootstrap_context_agents (
 );
 
 
-ALTER TABLE public.bootstrap_context_agents OWNER TO nova;
+ALTER TABLE public.bootstrap_context_agents OWNER TO newhart;
 
 --
--- Name: TABLE bootstrap_context_agents; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE bootstrap_context_agents; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.bootstrap_context_agents IS 'Per-agent context files (SEED_CONTEXT.md, domain knowledge)';
 
 
 --
--- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.bootstrap_context_agents_id_seq
@@ -2780,17 +2817,17 @@ CREATE SEQUENCE public.bootstrap_context_agents_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNER TO nova;
+ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNER TO newhart;
 
 --
--- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNED BY public.bootstrap_context_agents.id;
 
 
 --
--- Name: bootstrap_context_audit; Type: TABLE; Schema: public; Owner: nova
+-- Name: bootstrap_context_audit; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.bootstrap_context_audit (
@@ -2805,17 +2842,17 @@ CREATE TABLE public.bootstrap_context_audit (
 );
 
 
-ALTER TABLE public.bootstrap_context_audit OWNER TO nova;
+ALTER TABLE public.bootstrap_context_audit OWNER TO newhart;
 
 --
--- Name: TABLE bootstrap_context_audit; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE bootstrap_context_audit; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.bootstrap_context_audit IS 'Audit trail of all context modifications';
 
 
 --
--- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.bootstrap_context_audit_id_seq
@@ -2827,17 +2864,17 @@ CREATE SEQUENCE public.bootstrap_context_audit_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNER TO nova;
+ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNER TO newhart;
 
 --
--- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNED BY public.bootstrap_context_audit.id;
 
 
 --
--- Name: bootstrap_context_config; Type: TABLE; Schema: public; Owner: nova
+-- Name: bootstrap_context_config; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.bootstrap_context_config (
@@ -2848,17 +2885,17 @@ CREATE TABLE public.bootstrap_context_config (
 );
 
 
-ALTER TABLE public.bootstrap_context_config OWNER TO nova;
+ALTER TABLE public.bootstrap_context_config OWNER TO newhart;
 
 --
--- Name: TABLE bootstrap_context_config; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE bootstrap_context_config; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.bootstrap_context_config IS 'Configuration for bootstrap system behavior';
 
 
 --
--- Name: bootstrap_context_universal; Type: TABLE; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal; Type: TABLE; Schema: public; Owner: newhart
 --
 
 CREATE TABLE public.bootstrap_context_universal (
@@ -2872,17 +2909,17 @@ CREATE TABLE public.bootstrap_context_universal (
 );
 
 
-ALTER TABLE public.bootstrap_context_universal OWNER TO nova;
+ALTER TABLE public.bootstrap_context_universal OWNER TO newhart;
 
 --
--- Name: TABLE bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: nova
+-- Name: TABLE bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: newhart
 --
 
 COMMENT ON TABLE public.bootstrap_context_universal IS 'Universal context files loaded for all agents (AGENTS.md, SOUL.md, etc.)';
 
 
 --
--- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
 --
 
 CREATE SEQUENCE public.bootstrap_context_universal_id_seq
@@ -2894,10 +2931,10 @@ CREATE SEQUENCE public.bootstrap_context_universal_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNER TO nova;
+ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNER TO newhart;
 
 --
--- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
 --
 
 ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNED BY public.bootstrap_context_universal.id;
@@ -5246,51 +5283,6 @@ ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
 
 
 --
--- Name: shopping_history_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
---
-
-CREATE SEQUENCE public.shopping_history_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.shopping_history_id_seq OWNER TO "nova-staging";
-
---
--- Name: shopping_preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
---
-
-CREATE SEQUENCE public.shopping_preferences_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.shopping_preferences_id_seq OWNER TO "nova-staging";
-
---
--- Name: shopping_wishlist_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
---
-
-CREATE SEQUENCE public.shopping_wishlist_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.shopping_wishlist_id_seq OWNER TO "nova-staging";
-
---
 -- Name: tags; Type: TABLE; Schema: public; Owner: erato
 --
 
@@ -6226,14 +6218,14 @@ ALTER SEQUENCE public.works_id_seq OWNED BY public.works.id;
 
 
 --
--- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_actions ALTER COLUMN id SET DEFAULT nextval('public.agent_actions_id_seq'::regclass);
 
 
 --
--- Name: agent_bootstrap_context id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_bootstrap_context ALTER COLUMN id SET DEFAULT nextval('public.agent_bootstrap_context_id_seq'::regclass);
@@ -6247,35 +6239,35 @@ ALTER TABLE ONLY public.agent_chat ALTER COLUMN id SET DEFAULT nextval('public.a
 
 
 --
--- Name: agent_domains id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_domains id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_domains ALTER COLUMN id SET DEFAULT nextval('public.agent_domains_id_seq'::regclass);
 
 
 --
--- Name: agent_jobs id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_jobs id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_jobs ALTER COLUMN id SET DEFAULT nextval('public.agent_jobs_id_seq'::regclass);
 
 
 --
--- Name: agent_modifications id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_modifications id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_modifications ALTER COLUMN id SET DEFAULT nextval('public.agent_modifications_id_seq'::regclass);
 
 
 --
--- Name: agent_spawns id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agent_spawns id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_spawns ALTER COLUMN id SET DEFAULT nextval('public.agent_spawns_id_seq'::regclass);
 
 
 --
--- Name: agents id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: agents id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agents_id_seq'::regclass);
@@ -6296,21 +6288,21 @@ ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artw
 
 
 --
--- Name: bootstrap_context_agents id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_agents ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_agents_id_seq'::regclass);
 
 
 --
--- Name: bootstrap_context_audit id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: bootstrap_context_audit id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_audit ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_audit_id_seq'::regclass);
 
 
 --
--- Name: bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_universal ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_universal_id_seq'::regclass);
@@ -6583,7 +6575,7 @@ ALTER TABLE ONLY public.works ALTER COLUMN id SET DEFAULT nextval('public.works_
 
 
 --
--- Name: agent_actions agent_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -6591,7 +6583,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_aliases agent_aliases_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_aliases agent_aliases_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_aliases
@@ -6599,7 +6591,7 @@ ALTER TABLE ONLY public.agent_aliases
 
 
 --
--- Name: agent_bootstrap_context agent_bootstrap_context_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context agent_bootstrap_context_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_bootstrap_context
@@ -6623,7 +6615,7 @@ ALTER TABLE ONLY public.agent_chat_processed
 
 
 --
--- Name: agent_domains agent_domains_domain_topic_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_domain_topic_key; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -6631,7 +6623,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_domains agent_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -6639,7 +6631,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_jobs agent_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_jobs agent_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_jobs
@@ -6647,7 +6639,7 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
--- Name: agent_modifications agent_modifications_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_modifications agent_modifications_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_modifications
@@ -6655,7 +6647,7 @@ ALTER TABLE ONLY public.agent_modifications
 
 
 --
--- Name: agent_spawns agent_spawns_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_spawns agent_spawns_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_spawns
@@ -6663,7 +6655,7 @@ ALTER TABLE ONLY public.agent_spawns
 
 
 --
--- Name: agent_system_config agent_system_config_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_system_config agent_system_config_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_system_config
@@ -6671,7 +6663,7 @@ ALTER TABLE ONLY public.agent_system_config
 
 
 --
--- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agents
@@ -6679,7 +6671,7 @@ ALTER TABLE ONLY public.agents
 
 
 --
--- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agents
@@ -6703,7 +6695,7 @@ ALTER TABLE ONLY public.asset_classes
 
 
 --
--- Name: bootstrap_context_agents bootstrap_context_agents_agent_name_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents bootstrap_context_agents_agent_name_file_key_key; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_agents
@@ -6711,7 +6703,7 @@ ALTER TABLE ONLY public.bootstrap_context_agents
 
 
 --
--- Name: bootstrap_context_agents bootstrap_context_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents bootstrap_context_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_agents
@@ -6719,7 +6711,7 @@ ALTER TABLE ONLY public.bootstrap_context_agents
 
 
 --
--- Name: bootstrap_context_audit bootstrap_context_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: bootstrap_context_audit bootstrap_context_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_audit
@@ -6727,7 +6719,7 @@ ALTER TABLE ONLY public.bootstrap_context_audit
 
 
 --
--- Name: bootstrap_context_config bootstrap_context_config_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: bootstrap_context_config bootstrap_context_config_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_config
@@ -6735,7 +6727,7 @@ ALTER TABLE ONLY public.bootstrap_context_config
 
 
 --
--- Name: bootstrap_context_universal bootstrap_context_universal_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal bootstrap_context_universal_file_key_key; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_universal
@@ -6743,7 +6735,7 @@ ALTER TABLE ONLY public.bootstrap_context_universal
 
 
 --
--- Name: bootstrap_context_universal bootstrap_context_universal_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal bootstrap_context_universal_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.bootstrap_context_universal
@@ -7279,7 +7271,7 @@ ALTER TABLE ONLY public.works
 
 
 --
--- Name: agent_bootstrap_context_unique_idx; Type: INDEX; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context_unique_idx; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE UNIQUE INDEX agent_bootstrap_context_unique_idx ON public.agent_bootstrap_context USING btree (context_type, COALESCE(agent_name, ''::text), COALESCE(domain_name, ''::text), file_key);
@@ -7300,35 +7292,35 @@ CREATE INDEX events_archive_search_vector_idx ON public.events_archive USING gin
 
 
 --
--- Name: idx_abc_agent_name; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_abc_agent_name; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_abc_agent_name ON public.agent_bootstrap_context USING btree (agent_name) WHERE (agent_name IS NOT NULL);
 
 
 --
--- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_actions_agent ON public.agent_actions USING btree (agent_id);
 
 
 --
--- Name: idx_agent_actions_time; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_actions_time; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_actions_time ON public.agent_actions USING btree (created_at DESC);
 
 
 --
--- Name: idx_agent_actions_type; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_actions_type; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_actions_type ON public.agent_actions USING btree (action_type);
 
 
 --
--- Name: idx_agent_aliases_alias_lower; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_aliases_alias_lower; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_aliases_alias_lower ON public.agent_aliases USING btree (lower((alias)::text));
@@ -7384,98 +7376,98 @@ CREATE INDEX idx_agent_chat_sender ON public.agent_chat USING btree (sender, cre
 
 
 --
--- Name: idx_agent_domains_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_domains_agent; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_domains_agent ON public.agent_domains USING btree (agent_id);
 
 
 --
--- Name: idx_agent_domains_topic; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_domains_topic; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_domains_topic ON public.agent_domains USING btree (domain_topic);
 
 
 --
--- Name: idx_agent_domains_votes; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_domains_votes; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_domains_votes ON public.agent_domains USING btree (vote_count DESC);
 
 
 --
--- Name: idx_agent_modifications_agent_id; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_modifications_agent_id; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_modifications_agent_id ON public.agent_modifications USING btree (agent_id);
 
 
 --
--- Name: idx_agent_modifications_modified_at; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_modifications_modified_at; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_modifications_modified_at ON public.agent_modifications USING btree (modified_at DESC);
 
 
 --
--- Name: idx_agent_spawns_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_spawns_agent; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_spawns_agent ON public.agent_spawns USING btree (agent_id);
 
 
 --
--- Name: idx_agent_spawns_domain; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_spawns_domain; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_spawns_domain ON public.agent_spawns USING btree (domain);
 
 
 --
--- Name: idx_agent_spawns_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_spawns_status; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_spawns_status ON public.agent_spawns USING btree (status);
 
 
 --
--- Name: idx_agent_spawns_trigger; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agent_spawns_trigger; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agent_spawns_trigger ON public.agent_spawns USING btree (trigger_source, trigger_id);
 
 
 --
--- Name: idx_agents_provider; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agents_provider; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agents_provider ON public.agents USING btree (provider);
 
 
 --
--- Name: idx_agents_role; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agents_role; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agents_role ON public.agents USING btree (role);
 
 
 --
--- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_agents_status ON public.agents USING btree (status);
 
 
 --
--- Name: idx_bootstrap_agents_name; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_bootstrap_agents_name; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_bootstrap_agents_name ON public.bootstrap_context_agents USING btree (agent_name);
 
 
 --
--- Name: idx_bootstrap_audit_table; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_bootstrap_audit_table; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_bootstrap_audit_table ON public.bootstrap_context_audit USING btree (table_name, changed_at);
@@ -7692,35 +7684,35 @@ CREATE INDEX idx_job_messages ON public.job_messages USING btree (job_id, added_
 
 
 --
--- Name: idx_jobs_agent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_agent; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_jobs_agent ON public.agent_jobs USING btree (agent_name, status);
 
 
 --
--- Name: idx_jobs_parent; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_parent; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_jobs_parent ON public.agent_jobs USING btree (parent_job_id);
 
 
 --
--- Name: idx_jobs_requester; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_requester; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_jobs_requester ON public.agent_jobs USING btree (requester_agent, status);
 
 
 --
--- Name: idx_jobs_root; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_root; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_jobs_root ON public.agent_jobs USING btree (root_job_id);
 
 
 --
--- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: nova
+-- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: newhart
 --
 
 CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic) WHERE ((status)::text <> ALL ((ARRAY['completed'::character varying, 'cancelled'::character varying])::text[]));
@@ -8260,21 +8252,28 @@ CREATE OR REPLACE VIEW public.v_media_with_tags AS
 
 
 --
--- Name: agents agents_delegation_notify; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agents agents_config_changed; Type: TRIGGER; Schema: public; Owner: newhart
+--
+
+CREATE TRIGGER agents_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_agent_config_changed();
+
+
+--
+-- Name: agents agents_delegation_notify; Type: TRIGGER; Schema: public; Owner: newhart
 --
 
 CREATE TRIGGER agents_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
 
 
 --
--- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: newhart
 --
 
 CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.update_agents_timestamp();
 
 
 --
--- Name: agent_bootstrap_context audit_agent_bootstrap_context; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context audit_agent_bootstrap_context; Type: TRIGGER; Schema: public; Owner: newhart
 --
 
 CREATE TRIGGER audit_agent_bootstrap_context AFTER INSERT OR DELETE OR UPDATE ON public.agent_bootstrap_context FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_context_change();
@@ -8337,7 +8336,7 @@ CREATE TRIGGER music_search_update BEFORE INSERT OR UPDATE ON public.music_libra
 
 
 --
--- Name: agent_bootstrap_context protect_bootstrap_context; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: agent_bootstrap_context protect_bootstrap_context; Type: TRIGGER; Schema: public; Owner: newhart
 --
 
 CREATE TRIGGER protect_bootstrap_context BEFORE INSERT OR DELETE OR UPDATE ON public.agent_bootstrap_context FOR EACH ROW EXECUTE FUNCTION public.protect_bootstrap_context_writes();
@@ -8351,14 +8350,14 @@ CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR
 
 
 --
--- Name: bootstrap_context_agents trg_audit_bootstrap_agents; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: bootstrap_context_agents trg_audit_bootstrap_agents; Type: TRIGGER; Schema: public; Owner: newhart
 --
 
 CREATE TRIGGER trg_audit_bootstrap_agents AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_agents FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_agents();
 
 
 --
--- Name: bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: nova
+-- Name: bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: newhart
 --
 
 CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_universal FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_universal();
@@ -8425,7 +8424,7 @@ CREATE TRIGGER works_updated_at BEFORE UPDATE ON public.works FOR EACH ROW EXECU
 
 
 --
--- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -8433,7 +8432,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_actions agent_actions_related_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_related_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -8441,7 +8440,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_actions agent_actions_related_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_actions agent_actions_related_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_actions
@@ -8449,7 +8448,7 @@ ALTER TABLE ONLY public.agent_actions
 
 
 --
--- Name: agent_aliases agent_aliases_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_aliases agent_aliases_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_aliases
@@ -8473,7 +8472,7 @@ ALTER TABLE ONLY public.agent_chat
 
 
 --
--- Name: agent_domains agent_domains_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -8481,7 +8480,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_domains agent_domains_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_domains agent_domains_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_domains
@@ -8489,7 +8488,7 @@ ALTER TABLE ONLY public.agent_domains
 
 
 --
--- Name: agent_jobs agent_jobs_parent_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_jobs agent_jobs_parent_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_jobs
@@ -8497,7 +8496,7 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
--- Name: agent_jobs agent_jobs_root_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_jobs agent_jobs_root_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_jobs
@@ -8505,7 +8504,7 @@ ALTER TABLE ONLY public.agent_jobs
 
 
 --
--- Name: agent_spawns agent_spawns_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_spawns agent_spawns_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_spawns
@@ -8617,7 +8616,7 @@ ALTER TABLE ONLY public.event_projects
 
 
 --
--- Name: agent_modifications fk_agent_modifications_agent; Type: FK CONSTRAINT; Schema: public; Owner: nova
+-- Name: agent_modifications fk_agent_modifications_agent; Type: FK CONSTRAINT; Schema: public; Owner: newhart
 --
 
 ALTER TABLE ONLY public.agent_modifications
@@ -8881,7 +8880,7 @@ ALTER TABLE ONLY public.works
 
 
 --
--- Name: agent_jobs; Type: ROW SECURITY; Schema: public; Owner: nova
+-- Name: agent_jobs; Type: ROW SECURITY; Schema: public; Owner: newhart
 --
 
 ALTER TABLE public.agent_jobs ENABLE ROW LEVEL SECURITY;
@@ -8939,12 +8938,9 @@ GRANT ALL ON FUNCTION public.send_agent_message(p_sender character varying, p_me
 
 
 --
--- Name: TABLE agent_actions; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agent_actions; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agent_actions FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_actions TO nova;
-GRANT ALL ON TABLE public.agent_actions TO newhart;
 GRANT SELECT ON TABLE public.agent_actions TO gem;
 GRANT SELECT ON TABLE public.agent_actions TO coder;
 GRANT SELECT ON TABLE public.agent_actions TO scout;
@@ -8954,31 +8950,37 @@ GRANT SELECT ON TABLE public.agent_actions TO ticker;
 GRANT SELECT ON TABLE public.agent_actions TO athena;
 GRANT ALL ON TABLE public.agent_actions TO "nova-staging";
 GRANT SELECT ON TABLE public.agent_actions TO PUBLIC;
+GRANT SELECT ON TABLE public.agent_actions TO nova;
 
 
 --
--- Name: SEQUENCE agent_actions_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agent_actions_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
 GRANT ALL ON SEQUENCE public.agent_actions_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.agent_actions_id_seq TO newhart;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_actions_id_seq TO nova;
 
 
 --
--- Name: TABLE agent_bootstrap_context; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agent_aliases; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agent_bootstrap_context FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_bootstrap_context TO nova;
-GRANT ALL ON TABLE public.agent_bootstrap_context TO newhart;
+GRANT SELECT ON TABLE public.agent_aliases TO nova;
+
+
+--
+-- Name: TABLE agent_bootstrap_context; Type: ACL; Schema: public; Owner: newhart
+--
+
 GRANT SELECT ON TABLE public.agent_bootstrap_context TO PUBLIC;
+GRANT SELECT ON TABLE public.agent_bootstrap_context TO nova;
 
 
 --
--- Name: SEQUENCE agent_bootstrap_context_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agent_bootstrap_context_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.agent_bootstrap_context_id_seq TO newhart;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_bootstrap_context_id_seq TO nova;
 
 
 --
@@ -8995,13 +8997,14 @@ GRANT SELECT,INSERT ON TABLE public.agent_chat TO ticker;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO athena;
 GRANT ALL ON TABLE public.agent_chat TO "nova-staging";
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO PUBLIC;
+GRANT INSERT ON TABLE public.agent_chat TO graybeard;
 
 
 --
 -- Name: SEQUENCE agent_chat_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.agent_chat_id_seq TO newhart;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gem;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO coder;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO scout;
@@ -9010,6 +9013,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO gidget;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO ticker;
 GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO athena;
 GRANT ALL ON SEQUENCE public.agent_chat_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.agent_chat_id_seq TO graybeard;
 
 
 --
@@ -9029,31 +9033,26 @@ GRANT SELECT,INSERT,UPDATE ON TABLE public.agent_chat_processed TO PUBLIC;
 
 
 --
--- Name: TABLE agent_domains; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agent_domains; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agent_domains FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_domains TO nova;
-GRANT ALL ON TABLE public.agent_domains TO newhart;
 GRANT ALL ON TABLE public.agent_domains TO "nova-staging";
 GRANT SELECT ON TABLE public.agent_domains TO PUBLIC;
+GRANT SELECT ON TABLE public.agent_domains TO nova;
 
 
 --
--- Name: SEQUENCE agent_domains_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agent_domains_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
 GRANT ALL ON SEQUENCE public.agent_domains_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.agent_domains_id_seq TO newhart;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_domains_id_seq TO nova;
 
 
 --
--- Name: TABLE agent_jobs; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agent_jobs; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agent_jobs FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_jobs TO nova;
-GRANT ALL ON TABLE public.agent_jobs TO newhart;
 GRANT SELECT ON TABLE public.agent_jobs TO gem;
 GRANT SELECT ON TABLE public.agent_jobs TO coder;
 GRANT SELECT ON TABLE public.agent_jobs TO scout;
@@ -9063,60 +9062,61 @@ GRANT SELECT ON TABLE public.agent_jobs TO ticker;
 GRANT SELECT ON TABLE public.agent_jobs TO athena;
 GRANT ALL ON TABLE public.agent_jobs TO "nova-staging";
 GRANT SELECT ON TABLE public.agent_jobs TO PUBLIC;
+GRANT SELECT ON TABLE public.agent_jobs TO nova;
 
 
 --
--- Name: SEQUENCE agent_jobs_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agent_jobs_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO newhart;
 GRANT ALL ON SEQUENCE public.agent_jobs_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.agent_jobs_id_seq TO nova;
 
 
 --
--- Name: TABLE agent_modifications; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agent_modifications; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agent_modifications FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.agent_modifications TO nova;
 GRANT ALL ON TABLE public.agent_modifications TO "nova-staging";
 GRANT SELECT ON TABLE public.agent_modifications TO PUBLIC;
-GRANT ALL ON TABLE public.agent_modifications TO newhart;
+GRANT SELECT ON TABLE public.agent_modifications TO nova;
 
 
 --
--- Name: SEQUENCE agent_modifications_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agent_modifications_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
 GRANT ALL ON SEQUENCE public.agent_modifications_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.agent_modifications_id_seq TO newhart;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_modifications_id_seq TO nova;
 
 
 --
--- Name: SEQUENCE agent_spawns_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agent_spawns; Type: ACL; Schema: public; Owner: newhart
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.agent_spawns_id_seq TO newhart;
+GRANT SELECT ON TABLE public.agent_spawns TO nova;
 
 
 --
--- Name: TABLE agent_system_config; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agent_spawns_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agent_system_config FROM nova;
-GRANT SELECT ON TABLE public.agent_system_config TO nova;
+GRANT SELECT,USAGE ON SEQUENCE public.agent_spawns_id_seq TO nova;
+
+
+--
+-- Name: TABLE agent_system_config; Type: ACL; Schema: public; Owner: newhart
+--
+
 GRANT SELECT ON TABLE public.agent_system_config TO PUBLIC;
-GRANT ALL ON TABLE public.agent_system_config TO newhart;
 GRANT ALL ON TABLE public.agent_system_config TO "nova-staging";
+GRANT SELECT ON TABLE public.agent_system_config TO nova;
 
 
 --
--- Name: TABLE agents; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE agents; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.agents FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,UPDATE ON TABLE public.agents TO nova;
-GRANT ALL ON TABLE public.agents TO newhart;
 GRANT SELECT ON TABLE public.agents TO gem;
 GRANT SELECT ON TABLE public.agents TO coder;
 GRANT SELECT ON TABLE public.agents TO scout;
@@ -9126,14 +9126,16 @@ GRANT SELECT ON TABLE public.agents TO ticker;
 GRANT SELECT ON TABLE public.agents TO athena;
 GRANT ALL ON TABLE public.agents TO "nova-staging";
 GRANT SELECT ON TABLE public.agents TO PUBLIC;
+GRANT ALL ON TABLE public.agents TO graybeard;
+GRANT SELECT ON TABLE public.agents TO nova;
 
 
 --
--- Name: SEQUENCE agents_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: SEQUENCE agents_id_seq; Type: ACL; Schema: public; Owner: newhart
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO newhart;
 GRANT ALL ON SEQUENCE public.agents_id_seq TO "nova-staging";
+GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO nova;
 
 
 --
@@ -9183,30 +9185,33 @@ GRANT ALL ON TABLE public.asset_classes TO "nova-staging";
 
 
 --
--- Name: TABLE bootstrap_context_audit; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE bootstrap_context_agents; Type: ACL; Schema: public; Owner: newhart
 --
 
-REVOKE ALL ON TABLE public.bootstrap_context_audit FROM nova;
-GRANT SELECT,INSERT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.bootstrap_context_audit TO nova;
+GRANT SELECT ON TABLE public.bootstrap_context_agents TO nova;
+
+
+--
+-- Name: TABLE bootstrap_context_audit; Type: ACL; Schema: public; Owner: newhart
+--
+
 GRANT SELECT,INSERT ON TABLE public.bootstrap_context_audit TO PUBLIC;
-GRANT ALL ON TABLE public.bootstrap_context_audit TO newhart;
+GRANT SELECT ON TABLE public.bootstrap_context_audit TO nova;
 
 
 --
--- Name: SEQUENCE bootstrap_context_audit_id_seq; Type: ACL; Schema: public; Owner: nova
+-- Name: TABLE bootstrap_context_config; Type: ACL; Schema: public; Owner: newhart
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.bootstrap_context_audit_id_seq TO newhart;
-
-
---
--- Name: TABLE bootstrap_context_config; Type: ACL; Schema: public; Owner: nova
---
-
-REVOKE ALL ON TABLE public.bootstrap_context_config FROM nova;
-GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.bootstrap_context_config TO nova;
-GRANT ALL ON TABLE public.bootstrap_context_config TO newhart;
 GRANT SELECT ON TABLE public.bootstrap_context_config TO PUBLIC;
+GRANT SELECT ON TABLE public.bootstrap_context_config TO nova;
+
+
+--
+-- Name: TABLE bootstrap_context_universal; Type: ACL; Schema: public; Owner: newhart
+--
+
+GRANT SELECT ON TABLE public.bootstrap_context_universal TO nova;
 
 
 --
@@ -10338,5 +10343,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict n6vlFx6I8Ao2L4O7bqJDeDqr09PhZJ0WNUrluAaw3M8xLd1mugU8gzXgg3LApNb
+\unrestrict May4TSqEc6LQPnleg81CwNjrmQuYFFYEw3fPJPlgy08buXjiP4J8mjd4O1kraDk
 

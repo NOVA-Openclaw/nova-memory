@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- **Installer now handles schema migrations automatically** — when re-running `agent-install.sh` on an existing installation, missing columns are detected and added automatically. Users no longer need to run manual `ALTER TABLE` commands when the schema evolves. (#127)
 - Remove old pg-env.sh/pg_env imports from migrated scripts (#117)
 
 ### Changed

@@ -177,6 +177,101 @@ echo "════════════════════════�
 echo ""
 
 # ============================================
+# Schema Migration Function
+# ============================================
+
+migrate_schema() {
+    echo ""
+    echo "  Checking for schema migrations..."
+    local MIGRATIONS_APPLIED=0
+
+    # Helper: run a psql command and return its output
+    _psql() {
+        psql -U "$DB_USER" -d "$DB_NAME" -tAc "$1" 2>&1
+    }
+
+    # Helper: check whether a column exists in a table
+    _col_exists() {
+        local tbl="$1" col="$2"
+        _psql "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='$tbl' AND column_name='$col';" | tr -d '[:space:]'
+    }
+
+    # ----------------------------------------------------------------
+    # agents table — column migrations
+    # ----------------------------------------------------------------
+
+    # fallback_models TEXT[]
+    if [ "$(_col_exists agents fallback_models)" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c \
+            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS fallback_models TEXT[];" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added column 'fallback_models' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # thinking VARCHAR(20)
+    if [ "$(_col_exists agents thinking)" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c \
+            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS thinking VARCHAR(20);" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added column 'thinking' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # pronouns VARCHAR(50)
+    if [ "$(_col_exists agents pronouns)" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c \
+            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS pronouns VARCHAR(50);" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added column 'pronouns' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # ----------------------------------------------------------------
+    # agents table — CHECK constraint for thinking (if not exists)
+    # ----------------------------------------------------------------
+    CONSTRAINT_EXISTS=$(_psql "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'agents_thinking_check';" | tr -d '[:space:]')
+    if [ "$CONSTRAINT_EXISTS" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c "
+DO \$\$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'agents_thinking_check') THEN
+        ALTER TABLE agents ADD CONSTRAINT agents_thinking_check
+            CHECK (thinking IN ('off', 'minimal', 'low', 'medium', 'high', 'xhigh'));
+    END IF;
+END \$\$;" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added constraint 'agents_thinking_check' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # ----------------------------------------------------------------
+    # agents table — data migration: fallback_model -> fallback_models
+    # ----------------------------------------------------------------
+    if [ "$(_col_exists agents fallback_model)" = "1" ] && [ "$(_col_exists agents fallback_models)" = "1" ]; then
+        MIGRATED_ROWS=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "
+WITH updated AS (
+    UPDATE agents
+    SET fallback_models = ARRAY[fallback_model]
+    WHERE fallback_model IS NOT NULL
+      AND fallback_model != ''
+      AND fallback_models IS NULL
+    RETURNING 1
+)
+SELECT COUNT(*) FROM updated;" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$MIGRATED_ROWS" ] && [ "$MIGRATED_ROWS" -gt 0 ] 2>/dev/null; then
+            echo -e "  ${CHECK_MARK} Migrated $MIGRATED_ROWS row(s) from 'fallback_model' to 'fallback_models'"
+            MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+        fi
+    fi
+
+    # ----------------------------------------------------------------
+    # Summary
+    # ----------------------------------------------------------------
+    if [ "$MIGRATIONS_APPLIED" -eq 0 ]; then
+        echo -e "  ${CHECK_MARK} Schema up to date — no migrations needed"
+    else
+        echo -e "  ${CHECK_MARK} Applied $MIGRATIONS_APPLIED migration(s)"
+    fi
+}
+
+# ============================================
 # Verification Functions
 # ============================================
 
@@ -641,6 +736,9 @@ else
     echo "$SCHEMA_OUTPUT"
     exit 1
 fi
+
+# Run schema migrations (adds missing columns to existing tables)
+migrate_schema
 
 # ============================================
 # Part 3: Hooks Installation
