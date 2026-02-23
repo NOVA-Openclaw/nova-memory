@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict May4TSqEc6LQPnleg81CwNjrmQuYFFYEw3fPJPlgy08buXjiP4J8mjd4O1kraDk
+\restrict aziIKoG9hRk0iAXwu057iEKNi4lWrCi98ltR8hGOAgV0xhJCZMQ4g8tjsPzFSr6
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -856,6 +856,115 @@ $$;
 
 
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
+
+--
+-- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: public; Owner: nova-staging
+--
+
+CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_agent_id INTEGER;
+BEGIN
+    IF NOT (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled') THEN
+        RETURN;
+    END IF;
+
+    SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name LIMIT 1;
+
+    RETURN QUERY
+    SELECT DISTINCT ON (subq.filename)
+        subq.filename,
+        subq.content,
+        subq.source
+    FROM (
+        -- 1. UNIVERSAL (highest priority)
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'universal'::TEXT AS source, 1 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'UNIVERSAL'
+
+        UNION ALL
+
+        -- 2. GLOBAL
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'global'::TEXT AS source, 2 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'GLOBAL'
+
+        UNION ALL
+
+        -- 3. DOMAIN (matched via agent_domains)
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'domain:' || abc.domain_name AS source, 3 AS priority
+        FROM agent_bootstrap_context abc
+        JOIN agent_domains ad ON ad.domain_topic = abc.domain_name
+        WHERE abc.context_type = 'DOMAIN'
+          AND ad.agent_id = v_agent_id
+
+        UNION ALL
+
+        -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
+        -- Matches workflows where agent is assigned to steps,
+        -- workflow domains overlap agent domains,
+        -- OR agent is the workflow orchestrator
+        SELECT
+            'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
+            w.name || ': ' || w.description ||
+            CASE WHEN steps_text IS NOT NULL
+                 THEN E'\n\nSteps:\n' || steps_text
+                 ELSE ''
+            END AS content,
+            'workflow:' || w.name AS source,
+            4 AS priority
+        FROM workflows w
+        LEFT JOIN LATERAL (
+            SELECT string_agg(
+                ws.step_order || '. ' || ws.description ||
+                COALESCE(' [agent: ' || a2.name || ']', '') ||
+                COALESCE(' [domain: ' || ws.domain || ']', ''),
+                E'\n' ORDER BY ws.step_order
+            ) AS steps_text
+            FROM workflow_steps ws
+            LEFT JOIN agents a2 ON a2.id = ws.agent_id
+            WHERE ws.workflow_id = w.id
+        ) ws_agg ON true
+        WHERE w.status = 'active'
+          AND (
+            -- Agent is the workflow orchestrator
+            w.orchestrator_agent_id = v_agent_id
+            OR
+            -- Agent is directly assigned to a step
+            EXISTS (
+                SELECT 1 FROM workflow_steps ws2
+                WHERE ws2.workflow_id = w.id AND ws2.agent_id = v_agent_id
+            )
+            OR
+            -- Workflow step domains overlap with agent's domains
+            EXISTS (
+                SELECT 1 FROM workflow_steps ws3
+                JOIN agent_domains ad ON ad.agent_id = v_agent_id
+                WHERE ws3.workflow_id = w.id
+                  AND (ad.domain_topic = ws3.domain OR ad.domain_topic = ANY(ws3.domains))
+            )
+          )
+
+        UNION ALL
+
+        -- 5. AGENT-specific (lowest priority)
+        SELECT abc.file_key || '.md' AS filename, abc.content,
+            'agent'::TEXT AS source, 5 AS priority
+        FROM agent_bootstrap_context abc
+        WHERE abc.context_type = 'AGENT'
+          AND abc.agent_name = p_agent_name
+    ) subq
+    ORDER BY subq.filename, subq.priority;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO "nova-staging";
 
 --
 -- Name: get_agent_bootstrap(character varying); Type: FUNCTION; Schema: public; Owner: nova
@@ -2485,6 +2594,7 @@ CREATE TABLE public.agents (
     thinking character varying(20),
     fallback_models text[],
     pronouns character varying(50),
+    allowed_subagents text[],
     CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY ((ARRAY['off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying])::text[])))
 );
 
@@ -3010,6 +3120,26 @@ ALTER SEQUENCE public.certificates_id_seq OWNER TO nova;
 --
 
 ALTER SEQUENCE public.certificates_id_seq OWNED BY public.certificates.id;
+
+
+--
+-- Name: channel_activity; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.channel_activity (
+    channel character varying(50) NOT NULL,
+    last_message_at timestamp with time zone DEFAULT now(),
+    last_message_from character varying(100)
+);
+
+
+ALTER TABLE public.channel_activity OWNER TO nova;
+
+--
+-- Name: TABLE channel_activity; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.channel_activity IS 'Tracks last message per channel for idle detection. Read/write: NOVA, Newhart.';
 
 
 --
@@ -5283,6 +5413,51 @@ ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
 
 
 --
+-- Name: shopping_history_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
+--
+
+CREATE SEQUENCE public.shopping_history_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.shopping_history_id_seq OWNER TO "nova-staging";
+
+--
+-- Name: shopping_preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
+--
+
+CREATE SEQUENCE public.shopping_preferences_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.shopping_preferences_id_seq OWNER TO "nova-staging";
+
+--
+-- Name: shopping_wishlist_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
+--
+
+CREATE SEQUENCE public.shopping_wishlist_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.shopping_wishlist_id_seq OWNER TO "nova-staging";
+
+--
 -- Name: tags; Type: TABLE; Schema: public; Owner: erato
 --
 
@@ -6764,6 +6939,14 @@ ALTER TABLE ONLY public.certificates
 
 ALTER TABLE ONLY public.certificates
     ADD CONSTRAINT certificates_serial_key UNIQUE (serial);
+
+
+--
+-- Name: channel_activity channel_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.channel_activity
+    ADD CONSTRAINT channel_activity_pkey PRIMARY KEY (channel);
 
 
 --
@@ -9142,7 +9325,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO nova;
 -- Name: TABLE ai_models; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.ai_models TO newhart;
+GRANT ALL ON TABLE public.ai_models TO newhart;
 GRANT ALL ON TABLE public.ai_models TO "nova-staging";
 
 
@@ -9150,7 +9333,7 @@ GRANT ALL ON TABLE public.ai_models TO "nova-staging";
 -- Name: TABLE artwork; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.artwork TO newhart;
+GRANT ALL ON TABLE public.artwork TO newhart;
 GRANT SELECT ON TABLE public.artwork TO gem;
 GRANT SELECT ON TABLE public.artwork TO coder;
 GRANT SELECT ON TABLE public.artwork TO scout;
@@ -9166,14 +9349,14 @@ GRANT ALL ON TABLE public.artwork TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.artwork_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.artwork_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.artwork_id_seq TO newhart;
 
 
 --
 -- Name: TABLE asset_classes; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.asset_classes TO newhart;
+GRANT ALL ON TABLE public.asset_classes TO newhart;
 GRANT SELECT ON TABLE public.asset_classes TO gem;
 GRANT SELECT ON TABLE public.asset_classes TO coder;
 GRANT SELECT ON TABLE public.asset_classes TO scout;
@@ -9218,7 +9401,7 @@ GRANT SELECT ON TABLE public.bootstrap_context_universal TO nova;
 -- Name: TABLE certificates; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.certificates TO newhart;
+GRANT ALL ON TABLE public.certificates TO newhart;
 GRANT SELECT ON TABLE public.certificates TO gem;
 GRANT SELECT ON TABLE public.certificates TO coder;
 GRANT SELECT ON TABLE public.certificates TO scout;
@@ -9234,14 +9417,21 @@ GRANT ALL ON TABLE public.certificates TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.certificates_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.certificates_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.certificates_id_seq TO newhart;
+
+
+--
+-- Name: TABLE channel_activity; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.channel_activity TO newhart;
 
 
 --
 -- Name: TABLE conversations; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.conversations TO newhart;
+GRANT ALL ON TABLE public.conversations TO newhart;
 GRANT SELECT ON TABLE public.conversations TO gem;
 GRANT SELECT ON TABLE public.conversations TO coder;
 GRANT SELECT ON TABLE public.conversations TO scout;
@@ -9257,14 +9447,14 @@ GRANT ALL ON TABLE public.conversations TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.conversations_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.conversations_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.conversations_id_seq TO newhart;
 
 
 --
 -- Name: TABLE entity_facts; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.entity_facts TO newhart;
+GRANT ALL ON TABLE public.entity_facts TO newhart;
 GRANT SELECT ON TABLE public.entity_facts TO gem;
 GRANT SELECT ON TABLE public.entity_facts TO coder;
 GRANT SELECT ON TABLE public.entity_facts TO scout;
@@ -9287,7 +9477,7 @@ GRANT ALL ON TABLE public.delegation_knowledge TO "nova-staging";
 -- Name: TABLE entities; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.entities TO newhart;
+GRANT ALL ON TABLE public.entities TO newhart;
 GRANT SELECT ON TABLE public.entities TO gem;
 GRANT SELECT ON TABLE public.entities TO coder;
 GRANT SELECT ON TABLE public.entities TO scout;
@@ -9304,7 +9494,7 @@ GRANT SELECT ON TABLE public.entities TO graybeard;
 --
 
 GRANT ALL ON SEQUENCE public.entities_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.entities_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.entities_id_seq TO newhart;
 
 
 --
@@ -9312,6 +9502,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.entities_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.entity_fact_conflicts TO "nova-staging";
+GRANT ALL ON TABLE public.entity_fact_conflicts TO newhart;
 
 
 --
@@ -9319,7 +9510,7 @@ GRANT ALL ON TABLE public.entity_fact_conflicts TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.entity_fact_conflicts_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.entity_fact_conflicts_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.entity_fact_conflicts_id_seq TO newhart;
 
 
 --
@@ -9327,6 +9518,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.entity_fact_conflicts_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.entity_facts_archive TO "nova-staging";
+GRANT ALL ON TABLE public.entity_facts_archive TO newhart;
 
 
 --
@@ -9334,14 +9526,14 @@ GRANT ALL ON TABLE public.entity_facts_archive TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.entity_facts_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.entity_facts_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.entity_facts_id_seq TO newhart;
 
 
 --
 -- Name: TABLE entity_relationships; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.entity_relationships TO newhart;
+GRANT ALL ON TABLE public.entity_relationships TO newhart;
 GRANT SELECT ON TABLE public.entity_relationships TO gem;
 GRANT SELECT ON TABLE public.entity_relationships TO coder;
 GRANT SELECT ON TABLE public.entity_relationships TO scout;
@@ -9358,14 +9550,14 @@ GRANT SELECT ON TABLE public.entity_relationships TO graybeard;
 --
 
 GRANT ALL ON SEQUENCE public.entity_relationships_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.entity_relationships_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.entity_relationships_id_seq TO newhart;
 
 
 --
 -- Name: TABLE event_entities; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.event_entities TO newhart;
+GRANT ALL ON TABLE public.event_entities TO newhart;
 GRANT SELECT ON TABLE public.event_entities TO gem;
 GRANT SELECT ON TABLE public.event_entities TO coder;
 GRANT SELECT ON TABLE public.event_entities TO scout;
@@ -9380,7 +9572,7 @@ GRANT ALL ON TABLE public.event_entities TO "nova-staging";
 -- Name: TABLE event_places; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.event_places TO newhart;
+GRANT ALL ON TABLE public.event_places TO newhart;
 GRANT SELECT ON TABLE public.event_places TO gem;
 GRANT SELECT ON TABLE public.event_places TO coder;
 GRANT SELECT ON TABLE public.event_places TO scout;
@@ -9395,7 +9587,7 @@ GRANT ALL ON TABLE public.event_places TO "nova-staging";
 -- Name: TABLE event_projects; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.event_projects TO newhart;
+GRANT ALL ON TABLE public.event_projects TO newhart;
 GRANT SELECT ON TABLE public.event_projects TO gem;
 GRANT SELECT ON TABLE public.event_projects TO coder;
 GRANT SELECT ON TABLE public.event_projects TO scout;
@@ -9410,7 +9602,7 @@ GRANT ALL ON TABLE public.event_projects TO "nova-staging";
 -- Name: TABLE events; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.events TO newhart;
+GRANT ALL ON TABLE public.events TO newhart;
 GRANT SELECT ON TABLE public.events TO gem;
 GRANT SELECT ON TABLE public.events TO coder;
 GRANT SELECT ON TABLE public.events TO scout;
@@ -9426,7 +9618,7 @@ GRANT ALL ON TABLE public.events TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.events_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.events_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.events_id_seq TO newhart;
 
 
 --
@@ -9434,27 +9626,42 @@ GRANT SELECT,USAGE ON SEQUENCE public.events_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.events_archive TO "nova-staging";
+GRANT ALL ON TABLE public.events_archive TO newhart;
+
+
+--
+-- Name: TABLE extraction_metrics; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.extraction_metrics TO newhart;
 
 
 --
 -- Name: SEQUENCE extraction_metrics_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.extraction_metrics_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.extraction_metrics_id_seq TO newhart;
+
+
+--
+-- Name: TABLE fact_change_log; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.fact_change_log TO newhart;
 
 
 --
 -- Name: SEQUENCE fact_change_log_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.fact_change_log_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.fact_change_log_id_seq TO newhart;
 
 
 --
 -- Name: TABLE gambling_entries; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.gambling_entries TO newhart;
+GRANT ALL ON TABLE public.gambling_entries TO newhart;
 GRANT SELECT ON TABLE public.gambling_entries TO gem;
 GRANT SELECT ON TABLE public.gambling_entries TO coder;
 GRANT SELECT ON TABLE public.gambling_entries TO scout;
@@ -9470,14 +9677,14 @@ GRANT ALL ON TABLE public.gambling_entries TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.gambling_entries_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.gambling_entries_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.gambling_entries_id_seq TO newhart;
 
 
 --
 -- Name: TABLE gambling_logs; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.gambling_logs TO newhart;
+GRANT ALL ON TABLE public.gambling_logs TO newhart;
 GRANT SELECT ON TABLE public.gambling_logs TO gem;
 GRANT SELECT ON TABLE public.gambling_logs TO coder;
 GRANT SELECT ON TABLE public.gambling_logs TO scout;
@@ -9493,21 +9700,28 @@ GRANT ALL ON TABLE public.gambling_logs TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.gambling_logs_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.gambling_logs_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.gambling_logs_id_seq TO newhart;
+
+
+--
+-- Name: TABLE git_issue_queue; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.git_issue_queue TO newhart;
 
 
 --
 -- Name: SEQUENCE git_issue_queue_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.git_issue_queue_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.git_issue_queue_id_seq TO newhart;
 
 
 --
 -- Name: TABLE job_messages; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,INSERT ON TABLE public.job_messages TO newhart;
+GRANT ALL ON TABLE public.job_messages TO newhart;
 GRANT SELECT ON TABLE public.job_messages TO gem;
 GRANT SELECT ON TABLE public.job_messages TO coder;
 GRANT SELECT ON TABLE public.job_messages TO scout;
@@ -9522,7 +9736,7 @@ GRANT ALL ON TABLE public.job_messages TO "nova-staging";
 -- Name: SEQUENCE job_messages_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.job_messages_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.job_messages_id_seq TO newhart;
 GRANT ALL ON SEQUENCE public.job_messages_id_seq TO "nova-staging";
 
 
@@ -9530,7 +9744,7 @@ GRANT ALL ON SEQUENCE public.job_messages_id_seq TO "nova-staging";
 -- Name: TABLE lessons; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.lessons TO newhart;
+GRANT ALL ON TABLE public.lessons TO newhart;
 GRANT SELECT ON TABLE public.lessons TO gem;
 GRANT SELECT ON TABLE public.lessons TO coder;
 GRANT SELECT ON TABLE public.lessons TO scout;
@@ -9546,7 +9760,7 @@ GRANT ALL ON TABLE public.lessons TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.lessons_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.lessons_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.lessons_id_seq TO newhart;
 
 
 --
@@ -9554,13 +9768,14 @@ GRANT SELECT,USAGE ON SEQUENCE public.lessons_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.lessons_archive TO "nova-staging";
+GRANT ALL ON TABLE public.lessons_archive TO newhart;
 
 
 --
 -- Name: TABLE media_consumed; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.media_consumed TO newhart;
+GRANT ALL ON TABLE public.media_consumed TO newhart;
 GRANT SELECT ON TABLE public.media_consumed TO gem;
 GRANT SELECT ON TABLE public.media_consumed TO coder;
 GRANT SELECT ON TABLE public.media_consumed TO scout;
@@ -9576,14 +9791,14 @@ GRANT ALL ON TABLE public.media_consumed TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.media_consumed_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.media_consumed_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.media_consumed_id_seq TO newhart;
 
 
 --
 -- Name: TABLE media_queue; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.media_queue TO newhart;
+GRANT ALL ON TABLE public.media_queue TO newhart;
 GRANT SELECT ON TABLE public.media_queue TO gem;
 GRANT SELECT ON TABLE public.media_queue TO coder;
 GRANT SELECT ON TABLE public.media_queue TO scout;
@@ -9599,14 +9814,14 @@ GRANT ALL ON TABLE public.media_queue TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.media_queue_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.media_queue_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.media_queue_id_seq TO newhart;
 
 
 --
 -- Name: TABLE media_tags; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.media_tags TO newhart;
+GRANT ALL ON TABLE public.media_tags TO newhart;
 GRANT SELECT ON TABLE public.media_tags TO gem;
 GRANT SELECT ON TABLE public.media_tags TO coder;
 GRANT SELECT ON TABLE public.media_tags TO scout;
@@ -9622,14 +9837,14 @@ GRANT ALL ON TABLE public.media_tags TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.media_tags_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.media_tags_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.media_tags_id_seq TO newhart;
 
 
 --
 -- Name: TABLE memory_embeddings; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO newhart;
+GRANT ALL ON TABLE public.memory_embeddings TO newhart;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gem;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO coder;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO scout;
@@ -9644,7 +9859,7 @@ GRANT ALL ON TABLE public.memory_embeddings TO "nova-staging";
 -- Name: SEQUENCE memory_embeddings_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.memory_embeddings_id_seq TO newhart;
 GRANT ALL ON SEQUENCE public.memory_embeddings_id_seq TO "nova-staging";
 
 
@@ -9653,6 +9868,14 @@ GRANT ALL ON SEQUENCE public.memory_embeddings_id_seq TO "nova-staging";
 --
 
 GRANT ALL ON TABLE public.memory_embeddings_archive TO "nova-staging";
+GRANT ALL ON TABLE public.memory_embeddings_archive TO newhart;
+
+
+--
+-- Name: TABLE memory_type_priorities; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.memory_type_priorities TO newhart;
 
 
 --
@@ -9660,7 +9883,14 @@ GRANT ALL ON TABLE public.memory_embeddings_archive TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.models_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.models_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.models_id_seq TO newhart;
+
+
+--
+-- Name: TABLE motivation_d100; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT ALL ON TABLE public.motivation_d100 TO newhart;
 
 
 --
@@ -9668,6 +9898,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.models_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.music_analysis TO "nova-staging";
+GRANT ALL ON TABLE public.music_analysis TO newhart;
 
 
 --
@@ -9675,7 +9906,7 @@ GRANT ALL ON TABLE public.music_analysis TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.music_analysis_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.music_analysis_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.music_analysis_id_seq TO newhart;
 
 
 --
@@ -9683,6 +9914,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.music_analysis_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.music_library TO "nova-staging";
+GRANT ALL ON TABLE public.music_library TO newhart;
 
 
 --
@@ -9690,14 +9922,14 @@ GRANT ALL ON TABLE public.music_library TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.music_library_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.music_library_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.music_library_id_seq TO newhart;
 
 
 --
 -- Name: TABLE place_properties; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.place_properties TO newhart;
+GRANT ALL ON TABLE public.place_properties TO newhart;
 GRANT SELECT ON TABLE public.place_properties TO gem;
 GRANT SELECT ON TABLE public.place_properties TO coder;
 GRANT SELECT ON TABLE public.place_properties TO scout;
@@ -9713,14 +9945,14 @@ GRANT ALL ON TABLE public.place_properties TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.place_properties_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.place_properties_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.place_properties_id_seq TO newhart;
 
 
 --
 -- Name: TABLE places; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.places TO newhart;
+GRANT ALL ON TABLE public.places TO newhart;
 GRANT SELECT ON TABLE public.places TO gem;
 GRANT SELECT ON TABLE public.places TO coder;
 GRANT SELECT ON TABLE public.places TO scout;
@@ -9736,14 +9968,14 @@ GRANT ALL ON TABLE public.places TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.places_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.places_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.places_id_seq TO newhart;
 
 
 --
 -- Name: TABLE portfolio_positions; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.portfolio_positions TO newhart;
+GRANT ALL ON TABLE public.portfolio_positions TO newhart;
 GRANT SELECT ON TABLE public.portfolio_positions TO gem;
 GRANT SELECT ON TABLE public.portfolio_positions TO coder;
 GRANT SELECT ON TABLE public.portfolio_positions TO scout;
@@ -9759,14 +9991,14 @@ GRANT ALL ON TABLE public.portfolio_positions TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.portfolio_positions_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.portfolio_positions_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.portfolio_positions_id_seq TO newhart;
 
 
 --
 -- Name: TABLE portfolio_snapshots; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.portfolio_snapshots TO newhart;
+GRANT ALL ON TABLE public.portfolio_snapshots TO newhart;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO gem;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO coder;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO scout;
@@ -9782,14 +10014,14 @@ GRANT ALL ON TABLE public.portfolio_snapshots TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.portfolio_snapshots_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.portfolio_snapshots_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.portfolio_snapshots_id_seq TO newhart;
 
 
 --
 -- Name: TABLE positions; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.positions TO newhart;
+GRANT ALL ON TABLE public.positions TO newhart;
 GRANT SELECT ON TABLE public.positions TO gem;
 GRANT SELECT ON TABLE public.positions TO coder;
 GRANT SELECT ON TABLE public.positions TO scout;
@@ -9805,14 +10037,14 @@ GRANT ALL ON TABLE public.positions TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.positions_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.positions_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.positions_id_seq TO newhart;
 
 
 --
 -- Name: TABLE preferences; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.preferences TO newhart;
+GRANT ALL ON TABLE public.preferences TO newhart;
 GRANT SELECT ON TABLE public.preferences TO gem;
 GRANT SELECT ON TABLE public.preferences TO coder;
 GRANT SELECT ON TABLE public.preferences TO scout;
@@ -9828,14 +10060,14 @@ GRANT ALL ON TABLE public.preferences TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.preferences_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.preferences_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.preferences_id_seq TO newhart;
 
 
 --
 -- Name: TABLE price_cache_v2; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.price_cache_v2 TO newhart;
+GRANT ALL ON TABLE public.price_cache_v2 TO newhart;
 GRANT SELECT ON TABLE public.price_cache_v2 TO gem;
 GRANT SELECT ON TABLE public.price_cache_v2 TO coder;
 GRANT SELECT ON TABLE public.price_cache_v2 TO scout;
@@ -9850,7 +10082,7 @@ GRANT ALL ON TABLE public.price_cache_v2 TO "nova-staging";
 -- Name: TABLE project_entities; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.project_entities TO newhart;
+GRANT ALL ON TABLE public.project_entities TO newhart;
 GRANT SELECT ON TABLE public.project_entities TO gem;
 GRANT SELECT ON TABLE public.project_entities TO coder;
 GRANT SELECT ON TABLE public.project_entities TO scout;
@@ -9865,7 +10097,7 @@ GRANT ALL ON TABLE public.project_entities TO "nova-staging";
 -- Name: TABLE project_tasks; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.project_tasks TO newhart;
+GRANT ALL ON TABLE public.project_tasks TO newhart;
 GRANT SELECT ON TABLE public.project_tasks TO gem;
 GRANT SELECT ON TABLE public.project_tasks TO coder;
 GRANT SELECT ON TABLE public.project_tasks TO scout;
@@ -9881,14 +10113,14 @@ GRANT ALL ON TABLE public.project_tasks TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.project_tasks_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.project_tasks_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.project_tasks_id_seq TO newhart;
 
 
 --
 -- Name: TABLE projects; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.projects TO newhart;
+GRANT ALL ON TABLE public.projects TO newhart;
 GRANT SELECT ON TABLE public.projects TO gem;
 GRANT SELECT ON TABLE public.projects TO coder;
 GRANT SELECT ON TABLE public.projects TO scout;
@@ -9904,7 +10136,7 @@ GRANT ALL ON TABLE public.projects TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.projects_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.projects_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.projects_id_seq TO newhart;
 
 
 --
@@ -9913,6 +10145,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.projects_id_seq TO newhart;
 
 GRANT SELECT ON TABLE public.publications TO nova;
 GRANT ALL ON TABLE public.publications TO "nova-staging";
+GRANT ALL ON TABLE public.publications TO newhart;
 
 
 --
@@ -9928,6 +10161,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.publications_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.ralph_sessions TO "nova-staging";
+GRANT ALL ON TABLE public.ralph_sessions TO newhart;
 
 
 --
@@ -9935,7 +10169,7 @@ GRANT ALL ON TABLE public.ralph_sessions TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.ralph_sessions_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.ralph_sessions_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.ralph_sessions_id_seq TO newhart;
 
 
 --
@@ -9944,6 +10178,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.ralph_sessions_id_seq TO newhart;
 
 GRANT SELECT ON TABLE public.tags TO nova;
 GRANT ALL ON TABLE public.tags TO "nova-staging";
+GRANT ALL ON TABLE public.tags TO newhart;
 
 
 --
@@ -9958,7 +10193,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.tags_id_seq TO newhart;
 -- Name: TABLE tasks; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.tasks TO newhart;
+GRANT ALL ON TABLE public.tasks TO newhart;
 GRANT SELECT ON TABLE public.tasks TO gem;
 GRANT SELECT ON TABLE public.tasks TO coder;
 GRANT SELECT ON TABLE public.tasks TO scout;
@@ -9974,7 +10209,7 @@ GRANT ALL ON TABLE public.tasks TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.tasks_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.tasks_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.tasks_id_seq TO newhart;
 
 
 --
@@ -9982,6 +10217,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.tasks_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.unsolved_problems TO "nova-staging";
+GRANT ALL ON TABLE public.unsolved_problems TO newhart;
 
 
 --
@@ -9989,7 +10225,7 @@ GRANT ALL ON TABLE public.unsolved_problems TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.unsolved_problems_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.unsolved_problems_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.unsolved_problems_id_seq TO newhart;
 
 
 --
@@ -10213,7 +10449,7 @@ GRANT ALL ON TABLE public.v_users TO "nova-staging";
 -- Name: TABLE vehicles; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.vehicles TO newhart;
+GRANT ALL ON TABLE public.vehicles TO newhart;
 GRANT SELECT ON TABLE public.vehicles TO gem;
 GRANT SELECT ON TABLE public.vehicles TO coder;
 GRANT SELECT ON TABLE public.vehicles TO scout;
@@ -10229,14 +10465,14 @@ GRANT ALL ON TABLE public.vehicles TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.vehicles_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.vehicles_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.vehicles_id_seq TO newhart;
 
 
 --
 -- Name: TABLE vocabulary; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT ON TABLE public.vocabulary TO newhart;
+GRANT ALL ON TABLE public.vocabulary TO newhart;
 GRANT SELECT ON TABLE public.vocabulary TO gem;
 GRANT SELECT ON TABLE public.vocabulary TO coder;
 GRANT SELECT ON TABLE public.vocabulary TO scout;
@@ -10252,7 +10488,7 @@ GRANT ALL ON TABLE public.vocabulary TO "nova-staging";
 --
 
 GRANT ALL ON SEQUENCE public.vocabulary_id_seq TO "nova-staging";
-GRANT SELECT,USAGE ON SEQUENCE public.vocabulary_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.vocabulary_id_seq TO newhart;
 
 
 --
@@ -10261,20 +10497,21 @@ GRANT SELECT,USAGE ON SEQUENCE public.vocabulary_id_seq TO newhart;
 
 GRANT SELECT ON TABLE public.work_tags TO nova;
 GRANT ALL ON TABLE public.work_tags TO "nova-staging";
+GRANT ALL ON TABLE public.work_tags TO newhart;
 
 
 --
 -- Name: TABLE workflow_steps; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,INSERT,UPDATE ON TABLE public.workflow_steps TO newhart;
+GRANT ALL ON TABLE public.workflow_steps TO newhart;
 
 
 --
 -- Name: TABLE workflows; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,INSERT,UPDATE ON TABLE public.workflows TO newhart;
+GRANT ALL ON TABLE public.workflows TO newhart;
 
 
 --
@@ -10288,14 +10525,14 @@ GRANT SELECT ON TABLE public.workflow_steps_detail TO newhart;
 -- Name: SEQUENCE workflow_steps_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.workflow_steps_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.workflow_steps_id_seq TO newhart;
 
 
 --
 -- Name: SEQUENCE workflows_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
-GRANT SELECT,USAGE ON SEQUENCE public.workflows_id_seq TO newhart;
+GRANT ALL ON SEQUENCE public.workflows_id_seq TO newhart;
 
 
 --
@@ -10304,6 +10541,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.workflows_id_seq TO newhart;
 
 GRANT SELECT ON TABLE public.works TO nova;
 GRANT ALL ON TABLE public.works TO "nova-staging";
+GRANT ALL ON TABLE public.works TO newhart;
 
 
 --
@@ -10343,5 +10581,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict May4TSqEc6LQPnleg81CwNjrmQuYFFYEw3fPJPlgy08buXjiP4J8mjd4O1kraDk
+\unrestrict aziIKoG9hRk0iAXwu057iEKNi4lWrCi98ltR8hGOAgV0xhJCZMQ4g8tjsPzFSr6
 
