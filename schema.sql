@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict vDewkkCl4ro2FVnd2y2v3soby1wfncXEjn2BXcIBvRicPbLM2x4C8bDMPj9KhTE
+\restrict BSLnwi9sEtkqYIrXSFSKCSSeecUpQfU2JSn3R2mgLOzdKt4ZaxoOddDVl5tNCCg
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1455,6 +1455,35 @@ $$;
 
 
 ALTER FUNCTION public.notify_schema_change() OWNER TO postgres;
+
+--
+-- Name: notify_system_config_changed(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.notify_system_config_changed() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM pg_notify('agent_config_changed', json_build_object(
+            'source', 'agent_system_config',
+            'key', OLD.key,
+            'operation', TG_OP
+        )::text);
+        RETURN OLD;
+    END IF;
+
+    PERFORM pg_notify('agent_config_changed', json_build_object(
+        'source', 'agent_system_config',
+        'key', NEW.key,
+        'operation', TG_OP
+    )::text);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.notify_system_config_changed() OWNER TO nova;
 
 --
 -- Name: notify_workflow_step_change(); Type: FUNCTION; Schema: public; Owner: nova
@@ -10811,5 +10840,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict vDewkkCl4ro2FVnd2y2v3soby1wfncXEjn2BXcIBvRicPbLM2x4C8bDMPj9KhTE
+\unrestrict BSLnwi9sEtkqYIrXSFSKCSSeecUpQfU2JSn3R2mgLOzdKt4ZaxoOddDVl5tNCCg
 
