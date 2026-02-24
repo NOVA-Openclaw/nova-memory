@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict aziIKoG9hRk0iAXwu057iEKNi4lWrCi98ltR8hGOAgV0xhJCZMQ4g8tjsPzFSr6
+\restrict aLjNY51G5NJY8TLFzCSYCCxAjmnLZDJ73ht4LalnXU0QKIC9Ak4kjJTQpVN3fhe
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1337,12 +1337,13 @@ BEGIN
         )::text);
         RETURN OLD;
     END IF;
-    
+
     IF TG_OP = 'INSERT' OR
        OLD.model IS DISTINCT FROM NEW.model OR
        OLD.fallback_models IS DISTINCT FROM NEW.fallback_models OR
        OLD.thinking IS DISTINCT FROM NEW.thinking OR
-       OLD.instance_type IS DISTINCT FROM NEW.instance_type THEN
+       OLD.instance_type IS DISTINCT FROM NEW.instance_type OR
+       OLD.allowed_subagents IS DISTINCT FROM NEW.allowed_subagents THEN
         PERFORM pg_notify('agent_config_changed', json_build_object(
             'agent_id', NEW.id,
             'agent_name', NEW.name,
@@ -5413,6 +5414,30 @@ ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
 
 
 --
+-- Name: shopping_history; Type: TABLE; Schema: public; Owner: nova-staging
+--
+
+CREATE TABLE public.shopping_history (
+    id integer NOT NULL,
+    entity_id integer,
+    product_name text NOT NULL,
+    category text,
+    retailer text,
+    price numeric,
+    url text,
+    satisfaction_rating integer,
+    notes text,
+    purchased_at timestamp with time zone,
+    restock_interval_days integer,
+    next_restock_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT shopping_history_satisfaction_rating_check CHECK (((satisfaction_rating >= 1) AND (satisfaction_rating <= 5)))
+);
+
+
+ALTER TABLE public.shopping_history OWNER TO "nova-staging";
+
+--
 -- Name: shopping_history_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
 --
 
@@ -5426,6 +5451,31 @@ CREATE SEQUENCE public.shopping_history_id_seq
 
 
 ALTER SEQUENCE public.shopping_history_id_seq OWNER TO "nova-staging";
+
+--
+-- Name: shopping_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova-staging
+--
+
+ALTER SEQUENCE public.shopping_history_id_seq OWNED BY public.shopping_history.id;
+
+
+--
+-- Name: shopping_preferences; Type: TABLE; Schema: public; Owner: nova-staging
+--
+
+CREATE TABLE public.shopping_preferences (
+    id integer NOT NULL,
+    entity_id integer,
+    category text NOT NULL,
+    key text NOT NULL,
+    value text NOT NULL,
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.shopping_preferences OWNER TO "nova-staging";
 
 --
 -- Name: shopping_preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
@@ -5443,6 +5493,36 @@ CREATE SEQUENCE public.shopping_preferences_id_seq
 ALTER SEQUENCE public.shopping_preferences_id_seq OWNER TO "nova-staging";
 
 --
+-- Name: shopping_preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova-staging
+--
+
+ALTER SEQUENCE public.shopping_preferences_id_seq OWNED BY public.shopping_preferences.id;
+
+
+--
+-- Name: shopping_wishlist; Type: TABLE; Schema: public; Owner: nova-staging
+--
+
+CREATE TABLE public.shopping_wishlist (
+    id integer NOT NULL,
+    entity_id integer,
+    product_name text NOT NULL,
+    category text,
+    max_price numeric,
+    url text,
+    priority text DEFAULT 'normal'::text,
+    status text DEFAULT 'active'::text,
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT shopping_wishlist_priority_check CHECK ((priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text]))),
+    CONSTRAINT shopping_wishlist_status_check CHECK ((status = ANY (ARRAY['active'::text, 'purchased'::text, 'dropped'::text, 'watching'::text])))
+);
+
+
+ALTER TABLE public.shopping_wishlist OWNER TO "nova-staging";
+
+--
 -- Name: shopping_wishlist_id_seq; Type: SEQUENCE; Schema: public; Owner: nova-staging
 --
 
@@ -5456,6 +5536,13 @@ CREATE SEQUENCE public.shopping_wishlist_id_seq
 
 
 ALTER SEQUENCE public.shopping_wishlist_id_seq OWNER TO "nova-staging";
+
+--
+-- Name: shopping_wishlist_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova-staging
+--
+
+ALTER SEQUENCE public.shopping_wishlist_id_seq OWNED BY public.shopping_wishlist.id;
+
 
 --
 -- Name: tags; Type: TABLE; Schema: public; Owner: erato
@@ -6694,6 +6781,27 @@ ALTER TABLE ONLY public.ralph_sessions ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: shopping_history id; Type: DEFAULT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_history ALTER COLUMN id SET DEFAULT nextval('public.shopping_history_id_seq'::regclass);
+
+
+--
+-- Name: shopping_preferences id; Type: DEFAULT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_preferences ALTER COLUMN id SET DEFAULT nextval('public.shopping_preferences_id_seq'::regclass);
+
+
+--
+-- Name: shopping_wishlist id; Type: DEFAULT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_wishlist ALTER COLUMN id SET DEFAULT nextval('public.shopping_wishlist_id_seq'::regclass);
+
+
+--
 -- Name: tags id; Type: DEFAULT; Schema: public; Owner: erato
 --
 
@@ -7350,6 +7458,38 @@ ALTER TABLE ONLY public.ralph_sessions
 
 
 --
+-- Name: shopping_history shopping_history_pkey; Type: CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_history
+    ADD CONSTRAINT shopping_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shopping_preferences shopping_preferences_entity_id_category_key_key; Type: CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_preferences
+    ADD CONSTRAINT shopping_preferences_entity_id_category_key_key UNIQUE (entity_id, category, key);
+
+
+--
+-- Name: shopping_preferences shopping_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_preferences
+    ADD CONSTRAINT shopping_preferences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shopping_wishlist shopping_wishlist_pkey; Type: CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_wishlist
+    ADD CONSTRAINT shopping_wishlist_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tags tags_name_key; Type: CONSTRAINT; Schema: public; Owner: erato
 --
 
@@ -7860,6 +8000,20 @@ CREATE INDEX idx_git_queue_status ON public.git_issue_queue USING btree (status)
 
 
 --
+-- Name: idx_history_entity; Type: INDEX; Schema: public; Owner: nova-staging
+--
+
+CREATE INDEX idx_history_entity ON public.shopping_history USING btree (entity_id);
+
+
+--
+-- Name: idx_history_restock; Type: INDEX; Schema: public; Owner: nova-staging
+--
+
+CREATE INDEX idx_history_restock ON public.shopping_history USING btree (next_restock_at) WHERE (next_restock_at IS NOT NULL);
+
+
+--
 -- Name: idx_job_messages; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -8112,6 +8266,13 @@ CREATE INDEX idx_preferences_key ON public.preferences USING btree (key);
 
 
 --
+-- Name: idx_prefs_entity_cat; Type: INDEX; Schema: public; Owner: nova-staging
+--
+
+CREATE INDEX idx_prefs_entity_cat ON public.shopping_preferences USING btree (entity_id, category);
+
+
+--
 -- Name: idx_price_cache_v2_lookup; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -8277,6 +8438,27 @@ CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
 --
 
 CREATE INDEX idx_vocabulary_vote_count ON public.vocabulary USING btree (vote_count DESC);
+
+
+--
+-- Name: idx_wishlist_category; Type: INDEX; Schema: public; Owner: nova-staging
+--
+
+CREATE INDEX idx_wishlist_category ON public.shopping_wishlist USING btree (category);
+
+
+--
+-- Name: idx_wishlist_entity; Type: INDEX; Schema: public; Owner: nova-staging
+--
+
+CREATE INDEX idx_wishlist_entity ON public.shopping_wishlist USING btree (entity_id);
+
+
+--
+-- Name: idx_wishlist_status; Type: INDEX; Schema: public; Owner: nova-staging
+--
+
+CREATE INDEX idx_wishlist_status ON public.shopping_wishlist USING btree (status);
 
 
 --
@@ -8964,6 +9146,30 @@ ALTER TABLE ONLY public.project_tasks
 
 ALTER TABLE ONLY public.publications
     ADD CONSTRAINT publications_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shopping_history shopping_history_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_history
+    ADD CONSTRAINT shopping_history_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: shopping_preferences shopping_preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_preferences
+    ADD CONSTRAINT shopping_preferences_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
+
+--
+-- Name: shopping_wishlist shopping_wishlist_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova-staging
+--
+
+ALTER TABLE ONLY public.shopping_wishlist
+    ADD CONSTRAINT shopping_wishlist_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
 
 --
@@ -10173,6 +10379,30 @@ GRANT ALL ON SEQUENCE public.ralph_sessions_id_seq TO newhart;
 
 
 --
+-- Name: TABLE shopping_history; Type: ACL; Schema: public; Owner: nova-staging
+--
+
+GRANT ALL ON TABLE public.shopping_history TO newhart;
+GRANT SELECT ON TABLE public.shopping_history TO nova;
+
+
+--
+-- Name: TABLE shopping_preferences; Type: ACL; Schema: public; Owner: nova-staging
+--
+
+GRANT ALL ON TABLE public.shopping_preferences TO newhart;
+GRANT SELECT ON TABLE public.shopping_preferences TO nova;
+
+
+--
+-- Name: TABLE shopping_wishlist; Type: ACL; Schema: public; Owner: nova-staging
+--
+
+GRANT ALL ON TABLE public.shopping_wishlist TO newhart;
+GRANT SELECT ON TABLE public.shopping_wishlist TO nova;
+
+
+--
 -- Name: TABLE tags; Type: ACL; Schema: public; Owner: erato
 --
 
@@ -10581,5 +10811,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aziIKoG9hRk0iAXwu057iEKNi4lWrCi98ltR8hGOAgV0xhJCZMQ4g8tjsPzFSr6
+\unrestrict aLjNY51G5NJY8TLFzCSYCCxAjmnLZDJ73ht4LalnXU0QKIC9Ak4kjJTQpVN3fhe
 
