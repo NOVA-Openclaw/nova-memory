@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5FG55EabnbYLCz4lGu0aP5nJL4PanSuiKeCC1q3cs4kTZDSOZix06VKrILJ7wkp
+\restrict DkxKsdXPyijkRknlwwynBPlWqrtrIyvy0KzirLbNF9ObDFqZscrLW4ihWENCwQo
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -8770,6 +8770,8 @@ CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON
 
 CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.embed_chat_message();
 
+ALTER TABLE public.agent_chat ENABLE REPLICA TRIGGER trg_embed_chat_message;
+
 
 --
 -- Name: agent_chat trg_normalize_mentions; Type: TRIGGER; Schema: public; Owner: nova
@@ -8783,6 +8785,8 @@ CREATE TRIGGER trg_normalize_mentions BEFORE INSERT ON public.agent_chat FOR EAC
 --
 
 CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+
+ALTER TABLE public.agent_chat ENABLE ALWAYS TRIGGER trg_notify_agent_chat;
 
 
 --
@@ -10843,5 +10847,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5FG55EabnbYLCz4lGu0aP5nJL4PanSuiKeCC1q3cs4kTZDSOZix06VKrILJ7wkp
+\unrestrict DkxKsdXPyijkRknlwwynBPlWqrtrIyvy0KzirLbNF9ObDFqZscrLW4ihWENCwQo
 
