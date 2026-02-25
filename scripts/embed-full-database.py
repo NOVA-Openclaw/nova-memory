@@ -1,33 +1,21 @@
 #!/usr/bin/env python3
 """
 Embed full database for semantic search.
-Creates embeddings for all relevant tables in the nova-memory schema.
-
-Usage:
-    python embed-full-database.py              # Embed all sources
-    python embed-full-database.py --reindex    # Force re-embed everything
-
-Requires:
-    - OPENAI_API_KEY environment variable
-    - PostgreSQL with pgvector extension
-    - Tables from nova-memory schema
+Creates embeddings for all relevant tables in nova_memory.
 """
 
 import os
-import sys
-import argparse
 import psycopg2
 import openai
 
 EMBEDDING_MODEL = "text-embedding-3-small"
-DB_NAME = os.environ.get("NOVA_MEMORY_DB", "nova_memory")
+DB_NAME = "nova_memory"
 BATCH_SIZE = 50
 
-# Tables and their content extraction queries
-# Each query must return (id, content_text) pairs
+# Tables and their content extraction queries (adjusted for actual schemas)
 TABLES_TO_EMBED = {
     "task": """
-        SELECT id, title || ': ' || COALESCE(description, '') ||
+        SELECT id, title || ': ' || COALESCE(description, '') || 
                CASE WHEN status IS NOT NULL THEN ' [Status: ' || status || ']' ELSE '' END
         FROM tasks WHERE title IS NOT NULL
     """,
@@ -40,7 +28,7 @@ TABLES_TO_EMBED = {
         FROM entity_facts ef JOIN entities e ON ef.entity_id = e.id
     """,
     "project": """
-        SELECT id, name || ': ' || COALESCE(description, '') ||
+        SELECT id, name || ': ' || COALESCE(description, '') || 
                CASE WHEN status IS NOT NULL THEN ' [' || status || ']' ELSE '' END
         FROM projects WHERE name IS NOT NULL
     """,
@@ -55,6 +43,10 @@ TABLES_TO_EMBED = {
     "event": """
         SELECT id, COALESCE(title, event_type, 'event') || ' (' || event_date::date || '): ' || COALESCE(description, '')
         FROM events WHERE (title IS NOT NULL OR description IS NOT NULL)
+    """,
+    "trading_signal": """
+        SELECT id, signal_type || ' ' || symbol || ' (' || created_at::date || '): ' || COALESCE(reasoning, '')
+        FROM trading_signals WHERE symbol IS NOT NULL
     """,
     "position": """
         SELECT id, asset_class || ': ' || symbol || ' - ' || quantity::text || ' ' || COALESCE(unit, 'units') ||
@@ -79,42 +71,33 @@ TABLES_TO_EMBED = {
                 WHERE wa.work_id = w.id
             ), 'Unknown') ||
             ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
-            w.summary
+            w.summary ||
+            COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '')
         FROM library_works w
     """,
 }
 
-
 def get_openai_client():
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        print("Error: OPENAI_API_KEY not set", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError("OPENAI_API_KEY not set")
     return openai.OpenAI(api_key=api_key)
-
 
 def get_embeddings_batch(client, texts):
     response = client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
     return [item.embedding for item in response.data]
 
-
 def main():
-    parser = argparse.ArgumentParser(description="Embed database for semantic search")
-    parser.add_argument("--reindex", action="store_true", help="Force re-embed everything")
-    parser.add_argument("--source", help="Embed only a specific source type")
-    args = parser.parse_args()
-
     client = get_openai_client()
-    conn = psycopg2.connect(dbname=DB_NAME, host="localhost")
-
+    conn = psycopg2.connect(dbname=DB_NAME, host="localhost", user="nova")
+    
     total_embedded = 0
-    tables = {args.source: TABLES_TO_EMBED[args.source]} if args.source else TABLES_TO_EMBED
-
-    for source_type, query in tables.items():
+    
+    for source_type, query in TABLES_TO_EMBED.items():
         print(f"\n📊 Processing {source_type}...")
-
+        
         try:
-            cur = conn.cursor()
+            cur = conn.cursor()  # Fresh cursor for each table
             cur.execute(query)
             rows = cur.fetchall()
             cur.close()
@@ -122,42 +105,37 @@ def main():
             print(f"  ⚠️  Query failed: {e}")
             conn.rollback()
             continue
-
+            
         if not rows:
             print(f"  (no rows)")
             continue
-
-        # Filter out already embedded (unless reindexing)
+        
+        # Filter out already embedded
         cur = conn.cursor()
-        if args.reindex:
-            cur.execute("DELETE FROM memory_embeddings WHERE source_type = %s", (source_type,))
-            conn.commit()
-            to_embed = [(str(id_), content[:2000]) for id_, content in rows if content and len(content.strip()) > 5]
-        else:
-            to_embed = []
-            for id_, content in rows:
-                if content and len(content.strip()) > 5:
-                    cur.execute(
-                        "SELECT 1 FROM memory_embeddings WHERE source_type = %s AND source_id = %s",
-                        (source_type, str(id_))
-                    )
-                    if not cur.fetchone():
-                        to_embed.append((str(id_), content[:2000]))
+        to_embed = []
+        for id_, content in rows:
+            if content and len(content.strip()) > 5:
+                cur.execute(
+                    "SELECT 1 FROM memory_embeddings WHERE source_type = %s AND source_id = %s",
+                    (source_type, str(id_))
+                )
+                if not cur.fetchone():
+                    to_embed.append((str(id_), content[:2000]))
         cur.close()
-
+        
         if not to_embed:
             print(f"  (all already embedded)")
             continue
-
+        
         # Embed in batches
         new_count = 0
         for i in range(0, len(to_embed), BATCH_SIZE):
-            batch = to_embed[i:i + BATCH_SIZE]
+            batch = to_embed[i:i+BATCH_SIZE]
             texts = [item[1] for item in batch]
-
+            
             try:
                 embeddings = get_embeddings_batch(client, texts)
-
+                
                 cur = conn.cursor()
                 for (src_id, content), embedding in zip(batch, embeddings):
                     cur.execute("""
@@ -171,13 +149,12 @@ def main():
             except Exception as e:
                 print(f"  ⚠️  Batch failed: {e}")
                 conn.rollback()
-
+        
         print(f"  ✓ {new_count} embedded")
         total_embedded += new_count
-
+    
     conn.close()
     print(f"\n✅ Total: {total_embedded} new embeddings")
-
 
 if __name__ == "__main__":
     main()

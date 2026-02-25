@@ -34,7 +34,8 @@ LIBRARY_QUERY = """
             WHERE wa.work_id = w.id
         ), 'Unknown') ||
         ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
-        w.summary
+        w.summary ||
+        COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '')
     FROM library_works w
 """
 

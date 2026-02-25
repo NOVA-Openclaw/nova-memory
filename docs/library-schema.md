@@ -55,6 +55,7 @@ Only the `summary` field gets embedded into `memory_embeddings`. This is intenti
 | content_text | TEXT | | Full text (optional, for deep reading) |
 | insights | TEXT | ✅ | Key takeaways, relevance notes |
 | subjects | TEXT[] | ✅ | Topic array, e.g. `{'AI Safety', 'Agent Architecture'}` |
+| notable_quotes | TEXT[] | | 3-10 memorable or frequently cited passages from the work. Included in semantic embedding. |
 | publisher | TEXT | | Publisher name |
 | source_path | TEXT | | Path to local file (if any) |
 | shared_by | TEXT | ✅ | Who shared/recommended the work |

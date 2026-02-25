@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS library_works (
     -- Search
     search_vector tsvector,
 
+    -- Notable quotes for semantic recall
+    notable_quotes TEXT[],
+
     -- Catch-all for type-specific metadata
     extra_metadata JSONB DEFAULT '{}',
 
@@ -134,6 +137,7 @@ BEGIN
         setweight(to_tsvector('english', coalesce(NEW.summary, '')), 'B') ||
         setweight(to_tsvector('english', coalesce(NEW.abstract, '')), 'B') ||
         setweight(to_tsvector('english', coalesce(NEW.insights, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(array_to_string(NEW.notable_quotes, ' '), '')), 'B') ||
         setweight(to_tsvector('english', coalesce(NEW.content_text, '')), 'D');
     NEW.updated_at := CURRENT_TIMESTAMP;
     RETURN NEW;
