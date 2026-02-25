@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict sdXu3TzRNrBHFsiUP65Scu3jTeVAoKFtUl9l4hQa5GF70yma8pRDp97vnwo5Waw
+\restrict fvfqQ0GOq9Y8jhTOGblKrFQJCc2cbmRzZIceVIiPADU8pSRn0aMaFQiGRO84dzm
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -4430,6 +4430,7 @@ CREATE TABLE public.library_works (
     search_vector tsvector,
     extra_metadata jsonb DEFAULT '{}'::jsonb,
     CONSTRAINT insights_not_empty CHECK ((length(TRIM(BOTH FROM insights)) > 20)),
+    CONSTRAINT isbn_required_for_books CHECK (((work_type <> ALL (ARRAY['book'::text, 'novel'::text])) OR (isbn IS NOT NULL))),
     CONSTRAINT summary_not_empty CHECK ((length(TRIM(BOTH FROM summary)) > 50)),
     CONSTRAINT valid_work_type CHECK ((work_type = ANY (ARRAY['paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text])))
 );
@@ -9866,7 +9867,7 @@ GRANT SELECT,INSERT ON TABLE public.agent_chat TO scout;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO iris;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO gidget;
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO ticker;
-GRANT SELECT,INSERT ON TABLE public.agent_chat TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_chat TO athena;
 GRANT ALL ON TABLE public.agent_chat TO "nova-staging";
 GRANT SELECT,INSERT ON TABLE public.agent_chat TO PUBLIC;
 GRANT INSERT ON TABLE public.agent_chat TO graybeard;
@@ -9899,7 +9900,7 @@ GRANT SELECT ON TABLE public.agent_chat_processed TO scout;
 GRANT SELECT ON TABLE public.agent_chat_processed TO iris;
 GRANT SELECT ON TABLE public.agent_chat_processed TO gidget;
 GRANT SELECT ON TABLE public.agent_chat_processed TO ticker;
-GRANT SELECT ON TABLE public.agent_chat_processed TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_chat_processed TO athena;
 GRANT ALL ON TABLE public.agent_chat_processed TO "nova-staging";
 GRANT SELECT,INSERT,UPDATE ON TABLE public.agent_chat_processed TO PUBLIC;
 
@@ -10016,6 +10017,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.agents_id_seq TO nova;
 
 GRANT ALL ON TABLE public.ai_models TO newhart;
 GRANT ALL ON TABLE public.ai_models TO "nova-staging";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_models TO athena;
 
 
 --
@@ -10029,7 +10031,7 @@ GRANT SELECT ON TABLE public.artwork TO scout;
 GRANT SELECT ON TABLE public.artwork TO iris;
 GRANT SELECT ON TABLE public.artwork TO gidget;
 GRANT SELECT ON TABLE public.artwork TO ticker;
-GRANT SELECT ON TABLE public.artwork TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.artwork TO athena;
 GRANT ALL ON TABLE public.artwork TO "nova-staging";
 
 
@@ -10052,7 +10054,7 @@ GRANT SELECT ON TABLE public.asset_classes TO scout;
 GRANT SELECT ON TABLE public.asset_classes TO iris;
 GRANT SELECT ON TABLE public.asset_classes TO gidget;
 GRANT SELECT ON TABLE public.asset_classes TO ticker;
-GRANT SELECT ON TABLE public.asset_classes TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.asset_classes TO athena;
 GRANT ALL ON TABLE public.asset_classes TO "nova-staging";
 
 
@@ -10097,7 +10099,7 @@ GRANT SELECT ON TABLE public.certificates TO scout;
 GRANT SELECT ON TABLE public.certificates TO iris;
 GRANT SELECT ON TABLE public.certificates TO gidget;
 GRANT SELECT ON TABLE public.certificates TO ticker;
-GRANT SELECT ON TABLE public.certificates TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.certificates TO athena;
 GRANT ALL ON TABLE public.certificates TO "nova-staging";
 
 
@@ -10114,6 +10116,7 @@ GRANT ALL ON SEQUENCE public.certificates_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.channel_activity TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.channel_activity TO athena;
 
 
 --
@@ -10127,7 +10130,7 @@ GRANT SELECT ON TABLE public.conversations TO scout;
 GRANT SELECT ON TABLE public.conversations TO iris;
 GRANT SELECT ON TABLE public.conversations TO gidget;
 GRANT SELECT ON TABLE public.conversations TO ticker;
-GRANT SELECT ON TABLE public.conversations TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.conversations TO athena;
 GRANT ALL ON TABLE public.conversations TO "nova-staging";
 
 
@@ -10150,7 +10153,7 @@ GRANT SELECT ON TABLE public.entity_facts TO scout;
 GRANT SELECT ON TABLE public.entity_facts TO iris;
 GRANT SELECT ON TABLE public.entity_facts TO gidget;
 GRANT SELECT ON TABLE public.entity_facts TO ticker;
-GRANT SELECT ON TABLE public.entity_facts TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.entity_facts TO athena;
 GRANT ALL ON TABLE public.entity_facts TO "nova-staging";
 GRANT SELECT ON TABLE public.entity_facts TO graybeard;
 
@@ -10160,6 +10163,7 @@ GRANT SELECT ON TABLE public.entity_facts TO graybeard;
 --
 
 GRANT ALL ON TABLE public.delegation_knowledge TO "nova-staging";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.delegation_knowledge TO athena;
 
 
 --
@@ -10173,7 +10177,7 @@ GRANT SELECT ON TABLE public.entities TO scout;
 GRANT SELECT ON TABLE public.entities TO iris;
 GRANT SELECT ON TABLE public.entities TO gidget;
 GRANT SELECT ON TABLE public.entities TO ticker;
-GRANT SELECT ON TABLE public.entities TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.entities TO athena;
 GRANT ALL ON TABLE public.entities TO "nova-staging";
 GRANT SELECT ON TABLE public.entities TO graybeard;
 
@@ -10192,6 +10196,7 @@ GRANT ALL ON SEQUENCE public.entities_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.entity_fact_conflicts TO "nova-staging";
 GRANT ALL ON TABLE public.entity_fact_conflicts TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.entity_fact_conflicts TO athena;
 
 
 --
@@ -10208,6 +10213,7 @@ GRANT ALL ON SEQUENCE public.entity_fact_conflicts_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.entity_facts_archive TO "nova-staging";
 GRANT ALL ON TABLE public.entity_facts_archive TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.entity_facts_archive TO athena;
 
 
 --
@@ -10229,7 +10235,7 @@ GRANT SELECT ON TABLE public.entity_relationships TO scout;
 GRANT SELECT ON TABLE public.entity_relationships TO iris;
 GRANT SELECT ON TABLE public.entity_relationships TO gidget;
 GRANT SELECT ON TABLE public.entity_relationships TO ticker;
-GRANT SELECT ON TABLE public.entity_relationships TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.entity_relationships TO athena;
 GRANT ALL ON TABLE public.entity_relationships TO "nova-staging";
 GRANT SELECT ON TABLE public.entity_relationships TO graybeard;
 
@@ -10253,7 +10259,7 @@ GRANT SELECT ON TABLE public.event_entities TO scout;
 GRANT SELECT ON TABLE public.event_entities TO iris;
 GRANT SELECT ON TABLE public.event_entities TO gidget;
 GRANT SELECT ON TABLE public.event_entities TO ticker;
-GRANT SELECT ON TABLE public.event_entities TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.event_entities TO athena;
 GRANT ALL ON TABLE public.event_entities TO "nova-staging";
 
 
@@ -10268,7 +10274,7 @@ GRANT SELECT ON TABLE public.event_places TO scout;
 GRANT SELECT ON TABLE public.event_places TO iris;
 GRANT SELECT ON TABLE public.event_places TO gidget;
 GRANT SELECT ON TABLE public.event_places TO ticker;
-GRANT SELECT ON TABLE public.event_places TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.event_places TO athena;
 GRANT ALL ON TABLE public.event_places TO "nova-staging";
 
 
@@ -10283,7 +10289,7 @@ GRANT SELECT ON TABLE public.event_projects TO scout;
 GRANT SELECT ON TABLE public.event_projects TO iris;
 GRANT SELECT ON TABLE public.event_projects TO gidget;
 GRANT SELECT ON TABLE public.event_projects TO ticker;
-GRANT SELECT ON TABLE public.event_projects TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.event_projects TO athena;
 GRANT ALL ON TABLE public.event_projects TO "nova-staging";
 
 
@@ -10298,7 +10304,7 @@ GRANT SELECT ON TABLE public.events TO scout;
 GRANT SELECT ON TABLE public.events TO iris;
 GRANT SELECT ON TABLE public.events TO gidget;
 GRANT SELECT ON TABLE public.events TO ticker;
-GRANT SELECT ON TABLE public.events TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.events TO athena;
 GRANT ALL ON TABLE public.events TO "nova-staging";
 
 
@@ -10316,6 +10322,7 @@ GRANT ALL ON SEQUENCE public.events_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.events_archive TO "nova-staging";
 GRANT ALL ON TABLE public.events_archive TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.events_archive TO athena;
 
 
 --
@@ -10323,6 +10330,7 @@ GRANT ALL ON TABLE public.events_archive TO newhart;
 --
 
 GRANT ALL ON TABLE public.extraction_metrics TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.extraction_metrics TO athena;
 
 
 --
@@ -10337,6 +10345,7 @@ GRANT ALL ON SEQUENCE public.extraction_metrics_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.fact_change_log TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.fact_change_log TO athena;
 
 
 --
@@ -10357,7 +10366,7 @@ GRANT SELECT ON TABLE public.gambling_entries TO scout;
 GRANT SELECT ON TABLE public.gambling_entries TO iris;
 GRANT SELECT ON TABLE public.gambling_entries TO gidget;
 GRANT SELECT ON TABLE public.gambling_entries TO ticker;
-GRANT SELECT ON TABLE public.gambling_entries TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.gambling_entries TO athena;
 GRANT ALL ON TABLE public.gambling_entries TO "nova-staging";
 
 
@@ -10380,7 +10389,7 @@ GRANT SELECT ON TABLE public.gambling_logs TO scout;
 GRANT SELECT ON TABLE public.gambling_logs TO iris;
 GRANT SELECT ON TABLE public.gambling_logs TO gidget;
 GRANT SELECT ON TABLE public.gambling_logs TO ticker;
-GRANT SELECT ON TABLE public.gambling_logs TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.gambling_logs TO athena;
 GRANT ALL ON TABLE public.gambling_logs TO "nova-staging";
 
 
@@ -10397,6 +10406,7 @@ GRANT ALL ON SEQUENCE public.gambling_logs_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.git_issue_queue TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.git_issue_queue TO athena;
 
 
 --
@@ -10417,7 +10427,7 @@ GRANT SELECT ON TABLE public.job_messages TO scout;
 GRANT SELECT ON TABLE public.job_messages TO iris;
 GRANT SELECT ON TABLE public.job_messages TO gidget;
 GRANT SELECT ON TABLE public.job_messages TO ticker;
-GRANT SELECT ON TABLE public.job_messages TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.job_messages TO athena;
 GRANT ALL ON TABLE public.job_messages TO "nova-staging";
 
 
@@ -10440,7 +10450,7 @@ GRANT SELECT ON TABLE public.lessons TO scout;
 GRANT SELECT ON TABLE public.lessons TO iris;
 GRANT SELECT ON TABLE public.lessons TO gidget;
 GRANT SELECT ON TABLE public.lessons TO ticker;
-GRANT SELECT ON TABLE public.lessons TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lessons TO athena;
 GRANT ALL ON TABLE public.lessons TO "nova-staging";
 
 
@@ -10458,6 +10468,70 @@ GRANT ALL ON SEQUENCE public.lessons_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.lessons_archive TO "nova-staging";
 GRANT ALL ON TABLE public.lessons_archive TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lessons_archive TO athena;
+
+
+--
+-- Name: TABLE library_authors; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.library_authors TO athena;
+
+
+--
+-- Name: SEQUENCE library_authors_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.library_authors_id_seq TO athena;
+
+
+--
+-- Name: TABLE library_tags; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.library_tags TO athena;
+
+
+--
+-- Name: SEQUENCE library_tags_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.library_tags_id_seq TO athena;
+
+
+--
+-- Name: TABLE library_work_authors; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.library_work_authors TO athena;
+
+
+--
+-- Name: TABLE library_work_relationships; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.library_work_relationships TO athena;
+
+
+--
+-- Name: TABLE library_work_tags; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.library_work_tags TO athena;
+
+
+--
+-- Name: TABLE library_works; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.library_works TO athena;
+
+
+--
+-- Name: SEQUENCE library_works_id_seq; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,USAGE ON SEQUENCE public.library_works_id_seq TO athena;
 
 
 --
@@ -10471,7 +10545,7 @@ GRANT SELECT ON TABLE public.media_consumed TO scout;
 GRANT SELECT ON TABLE public.media_consumed TO iris;
 GRANT SELECT ON TABLE public.media_consumed TO gidget;
 GRANT SELECT ON TABLE public.media_consumed TO ticker;
-GRANT SELECT ON TABLE public.media_consumed TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.media_consumed TO athena;
 GRANT ALL ON TABLE public.media_consumed TO "nova-staging";
 
 
@@ -10494,7 +10568,7 @@ GRANT SELECT ON TABLE public.media_queue TO scout;
 GRANT SELECT ON TABLE public.media_queue TO iris;
 GRANT SELECT ON TABLE public.media_queue TO gidget;
 GRANT SELECT ON TABLE public.media_queue TO ticker;
-GRANT SELECT ON TABLE public.media_queue TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.media_queue TO athena;
 GRANT ALL ON TABLE public.media_queue TO "nova-staging";
 
 
@@ -10517,7 +10591,7 @@ GRANT SELECT ON TABLE public.media_tags TO scout;
 GRANT SELECT ON TABLE public.media_tags TO iris;
 GRANT SELECT ON TABLE public.media_tags TO gidget;
 GRANT SELECT ON TABLE public.media_tags TO ticker;
-GRANT SELECT ON TABLE public.media_tags TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.media_tags TO athena;
 GRANT ALL ON TABLE public.media_tags TO "nova-staging";
 
 
@@ -10540,7 +10614,7 @@ GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO scout;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO iris;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO gidget;
 GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO ticker;
-GRANT SELECT,INSERT ON TABLE public.memory_embeddings TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.memory_embeddings TO athena;
 GRANT ALL ON TABLE public.memory_embeddings TO "nova-staging";
 
 
@@ -10558,6 +10632,7 @@ GRANT ALL ON SEQUENCE public.memory_embeddings_id_seq TO "nova-staging";
 
 GRANT ALL ON TABLE public.memory_embeddings_archive TO "nova-staging";
 GRANT ALL ON TABLE public.memory_embeddings_archive TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.memory_embeddings_archive TO athena;
 
 
 --
@@ -10565,6 +10640,7 @@ GRANT ALL ON TABLE public.memory_embeddings_archive TO newhart;
 --
 
 GRANT ALL ON TABLE public.memory_type_priorities TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.memory_type_priorities TO athena;
 
 
 --
@@ -10580,6 +10656,7 @@ GRANT ALL ON SEQUENCE public.models_id_seq TO newhart;
 --
 
 GRANT ALL ON TABLE public.motivation_d100 TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.motivation_d100 TO athena;
 
 
 --
@@ -10588,6 +10665,7 @@ GRANT ALL ON TABLE public.motivation_d100 TO newhart;
 
 GRANT ALL ON TABLE public.music_analysis TO "nova-staging";
 GRANT ALL ON TABLE public.music_analysis TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.music_analysis TO athena;
 
 
 --
@@ -10604,6 +10682,7 @@ GRANT ALL ON SEQUENCE public.music_analysis_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.music_library TO "nova-staging";
 GRANT ALL ON TABLE public.music_library TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.music_library TO athena;
 
 
 --
@@ -10625,7 +10704,7 @@ GRANT SELECT ON TABLE public.place_properties TO scout;
 GRANT SELECT ON TABLE public.place_properties TO iris;
 GRANT SELECT ON TABLE public.place_properties TO gidget;
 GRANT SELECT ON TABLE public.place_properties TO ticker;
-GRANT SELECT ON TABLE public.place_properties TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.place_properties TO athena;
 GRANT ALL ON TABLE public.place_properties TO "nova-staging";
 
 
@@ -10648,7 +10727,7 @@ GRANT SELECT ON TABLE public.places TO scout;
 GRANT SELECT ON TABLE public.places TO iris;
 GRANT SELECT ON TABLE public.places TO gidget;
 GRANT SELECT ON TABLE public.places TO ticker;
-GRANT SELECT ON TABLE public.places TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.places TO athena;
 GRANT ALL ON TABLE public.places TO "nova-staging";
 
 
@@ -10671,7 +10750,7 @@ GRANT SELECT ON TABLE public.portfolio_positions TO scout;
 GRANT SELECT ON TABLE public.portfolio_positions TO iris;
 GRANT SELECT ON TABLE public.portfolio_positions TO gidget;
 GRANT SELECT ON TABLE public.portfolio_positions TO ticker;
-GRANT SELECT ON TABLE public.portfolio_positions TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.portfolio_positions TO athena;
 GRANT ALL ON TABLE public.portfolio_positions TO "nova-staging";
 
 
@@ -10694,7 +10773,7 @@ GRANT SELECT ON TABLE public.portfolio_snapshots TO scout;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO iris;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO gidget;
 GRANT SELECT ON TABLE public.portfolio_snapshots TO ticker;
-GRANT SELECT ON TABLE public.portfolio_snapshots TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.portfolio_snapshots TO athena;
 GRANT ALL ON TABLE public.portfolio_snapshots TO "nova-staging";
 
 
@@ -10717,7 +10796,7 @@ GRANT SELECT ON TABLE public.positions TO scout;
 GRANT SELECT ON TABLE public.positions TO iris;
 GRANT SELECT ON TABLE public.positions TO gidget;
 GRANT SELECT ON TABLE public.positions TO ticker;
-GRANT SELECT ON TABLE public.positions TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.positions TO athena;
 GRANT ALL ON TABLE public.positions TO "nova-staging";
 
 
@@ -10740,7 +10819,7 @@ GRANT SELECT ON TABLE public.preferences TO scout;
 GRANT SELECT ON TABLE public.preferences TO iris;
 GRANT SELECT ON TABLE public.preferences TO gidget;
 GRANT SELECT ON TABLE public.preferences TO ticker;
-GRANT SELECT ON TABLE public.preferences TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.preferences TO athena;
 GRANT ALL ON TABLE public.preferences TO "nova-staging";
 
 
@@ -10763,7 +10842,7 @@ GRANT SELECT ON TABLE public.price_cache_v2 TO scout;
 GRANT SELECT ON TABLE public.price_cache_v2 TO iris;
 GRANT SELECT ON TABLE public.price_cache_v2 TO gidget;
 GRANT SELECT ON TABLE public.price_cache_v2 TO ticker;
-GRANT SELECT ON TABLE public.price_cache_v2 TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.price_cache_v2 TO athena;
 GRANT ALL ON TABLE public.price_cache_v2 TO "nova-staging";
 
 
@@ -10778,7 +10857,7 @@ GRANT SELECT ON TABLE public.project_entities TO scout;
 GRANT SELECT ON TABLE public.project_entities TO iris;
 GRANT SELECT ON TABLE public.project_entities TO gidget;
 GRANT SELECT ON TABLE public.project_entities TO ticker;
-GRANT SELECT ON TABLE public.project_entities TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.project_entities TO athena;
 GRANT ALL ON TABLE public.project_entities TO "nova-staging";
 
 
@@ -10793,7 +10872,7 @@ GRANT SELECT ON TABLE public.project_tasks TO scout;
 GRANT SELECT ON TABLE public.project_tasks TO iris;
 GRANT SELECT ON TABLE public.project_tasks TO gidget;
 GRANT SELECT ON TABLE public.project_tasks TO ticker;
-GRANT SELECT ON TABLE public.project_tasks TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.project_tasks TO athena;
 GRANT ALL ON TABLE public.project_tasks TO "nova-staging";
 
 
@@ -10816,7 +10895,7 @@ GRANT SELECT ON TABLE public.projects TO scout;
 GRANT SELECT ON TABLE public.projects TO iris;
 GRANT SELECT ON TABLE public.projects TO gidget;
 GRANT SELECT ON TABLE public.projects TO ticker;
-GRANT SELECT ON TABLE public.projects TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.projects TO athena;
 GRANT ALL ON TABLE public.projects TO "nova-staging";
 
 
@@ -10851,6 +10930,7 @@ GRANT SELECT,USAGE ON SEQUENCE public.publications_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.ralph_sessions TO "nova-staging";
 GRANT ALL ON TABLE public.ralph_sessions TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ralph_sessions TO athena;
 
 
 --
@@ -10913,7 +10993,7 @@ GRANT SELECT ON TABLE public.tasks TO scout;
 GRANT SELECT ON TABLE public.tasks TO iris;
 GRANT SELECT ON TABLE public.tasks TO gidget;
 GRANT SELECT ON TABLE public.tasks TO ticker;
-GRANT SELECT ON TABLE public.tasks TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.tasks TO athena;
 GRANT ALL ON TABLE public.tasks TO "nova-staging";
 
 
@@ -10931,6 +11011,7 @@ GRANT ALL ON SEQUENCE public.tasks_id_seq TO newhart;
 
 GRANT ALL ON TABLE public.unsolved_problems TO "nova-staging";
 GRANT ALL ON TABLE public.unsolved_problems TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.unsolved_problems TO athena;
 
 
 --
@@ -10952,7 +11033,7 @@ GRANT SELECT ON TABLE public.v_agent_chat_recent TO scout;
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO iris;
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO gidget;
 GRANT SELECT ON TABLE public.v_agent_chat_recent TO ticker;
-GRANT SELECT ON TABLE public.v_agent_chat_recent TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_agent_chat_recent TO athena;
 GRANT ALL ON TABLE public.v_agent_chat_recent TO "nova-staging";
 
 
@@ -10967,8 +11048,15 @@ GRANT SELECT ON TABLE public.v_agent_chat_stats TO scout;
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO iris;
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO gidget;
 GRANT SELECT ON TABLE public.v_agent_chat_stats TO ticker;
-GRANT SELECT ON TABLE public.v_agent_chat_stats TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_agent_chat_stats TO athena;
 GRANT ALL ON TABLE public.v_agent_chat_stats TO "nova-staging";
+
+
+--
+-- Name: TABLE v_agent_spawn_stats; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_agent_spawn_stats TO athena;
 
 
 --
@@ -10982,7 +11070,7 @@ GRANT SELECT ON TABLE public.v_agents TO scout;
 GRANT SELECT ON TABLE public.v_agents TO iris;
 GRANT SELECT ON TABLE public.v_agents TO gidget;
 GRANT SELECT ON TABLE public.v_agents TO ticker;
-GRANT SELECT ON TABLE public.v_agents TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_agents TO athena;
 GRANT ALL ON TABLE public.v_agents TO "nova-staging";
 
 
@@ -10997,7 +11085,7 @@ GRANT SELECT ON TABLE public.v_entity_facts TO scout;
 GRANT SELECT ON TABLE public.v_entity_facts TO iris;
 GRANT SELECT ON TABLE public.v_entity_facts TO gidget;
 GRANT SELECT ON TABLE public.v_entity_facts TO ticker;
-GRANT SELECT ON TABLE public.v_entity_facts TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_entity_facts TO athena;
 GRANT ALL ON TABLE public.v_entity_facts TO "nova-staging";
 
 
@@ -11012,7 +11100,7 @@ GRANT SELECT ON TABLE public.v_event_timeline TO scout;
 GRANT SELECT ON TABLE public.v_event_timeline TO iris;
 GRANT SELECT ON TABLE public.v_event_timeline TO gidget;
 GRANT SELECT ON TABLE public.v_event_timeline TO ticker;
-GRANT SELECT ON TABLE public.v_event_timeline TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_event_timeline TO athena;
 GRANT ALL ON TABLE public.v_event_timeline TO "nova-staging";
 
 
@@ -11027,7 +11115,7 @@ GRANT SELECT ON TABLE public.v_gambling_summary TO scout;
 GRANT SELECT ON TABLE public.v_gambling_summary TO iris;
 GRANT SELECT ON TABLE public.v_gambling_summary TO gidget;
 GRANT SELECT ON TABLE public.v_gambling_summary TO ticker;
-GRANT SELECT ON TABLE public.v_gambling_summary TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_gambling_summary TO athena;
 GRANT ALL ON TABLE public.v_gambling_summary TO "nova-staging";
 
 
@@ -11042,7 +11130,7 @@ GRANT SELECT ON TABLE public.v_media_queue_pending TO scout;
 GRANT SELECT ON TABLE public.v_media_queue_pending TO iris;
 GRANT SELECT ON TABLE public.v_media_queue_pending TO gidget;
 GRANT SELECT ON TABLE public.v_media_queue_pending TO ticker;
-GRANT SELECT ON TABLE public.v_media_queue_pending TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_media_queue_pending TO athena;
 GRANT ALL ON TABLE public.v_media_queue_pending TO "nova-staging";
 
 
@@ -11057,7 +11145,7 @@ GRANT SELECT ON TABLE public.v_media_with_tags TO scout;
 GRANT SELECT ON TABLE public.v_media_with_tags TO iris;
 GRANT SELECT ON TABLE public.v_media_with_tags TO gidget;
 GRANT SELECT ON TABLE public.v_media_with_tags TO ticker;
-GRANT SELECT ON TABLE public.v_media_with_tags TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_media_with_tags TO athena;
 GRANT ALL ON TABLE public.v_media_with_tags TO "nova-staging";
 
 
@@ -11072,7 +11160,7 @@ GRANT SELECT ON TABLE public.v_metamours TO scout;
 GRANT SELECT ON TABLE public.v_metamours TO iris;
 GRANT SELECT ON TABLE public.v_metamours TO gidget;
 GRANT SELECT ON TABLE public.v_metamours TO ticker;
-GRANT SELECT ON TABLE public.v_metamours TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_metamours TO athena;
 GRANT ALL ON TABLE public.v_metamours TO "nova-staging";
 
 
@@ -11087,8 +11175,15 @@ GRANT SELECT ON TABLE public.v_pending_tasks TO scout;
 GRANT SELECT ON TABLE public.v_pending_tasks TO iris;
 GRANT SELECT ON TABLE public.v_pending_tasks TO gidget;
 GRANT SELECT ON TABLE public.v_pending_tasks TO ticker;
-GRANT SELECT ON TABLE public.v_pending_tasks TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_pending_tasks TO athena;
 GRANT ALL ON TABLE public.v_pending_tasks TO "nova-staging";
+
+
+--
+-- Name: TABLE v_pending_test_failures; Type: ACL; Schema: public; Owner: nova
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_pending_test_failures TO athena;
 
 
 --
@@ -11102,7 +11197,7 @@ GRANT SELECT ON TABLE public.v_portfolio_allocation TO scout;
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO iris;
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO gidget;
 GRANT SELECT ON TABLE public.v_portfolio_allocation TO ticker;
-GRANT SELECT ON TABLE public.v_portfolio_allocation TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_portfolio_allocation TO athena;
 GRANT ALL ON TABLE public.v_portfolio_allocation TO "nova-staging";
 
 
@@ -11111,6 +11206,7 @@ GRANT ALL ON TABLE public.v_portfolio_allocation TO "nova-staging";
 --
 
 GRANT ALL ON TABLE public.v_ralph_active TO "nova-staging";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_ralph_active TO athena;
 
 
 --
@@ -11124,7 +11220,7 @@ GRANT SELECT ON TABLE public.v_relationships TO scout;
 GRANT SELECT ON TABLE public.v_relationships TO iris;
 GRANT SELECT ON TABLE public.v_relationships TO gidget;
 GRANT SELECT ON TABLE public.v_relationships TO ticker;
-GRANT SELECT ON TABLE public.v_relationships TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_relationships TO athena;
 GRANT ALL ON TABLE public.v_relationships TO "nova-staging";
 
 
@@ -11139,7 +11235,7 @@ GRANT SELECT ON TABLE public.v_task_tree TO scout;
 GRANT SELECT ON TABLE public.v_task_tree TO iris;
 GRANT SELECT ON TABLE public.v_task_tree TO gidget;
 GRANT SELECT ON TABLE public.v_task_tree TO ticker;
-GRANT SELECT ON TABLE public.v_task_tree TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_task_tree TO athena;
 GRANT ALL ON TABLE public.v_task_tree TO "nova-staging";
 
 
@@ -11154,7 +11250,7 @@ GRANT SELECT ON TABLE public.v_users TO scout;
 GRANT SELECT ON TABLE public.v_users TO iris;
 GRANT SELECT ON TABLE public.v_users TO gidget;
 GRANT SELECT ON TABLE public.v_users TO ticker;
-GRANT SELECT ON TABLE public.v_users TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.v_users TO athena;
 GRANT ALL ON TABLE public.v_users TO "nova-staging";
 
 
@@ -11169,7 +11265,7 @@ GRANT SELECT ON TABLE public.vehicles TO scout;
 GRANT SELECT ON TABLE public.vehicles TO iris;
 GRANT SELECT ON TABLE public.vehicles TO gidget;
 GRANT SELECT ON TABLE public.vehicles TO ticker;
-GRANT SELECT ON TABLE public.vehicles TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.vehicles TO athena;
 GRANT ALL ON TABLE public.vehicles TO "nova-staging";
 
 
@@ -11192,7 +11288,7 @@ GRANT SELECT ON TABLE public.vocabulary TO scout;
 GRANT SELECT ON TABLE public.vocabulary TO iris;
 GRANT SELECT ON TABLE public.vocabulary TO gidget;
 GRANT SELECT ON TABLE public.vocabulary TO ticker;
-GRANT SELECT ON TABLE public.vocabulary TO athena;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.vocabulary TO athena;
 GRANT ALL ON TABLE public.vocabulary TO "nova-staging";
 
 
@@ -11218,6 +11314,7 @@ GRANT ALL ON TABLE public.work_tags TO newhart;
 --
 
 GRANT ALL ON TABLE public.workflow_steps TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workflow_steps TO athena;
 
 
 --
@@ -11225,6 +11322,7 @@ GRANT ALL ON TABLE public.workflow_steps TO newhart;
 --
 
 GRANT ALL ON TABLE public.workflows TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workflows TO athena;
 
 
 --
@@ -11232,6 +11330,7 @@ GRANT ALL ON TABLE public.workflows TO newhart;
 --
 
 GRANT SELECT ON TABLE public.workflow_steps_detail TO newhart;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workflow_steps_detail TO athena;
 
 
 --
@@ -11294,5 +11393,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict sdXu3TzRNrBHFsiUP65Scu3jTeVAoKFtUl9l4hQa5GF70yma8pRDp97vnwo5Waw
+\unrestrict fvfqQ0GOq9Y8jhTOGblKrFQJCc2cbmRzZIceVIiPADU8pSRn0aMaFQiGRO84dzm
 
