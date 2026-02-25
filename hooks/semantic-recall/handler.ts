@@ -2,6 +2,15 @@ import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as os from "os";
+
+// Load PG env vars from postgres.json BEFORE importing entity-resolver,
+// which creates a pg.Pool at module scope. Without this, PGPASSWORD may be
+// unset and node-pg falls back to ~/.pgpass (which can have stale creds).
+// See: https://github.com/NOVA-Openclaw/nova-memory/issues/136
+const pgEnvPath = join(os.homedir(), ".openclaw", "lib", "pg-env.ts");
+const { loadPgEnv } = await import(pgEnvPath);
+loadPgEnv();
+
 import {
   resolveEntity,
   getEntityProfile,
