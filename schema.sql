@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict RTB5g36DbAhA98Kc2UyJ0jouE5KFxTbv0Oj2EsoVUk65AoDa4OOXLfFcdgqE49p
+\restrict grDlJ8g9G88E5mmv26aIMSkrIEQ0sRRUoF4G2aQ63mbICouzGtxYDmVc3qHeCR7
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -4429,6 +4429,7 @@ CREATE TABLE public.library_works (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     search_vector tsvector,
     extra_metadata jsonb DEFAULT '{}'::jsonb,
+    notable_quotes text[],
     CONSTRAINT insights_not_empty CHECK ((length(TRIM(BOTH FROM insights)) > 20)),
     CONSTRAINT summary_not_empty CHECK ((length(TRIM(BOTH FROM summary)) > 50)),
     CONSTRAINT valid_work_type CHECK ((work_type = ANY (ARRAY['paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text])))
@@ -4470,6 +4471,13 @@ COMMENT ON COLUMN public.library_works.content_text IS 'Full text of the work. O
 --
 
 COMMENT ON COLUMN public.library_works.insights IS 'REQUIRED. Key takeaways, relevance to our work, notable connections. Athena generates this during ingestion.';
+
+
+--
+-- Name: COLUMN library_works.notable_quotes; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.library_works.notable_quotes IS 'Array of notable quotes from the work. Included in semantic embedding for recall. Generated during ingestion.';
 
 
 --
@@ -11392,5 +11400,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RTB5g36DbAhA98Kc2UyJ0jouE5KFxTbv0Oj2EsoVUk65AoDa4OOXLfFcdgqE49p
+\unrestrict grDlJ8g9G88E5mmv26aIMSkrIEQ0sRRUoF4G2aQ63mbICouzGtxYDmVc3qHeCR7
 
