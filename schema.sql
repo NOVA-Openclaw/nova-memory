@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict DkxKsdXPyijkRknlwwynBPlWqrtrIyvy0KzirLbNF9ObDFqZscrLW4ihWENCwQo
+\restrict cjSPO53wx2ZjSziwOohZdClGyOfFbDMqgHLJAlHqfa8J1jnhJmUyl9l4afhd02q
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -4237,6 +4237,91 @@ COMMENT ON COLUMN public.lessons_archive.confidence IS 'Confidence score 0-1, de
 
 
 --
+-- Name: library_authors; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.library_authors (
+    id integer NOT NULL,
+    name text NOT NULL,
+    biography text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.library_authors OWNER TO nova;
+
+--
+-- Name: TABLE library_authors; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.library_authors IS 'Library domain: normalized author records. Managed by Athena (librarian agent).';
+
+
+--
+-- Name: library_authors_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.library_authors_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.library_authors_id_seq OWNER TO nova;
+
+--
+-- Name: library_authors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.library_authors_id_seq OWNED BY public.library_authors.id;
+
+
+--
+-- Name: library_tags; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.library_tags (
+    id integer NOT NULL,
+    name text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.library_tags OWNER TO nova;
+
+--
+-- Name: TABLE library_tags; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.library_tags IS 'Library domain: subject/genre/topic tags for works. Managed by Athena.';
+
+
+--
+-- Name: library_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.library_tags_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.library_tags_id_seq OWNER TO nova;
+
+--
+-- Name: library_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.library_tags_id_seq OWNED BY public.library_tags.id;
+
+
+--
 -- Name: media_consumed; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -6698,6 +6783,20 @@ ALTER TABLE ONLY public.lessons ALTER COLUMN id SET DEFAULT nextval('public.less
 
 
 --
+-- Name: library_authors id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_authors ALTER COLUMN id SET DEFAULT nextval('public.library_authors_id_seq'::regclass);
+
+
+--
+-- Name: library_tags id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_tags ALTER COLUMN id SET DEFAULT nextval('public.library_tags_id_seq'::regclass);
+
+
+--
 -- Name: media_consumed id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -7260,6 +7359,38 @@ ALTER TABLE ONLY public.lessons_archive
 
 ALTER TABLE ONLY public.lessons
     ADD CONSTRAINT lessons_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: library_authors library_authors_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_authors
+    ADD CONSTRAINT library_authors_name_key UNIQUE (name);
+
+
+--
+-- Name: library_authors library_authors_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_authors
+    ADD CONSTRAINT library_authors_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: library_tags library_tags_name_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_tags
+    ADD CONSTRAINT library_tags_name_key UNIQUE (name);
+
+
+--
+-- Name: library_tags library_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_tags
+    ADD CONSTRAINT library_tags_pkey PRIMARY KEY (id);
 
 
 --
@@ -10847,5 +10978,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict DkxKsdXPyijkRknlwwynBPlWqrtrIyvy0KzirLbNF9ObDFqZscrLW4ihWENCwQo
+\unrestrict cjSPO53wx2ZjSziwOohZdClGyOfFbDMqgHLJAlHqfa8J1jnhJmUyl9l4afhd02q
 
