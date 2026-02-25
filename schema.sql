@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fvfqQ0GOq9Y8jhTOGblKrFQJCc2cbmRzZIceVIiPADU8pSRn0aMaFQiGRO84dzm
+\restrict RTB5g36DbAhA98Kc2UyJ0jouE5KFxTbv0Oj2EsoVUk65AoDa4OOXLfFcdgqE49p
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -4430,7 +4430,6 @@ CREATE TABLE public.library_works (
     search_vector tsvector,
     extra_metadata jsonb DEFAULT '{}'::jsonb,
     CONSTRAINT insights_not_empty CHECK ((length(TRIM(BOTH FROM insights)) > 20)),
-    CONSTRAINT isbn_required_for_books CHECK (((work_type <> ALL (ARRAY['book'::text, 'novel'::text])) OR (isbn IS NOT NULL))),
     CONSTRAINT summary_not_empty CHECK ((length(TRIM(BOTH FROM summary)) > 50)),
     CONSTRAINT valid_work_type CHECK ((work_type = ANY (ARRAY['paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text])))
 );
@@ -11393,5 +11392,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fvfqQ0GOq9Y8jhTOGblKrFQJCc2cbmRzZIceVIiPADU8pSRn0aMaFQiGRO84dzm
+\unrestrict RTB5g36DbAhA98Kc2UyJ0jouE5KFxTbv0Oj2EsoVUk65AoDa4OOXLfFcdgqE49p
 
