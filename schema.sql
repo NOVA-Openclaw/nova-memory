@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict BoeKijfHP4GEcLiklfHOnz5QfF5uTEuaduMJpfZpKz0pd5ReeES9tEvXTVodN4y
+\restrict KvRsTbgQOLe8wUUbYh4jYf8ecWYHQCPOYSiatheIQ0YRggKzKqaBspMd3FLOiro
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -8158,6 +8158,13 @@ CREATE INDEX idx_agents_role ON public.agents USING btree (role);
 
 
 --
+-- Name: idx_agents_single_default; Type: INDEX; Schema: public; Owner: newhart
+--
+
+CREATE UNIQUE INDEX idx_agents_single_default ON public.agents USING btree (is_default) WHERE (is_default = true);
+
+
+--
 -- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: newhart
 --
 
@@ -11402,5 +11409,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict BoeKijfHP4GEcLiklfHOnz5QfF5uTEuaduMJpfZpKz0pd5ReeES9tEvXTVodN4y
+\unrestrict KvRsTbgQOLe8wUUbYh4jYf8ecWYHQCPOYSiatheIQ0YRggKzKqaBspMd3FLOiro
 
