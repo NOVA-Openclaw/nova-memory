@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict oKu7HDrRdlHlhgwWjBhVnBaqGE3ZcBHHWP7vG4coXYz4N1FliDzIDsGPZvOVQI0
+\restrict oALubiXaksH9XcXG5N2s1eS66SfW2zJyH1CxcppSfUv6BmawnncjcUtDoOcyTGH
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1352,28 +1352,12 @@ CREATE FUNCTION public.notify_agent_config_changed() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF TG_OP = 'DELETE' THEN
-        PERFORM pg_notify('agent_config_changed', json_build_object(
-            'agent_id', OLD.id,
-            'agent_name', OLD.name,
-            'operation', TG_OP
-        )::text);
-        RETURN OLD;
-    END IF;
-
-    IF TG_OP = 'INSERT' OR
-       OLD.model IS DISTINCT FROM NEW.model OR
-       OLD.fallback_models IS DISTINCT FROM NEW.fallback_models OR
-       OLD.thinking IS DISTINCT FROM NEW.thinking OR
-       OLD.instance_type IS DISTINCT FROM NEW.instance_type OR
-       OLD.allowed_subagents IS DISTINCT FROM NEW.allowed_subagents THEN
-        PERFORM pg_notify('agent_config_changed', json_build_object(
-            'agent_id', NEW.id,
-            'agent_name', NEW.name,
-            'operation', TG_OP
-        )::text);
-    END IF;
-    RETURN NEW;
+    PERFORM pg_notify('agent_config_changed', json_build_object(
+        'agent_id', COALESCE(NEW.id, OLD.id),
+        'agent_name', COALESCE(NEW.name, OLD.name),
+        'operation', TG_OP
+    )::text);
+    RETURN COALESCE(NEW, OLD);
 END;
 $$;
 
@@ -11411,5 +11395,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict oKu7HDrRdlHlhgwWjBhVnBaqGE3ZcBHHWP7vG4coXYz4N1FliDzIDsGPZvOVQI0
+\unrestrict oALubiXaksH9XcXG5N2s1eS66SfW2zJyH1CxcppSfUv6BmawnncjcUtDoOcyTGH
 

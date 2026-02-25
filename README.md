@@ -358,7 +358,7 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 **seed_context Structure (for ephemeral agents):**
 ```json
 {
-  "files": ["~/clawd/AGENTS.md", "{project_dir}/README.md"],
+  "files": ["~/.openclaw/workspace/AGENTS.md", "{project_dir}/README.md"],
   "sops": ["git-commit", "pr-workflow"],
   "db_queries": ["SELECT steps FROM sops WHERE name LIKE 'git-%'"],
   "context_template": "You are a Git agent for {project_name}. Follow SOPs strictly."
@@ -665,7 +665,7 @@ INSERT INTO media_consumed (media_type, title, creator, url, consumed_date, cons
 VALUES ('podcast', 'TIP Infinite Tech - Clawdbot Episode', 'Preston Pysh', 
         'https://example.com/podcast', '2026-02-05', 1, 
         'Discussion of AI agents, persistent memory, Bitcoin wallets',
-        '~/clawd/podcasts/tip-clawdbot.mp3',
+        '~/.openclaw/workspace/podcasts/tip-clawdbot.mp3',
         '{"duration_minutes": 75, "guests": ["Pablo Fernandez", "Trey Sellers"]}');
 ```
 
@@ -828,7 +828,7 @@ import { resolveEntity } from "../../../nova-relationships/lib/entity-resolver/i
 This expects `~/nova-relationships` to be a symlink to the nova-relationships repo. Install it:
 
 ```bash
-cd ~/clawd/nova-relationships
+cd ~/.openclaw/workspace/nova-relationships
 ./agent-install.sh
 ```
 
