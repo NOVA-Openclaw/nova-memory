@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict mBbviPcje1dtFn3c3Cxc3eNji4emcFkWC5NpkfBrGKF4Cvx94PblsInOhgI1pu0
+\restrict 0IshkSbyfWYKKLgHddByHFzPrC0OhdLIGW692tuzo1PyRCdzjdL87FRKHSZcLGT
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -365,191 +365,6 @@ $$;
 ALTER FUNCTION public.agent_update_skills(p_agent_id integer, p_skills text[], p_modified_by text) OWNER TO nova;
 
 --
--- Name: audit_bootstrap_agents(); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.audit_bootstrap_agents() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        INSERT INTO bootstrap_context_audit (
-            table_name, 
-            record_id, 
-            operation, 
-            old_content, 
-            new_content, 
-            changed_by, 
-            changed_at
-        ) VALUES (
-            'bootstrap_context_agents',
-            OLD.id,
-            'DELETE',
-            OLD.content,
-            NULL,
-            OLD.updated_by,
-            NOW()
-        );
-        RETURN OLD;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO bootstrap_context_audit (
-            table_name, 
-            record_id, 
-            operation, 
-            old_content, 
-            new_content, 
-            changed_by, 
-            changed_at
-        ) VALUES (
-            'bootstrap_context_agents',
-            NEW.id,
-            'UPDATE',
-            OLD.content,
-            NEW.content,
-            NEW.updated_by,
-            NOW()
-        );
-        RETURN NEW;
-    ELSIF (TG_OP = 'INSERT') THEN
-        INSERT INTO bootstrap_context_audit (
-            table_name, 
-            record_id, 
-            operation, 
-            old_content, 
-            new_content, 
-            changed_by, 
-            changed_at
-        ) VALUES (
-            'bootstrap_context_agents',
-            NEW.id,
-            'INSERT',
-            NULL,
-            NEW.content,
-            NEW.updated_by,
-            NOW()
-        );
-        RETURN NEW;
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
-
-ALTER FUNCTION public.audit_bootstrap_agents() OWNER TO nova;
-
---
--- Name: FUNCTION audit_bootstrap_agents(); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.audit_bootstrap_agents() IS 'Audit trigger function for agent-specific context changes';
-
-
---
--- Name: audit_bootstrap_context_change(); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.audit_bootstrap_context_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        INSERT INTO bootstrap_context_audit (table_name, record_id, operation, new_content, changed_by)
-        VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', NEW.content, COALESCE(NEW.updated_by, current_user));
-    ELSIF TG_OP = 'UPDATE' THEN
-        INSERT INTO bootstrap_context_audit (table_name, record_id, operation, old_content, new_content, changed_by)
-        VALUES (TG_TABLE_NAME, NEW.id, 'UPDATE', OLD.content, NEW.content, COALESCE(NEW.updated_by, current_user));
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO bootstrap_context_audit (table_name, record_id, operation, old_content, changed_by)
-        VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', OLD.content, current_user);
-    END IF;
-    RETURN COALESCE(NEW, OLD);
-END;
-$$;
-
-
-ALTER FUNCTION public.audit_bootstrap_context_change() OWNER TO nova;
-
---
--- Name: audit_bootstrap_universal(); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.audit_bootstrap_universal() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        INSERT INTO bootstrap_context_audit (
-            table_name, 
-            record_id, 
-            operation, 
-            old_content, 
-            new_content, 
-            changed_by, 
-            changed_at
-        ) VALUES (
-            'bootstrap_context_universal',
-            OLD.id,
-            'DELETE',
-            OLD.content,
-            NULL,
-            OLD.updated_by,
-            NOW()
-        );
-        RETURN OLD;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO bootstrap_context_audit (
-            table_name, 
-            record_id, 
-            operation, 
-            old_content, 
-            new_content, 
-            changed_by, 
-            changed_at
-        ) VALUES (
-            'bootstrap_context_universal',
-            NEW.id,
-            'UPDATE',
-            OLD.content,
-            NEW.content,
-            NEW.updated_by,
-            NOW()
-        );
-        RETURN NEW;
-    ELSIF (TG_OP = 'INSERT') THEN
-        INSERT INTO bootstrap_context_audit (
-            table_name, 
-            record_id, 
-            operation, 
-            old_content, 
-            new_content, 
-            changed_by, 
-            changed_at
-        ) VALUES (
-            'bootstrap_context_universal',
-            NEW.id,
-            'INSERT',
-            NULL,
-            NEW.content,
-            NEW.updated_by,
-            NOW()
-        );
-        RETURN NEW;
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
-
-ALTER FUNCTION public.audit_bootstrap_universal() OWNER TO nova;
-
---
--- Name: FUNCTION audit_bootstrap_universal(); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.audit_bootstrap_universal() IS 'Audit trigger function for universal context changes';
-
-
---
 -- Name: calculate_word_count(); Type: FUNCTION; Schema: public; Owner: erato
 --
 
@@ -752,52 +567,6 @@ COMMENT ON FUNCTION public.copy_file_to_bootstrap(p_file_path text, p_file_conte
 
 
 --
--- Name: delete_agent_context(text, text); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_deleted INTEGER;
-BEGIN
-    DELETE FROM bootstrap_context_agents 
-    WHERE agent_name = p_agent_name AND file_key = p_file_key;
-    GET DIAGNOSTICS v_deleted = ROW_COUNT;
-    RETURN v_deleted > 0;
-END;
-$$;
-
-
-ALTER FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) OWNER TO nova;
-
---
--- Name: FUNCTION delete_agent_context(p_agent_name text, p_file_key text); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.delete_agent_context(p_agent_name text, p_file_key text) IS 'Delete a key from agents.bootstrap_context JSONB column';
-
-
---
--- Name: delete_universal_context(text); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.delete_universal_context(p_file_key text) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_deleted INTEGER;
-BEGIN
-    DELETE FROM bootstrap_context_universal WHERE file_key = p_file_key;
-    GET DIAGNOSTICS v_deleted = ROW_COUNT;
-    RETURN v_deleted > 0;
-END;
-$$;
-
-
-ALTER FUNCTION public.delete_universal_context(p_file_key text) OWNER TO nova;
-
---
 -- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -858,7 +627,7 @@ $$;
 ALTER FUNCTION public.expire_old_chat() OWNER TO nova;
 
 --
--- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: public; Owner: nova-staging
+-- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: public; Owner: nova
 --
 
 CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
@@ -867,10 +636,7 @@ CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(file
 DECLARE
     v_agent_id INTEGER;
 BEGIN
-    IF NOT (SELECT value::boolean FROM bootstrap_context_config WHERE key = 'enabled') THEN
-        RETURN;
-    END IF;
-
+    -- Resolve agent ID (may be NULL if agent not in agents table)
     SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name LIMIT 1;
 
     RETURN QUERY
@@ -879,7 +645,7 @@ BEGIN
         subq.content,
         subq.source
     FROM (
-        -- 1. UNIVERSAL (highest priority)
+        -- 1. UNIVERSAL — everyone gets these
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'universal'::TEXT AS source, 1 AS priority
         FROM agent_bootstrap_context abc
@@ -887,7 +653,7 @@ BEGIN
 
         UNION ALL
 
-        -- 2. GLOBAL
+        -- 2. GLOBAL — everyone gets these
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'global'::TEXT AS source, 2 AS priority
         FROM agent_bootstrap_context abc
@@ -895,7 +661,7 @@ BEGIN
 
         UNION ALL
 
-        -- 3. DOMAIN (matched via agent_domains)
+        -- 3. DOMAIN — matched via agent's domains in agent_domains
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'domain:' || abc.domain_name AS source, 3 AS priority
         FROM agent_bootstrap_context abc
@@ -905,10 +671,7 @@ BEGIN
 
         UNION ALL
 
-        -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
-        -- Matches workflows where agent is assigned to steps,
-        -- workflow domains overlap agent domains,
-        -- OR agent is the workflow orchestrator
+        -- 4. WORKFLOW — inject workflows the agent participates in (by domain overlap)
         SELECT
             'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
             w.name || ': ' || w.description ||
@@ -922,37 +685,33 @@ BEGIN
         LEFT JOIN LATERAL (
             SELECT string_agg(
                 ws.step_order || '. ' || ws.description ||
-                COALESCE(' [agent: ' || a2.name || ']', '') ||
                 COALESCE(' [domain: ' || ws.domain || ']', ''),
                 E'\n' ORDER BY ws.step_order
             ) AS steps_text
             FROM workflow_steps ws
-            LEFT JOIN agents a2 ON a2.id = ws.agent_id
             WHERE ws.workflow_id = w.id
         ) ws_agg ON true
         WHERE w.status = 'active'
           AND (
-            -- Agent is the workflow orchestrator
-            w.orchestrator_agent_id = v_agent_id
-            OR
-            -- Agent is directly assigned to a step
+            -- Workflow's orchestrator domain matches one of the agent's domains
             EXISTS (
-                SELECT 1 FROM workflow_steps ws2
-                WHERE ws2.workflow_id = w.id AND ws2.agent_id = v_agent_id
+                SELECT 1 FROM agent_domains ad
+                WHERE ad.agent_id = v_agent_id
+                  AND ad.domain_topic = w.orchestrator_domain
             )
             OR
             -- Workflow step domains overlap with agent's domains
             EXISTS (
-                SELECT 1 FROM workflow_steps ws3
+                SELECT 1 FROM workflow_steps ws
                 JOIN agent_domains ad ON ad.agent_id = v_agent_id
-                WHERE ws3.workflow_id = w.id
-                  AND (ad.domain_topic = ws3.domain OR ad.domain_topic = ANY(ws3.domains))
+                WHERE ws.workflow_id = w.id
+                  AND (ad.domain_topic = ws.domain OR ad.domain_topic = ANY(ws.domains))
             )
           )
 
         UNION ALL
 
-        -- 5. AGENT-specific (lowest priority)
+        -- 5. AGENT — the ONLY lookup by agent name directly
         SELECT abc.file_key || '.md' AS filename, abc.content,
             'agent'::TEXT AS source, 5 AS priority
         FROM agent_bootstrap_context abc
@@ -964,134 +723,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO "nova-staging";
-
---
--- Name: get_agent_bootstrap(character varying); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.get_agent_bootstrap(p_agent_name character varying) RETURNS TABLE(filename text, content text, source text)
-    LANGUAGE plpgsql STABLE
-    AS $$
-DECLARE
-    v_agent_id INT;
-BEGIN
-    SELECT id INTO v_agent_id FROM agents WHERE name ILIKE p_agent_name;
-
-    RETURN QUERY
-    SELECT DISTINCT ON (subq.filename)
-        subq.filename,
-        subq.content,
-        subq.source
-    FROM (
-        -- 1. UNIVERSAL (highest priority)
-        SELECT abc.file_key || '.md' AS filename, abc.content,
-            'universal'::TEXT AS source, 1 AS priority
-        FROM agent_bootstrap_context abc
-        WHERE abc.context_type = 'UNIVERSAL'
-
-        UNION ALL
-
-        -- 2. GLOBAL
-        SELECT abc.file_key || '.md' AS filename, abc.content,
-            'global'::TEXT AS source, 2 AS priority
-        FROM agent_bootstrap_context abc
-        WHERE abc.context_type = 'GLOBAL'
-
-        UNION ALL
-
-        -- 3. DOMAIN (matched via agent_domains)
-        SELECT abc.file_key || '.md' AS filename, abc.content,
-            'domain:' || abc.domain_name AS source, 3 AS priority
-        FROM agent_bootstrap_context abc
-        JOIN agent_domains ad ON ad.domain_topic = abc.domain_name
-        WHERE abc.context_type = 'DOMAIN'
-          AND ad.agent_id = v_agent_id
-
-        UNION ALL
-
-        -- 4. WORKFLOW (dynamic from workflows/workflow_steps)
-        SELECT
-            'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
-            w.name || ': ' || w.description ||
-            CASE WHEN ws_agg.steps_text IS NOT NULL
-                 THEN E'\n\nSteps:\n' || ws_agg.steps_text
-                 ELSE ''
-            END AS content,
-            'workflow:' || w.name AS source,
-            4 AS priority
-        FROM workflows w
-        LEFT JOIN LATERAL (
-            SELECT string_agg(
-                ws.step_order || '. ' || ws.description ||
-                COALESCE(' [agent: ' || a2.name || ']', '') ||
-                COALESCE(' [domain: ' || ws.domain || ']', ''),
-                E'\n' ORDER BY ws.step_order
-            ) AS steps_text
-            FROM workflow_steps ws
-            LEFT JOIN agents a2 ON a2.id = ws.agent_id
-            WHERE ws.workflow_id = w.id
-        ) ws_agg ON true
-        WHERE w.status = 'active'
-          AND (
-            -- Agent has the orchestrator domain
-            EXISTS (
-                SELECT 1 FROM agent_domains ad 
-                WHERE ad.agent_id = v_agent_id AND ad.domain_topic = w.orchestrator_domain
-            )
-            OR
-            -- Agent is directly assigned to a step
-            EXISTS (
-                SELECT 1 FROM workflow_steps ws2
-                WHERE ws2.workflow_id = w.id AND ws2.agent_id = v_agent_id
-            )
-            OR
-            -- Workflow step domains overlap with agent's domains
-            EXISTS (
-                SELECT 1 FROM workflow_steps ws3
-                JOIN agent_domains ad ON ad.agent_id = v_agent_id
-                WHERE ws3.workflow_id = w.id
-                  AND (ad.domain_topic = ws3.domain OR ad.domain_topic = ANY(ws3.domains))
-            )
-          )
-
-        UNION ALL
-
-        -- 5. AGENT-specific (lowest priority)
-        SELECT abc.file_key || '.md' AS filename, abc.content,
-            'agent'::TEXT AS source, 5 AS priority
-        FROM agent_bootstrap_context abc
-        WHERE abc.context_type = 'AGENT'
-          AND abc.agent_name = p_agent_name
-    ) subq
-    ORDER BY subq.filename, subq.priority;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_agent_bootstrap(p_agent_name character varying) OWNER TO nova;
-
---
--- Name: get_bootstrap_config(); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.get_bootstrap_config() RETURNS TABLE(key text, value jsonb, description text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY SELECT c.key, c.value, c.description FROM bootstrap_context_config c;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_bootstrap_config() OWNER TO nova;
-
---
--- Name: FUNCTION get_bootstrap_config(); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.get_bootstrap_config() IS 'Get bootstrap system configuration';
-
+ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
 
 --
 -- Name: get_next_coder_issue(); Type: FUNCTION; Schema: public; Owner: nova
@@ -1242,48 +874,6 @@ $$;
 
 
 ALTER FUNCTION public.list_agent_context(p_agent_name text) OWNER TO nova;
-
---
--- Name: list_all_context(); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.list_all_context() RETURNS TABLE(type text, agent_name text, file_key text, content_length integer, updated_at timestamp with time zone, updated_by text)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        'universal'::TEXT,
-        NULL::TEXT,
-        u.file_key,
-        length(u.content),
-        u.updated_at,
-        u.updated_by
-    FROM bootstrap_context_universal u
-    
-    UNION ALL
-    
-    SELECT 
-        'agent'::TEXT,
-        a.agent_name,
-        a.file_key,
-        length(a.content),
-        a.updated_at,
-        a.updated_by
-    FROM bootstrap_context_agents a
-    ORDER BY type, agent_name, file_key;
-END;
-$$;
-
-
-ALTER FUNCTION public.list_all_context() OWNER TO nova;
-
---
--- Name: FUNCTION list_all_context(); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.list_all_context() IS 'List all context files with metadata';
-
 
 --
 -- Name: log_agent_modification(integer, text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
@@ -1837,50 +1427,6 @@ $$;
 ALTER FUNCTION public.table_comment(tbl text) OWNER TO nova;
 
 --
--- Name: update_agent_context(text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text DEFAULT NULL::text, p_updated_by text DEFAULT 'system'::text) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_id INTEGER;
-    v_max_size INTEGER;
-BEGIN
-    -- Enforce max_file_size from config
-    SELECT (value::text)::integer INTO v_max_size 
-    FROM bootstrap_context_config 
-    WHERE key = 'max_file_size';
-    
-    IF length(p_content) > v_max_size THEN
-        RAISE EXCEPTION 'Content size (% chars) exceeds maximum allowed size (% chars)', 
-            length(p_content), v_max_size;
-    END IF;
-    
-    INSERT INTO bootstrap_context_agents (agent_name, file_key, content, description, updated_by)
-    VALUES (p_agent_name, p_file_key, p_content, p_description, p_updated_by)
-    ON CONFLICT (agent_name, file_key) DO UPDATE
-    SET content = EXCLUDED.content,
-        description = COALESCE(EXCLUDED.description, bootstrap_context_agents.description),
-        updated_at = NOW(),
-        updated_by = EXCLUDED.updated_by
-    RETURNING id INTO v_id;
-    
-    RETURN v_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text) OWNER TO nova;
-
---
--- Name: FUNCTION update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.update_agent_context(p_agent_name text, p_file_key text, p_content text, p_description text, p_updated_by text) IS 'Update or insert agent-specific context file';
-
-
---
 -- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -1958,50 +1504,6 @@ $$;
 
 
 ALTER FUNCTION public.update_music_search_vector() OWNER TO nova;
-
---
--- Name: update_universal_context(text, text, text, text); Type: FUNCTION; Schema: public; Owner: nova
---
-
-CREATE FUNCTION public.update_universal_context(p_file_key text, p_content text, p_description text DEFAULT NULL::text, p_updated_by text DEFAULT 'system'::text) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_id INTEGER;
-    v_max_size INTEGER;
-BEGIN
-    -- Enforce max_file_size from config
-    SELECT (value::text)::integer INTO v_max_size 
-    FROM bootstrap_context_config 
-    WHERE key = 'max_file_size';
-    
-    IF length(p_content) > v_max_size THEN
-        RAISE EXCEPTION 'Content size (% chars) exceeds maximum allowed size (% chars)', 
-            length(p_content), v_max_size;
-    END IF;
-    
-    INSERT INTO bootstrap_context_universal (file_key, content, description, updated_by)
-    VALUES (p_file_key, p_content, p_description, p_updated_by)
-    ON CONFLICT (file_key) DO UPDATE
-    SET content = EXCLUDED.content,
-        description = COALESCE(EXCLUDED.description, bootstrap_context_universal.description),
-        updated_at = NOW(),
-        updated_by = EXCLUDED.updated_by
-    RETURNING id INTO v_id;
-    
-    RETURN v_id;
-END;
-$$;
-
-
-ALTER FUNCTION public.update_universal_context(p_file_key text, p_content text, p_description text, p_updated_by text) OWNER TO nova;
-
---
--- Name: FUNCTION update_universal_context(p_file_key text, p_content text, p_description text, p_updated_by text); Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON FUNCTION public.update_universal_context(p_file_key text, p_content text, p_description text, p_updated_by text) IS 'Update or insert universal context file';
-
 
 --
 -- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: public; Owner: erato
@@ -2927,167 +2429,6 @@ COMMENT ON COLUMN public.asset_classes.trading_hours IS 'When this asset class t
 --
 
 COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (shares, contracts, etc.)';
-
-
---
--- Name: bootstrap_context_agents; Type: TABLE; Schema: public; Owner: newhart
---
-
-CREATE TABLE public.bootstrap_context_agents (
-    id integer NOT NULL,
-    agent_name text NOT NULL,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now(),
-    updated_by text,
-    CONSTRAINT bootstrap_context_agents_file_key_check CHECK ((file_key <> ''::text))
-);
-
-
-ALTER TABLE public.bootstrap_context_agents OWNER TO newhart;
-
---
--- Name: TABLE bootstrap_context_agents; Type: COMMENT; Schema: public; Owner: newhart
---
-
-COMMENT ON TABLE public.bootstrap_context_agents IS 'Per-agent context files (SEED_CONTEXT.md, domain knowledge)';
-
-
---
--- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
---
-
-CREATE SEQUENCE public.bootstrap_context_agents_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNER TO newhart;
-
---
--- Name: bootstrap_context_agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
---
-
-ALTER SEQUENCE public.bootstrap_context_agents_id_seq OWNED BY public.bootstrap_context_agents.id;
-
-
---
--- Name: bootstrap_context_audit; Type: TABLE; Schema: public; Owner: newhart
---
-
-CREATE TABLE public.bootstrap_context_audit (
-    id integer NOT NULL,
-    table_name text NOT NULL,
-    record_id integer,
-    operation text NOT NULL,
-    old_content text,
-    new_content text,
-    changed_by text,
-    changed_at timestamp with time zone DEFAULT now()
-);
-
-
-ALTER TABLE public.bootstrap_context_audit OWNER TO newhart;
-
---
--- Name: TABLE bootstrap_context_audit; Type: COMMENT; Schema: public; Owner: newhart
---
-
-COMMENT ON TABLE public.bootstrap_context_audit IS 'Audit trail of all context modifications';
-
-
---
--- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
---
-
-CREATE SEQUENCE public.bootstrap_context_audit_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNER TO newhart;
-
---
--- Name: bootstrap_context_audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
---
-
-ALTER SEQUENCE public.bootstrap_context_audit_id_seq OWNED BY public.bootstrap_context_audit.id;
-
-
---
--- Name: bootstrap_context_config; Type: TABLE; Schema: public; Owner: newhart
---
-
-CREATE TABLE public.bootstrap_context_config (
-    key text NOT NULL,
-    value jsonb NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
-ALTER TABLE public.bootstrap_context_config OWNER TO newhart;
-
---
--- Name: TABLE bootstrap_context_config; Type: COMMENT; Schema: public; Owner: newhart
---
-
-COMMENT ON TABLE public.bootstrap_context_config IS 'Configuration for bootstrap system behavior';
-
-
---
--- Name: bootstrap_context_universal; Type: TABLE; Schema: public; Owner: newhart
---
-
-CREATE TABLE public.bootstrap_context_universal (
-    id integer NOT NULL,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now(),
-    updated_by text,
-    CONSTRAINT bootstrap_context_universal_file_key_check CHECK ((file_key <> ''::text))
-);
-
-
-ALTER TABLE public.bootstrap_context_universal OWNER TO newhart;
-
---
--- Name: TABLE bootstrap_context_universal; Type: COMMENT; Schema: public; Owner: newhart
---
-
-COMMENT ON TABLE public.bootstrap_context_universal IS 'Universal context files loaded for all agents (AGENTS.md, SOUL.md, etc.)';
-
-
---
--- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE; Schema: public; Owner: newhart
---
-
-CREATE SEQUENCE public.bootstrap_context_universal_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNER TO newhart;
-
---
--- Name: bootstrap_context_universal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: newhart
---
-
-ALTER SEQUENCE public.bootstrap_context_universal_id_seq OWNED BY public.bootstrap_context_universal.id;
 
 
 --
@@ -6825,27 +6166,6 @@ ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artw
 
 
 --
--- Name: bootstrap_context_agents id; Type: DEFAULT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_agents ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_agents_id_seq'::regclass);
-
-
---
--- Name: bootstrap_context_audit id; Type: DEFAULT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_audit ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_audit_id_seq'::regclass);
-
-
---
--- Name: bootstrap_context_universal id; Type: DEFAULT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_universal ALTER COLUMN id SET DEFAULT nextval('public.bootstrap_context_universal_id_seq'::regclass);
-
-
---
 -- Name: certificates id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -7271,54 +6591,6 @@ ALTER TABLE ONLY public.artwork
 
 ALTER TABLE ONLY public.asset_classes
     ADD CONSTRAINT asset_classes_pkey PRIMARY KEY (code);
-
-
---
--- Name: bootstrap_context_agents bootstrap_context_agents_agent_name_file_key_key; Type: CONSTRAINT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_agents
-    ADD CONSTRAINT bootstrap_context_agents_agent_name_file_key_key UNIQUE (agent_name, file_key);
-
-
---
--- Name: bootstrap_context_agents bootstrap_context_agents_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_agents
-    ADD CONSTRAINT bootstrap_context_agents_pkey PRIMARY KEY (id);
-
-
---
--- Name: bootstrap_context_audit bootstrap_context_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_audit
-    ADD CONSTRAINT bootstrap_context_audit_pkey PRIMARY KEY (id);
-
-
---
--- Name: bootstrap_context_config bootstrap_context_config_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_config
-    ADD CONSTRAINT bootstrap_context_config_pkey PRIMARY KEY (key);
-
-
---
--- Name: bootstrap_context_universal bootstrap_context_universal_file_key_key; Type: CONSTRAINT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_universal
-    ADD CONSTRAINT bootstrap_context_universal_file_key_key UNIQUE (file_key);
-
-
---
--- Name: bootstrap_context_universal bootstrap_context_universal_pkey; Type: CONSTRAINT; Schema: public; Owner: newhart
---
-
-ALTER TABLE ONLY public.bootstrap_context_universal
-    ADD CONSTRAINT bootstrap_context_universal_pkey PRIMARY KEY (id);
 
 
 --
@@ -8147,20 +7419,6 @@ CREATE UNIQUE INDEX idx_agents_single_default ON public.agents USING btree (is_d
 --
 
 CREATE INDEX idx_agents_status ON public.agents USING btree (status);
-
-
---
--- Name: idx_bootstrap_agents_name; Type: INDEX; Schema: public; Owner: newhart
---
-
-CREATE INDEX idx_bootstrap_agents_name ON public.bootstrap_context_agents USING btree (agent_name);
-
-
---
--- Name: idx_bootstrap_audit_table; Type: INDEX; Schema: public; Owner: newhart
---
-
-CREATE INDEX idx_bootstrap_audit_table ON public.bootstrap_context_audit USING btree (table_name, changed_at);
 
 
 --
@@ -9054,13 +8312,6 @@ CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXE
 
 
 --
--- Name: agent_bootstrap_context audit_agent_bootstrap_context; Type: TRIGGER; Schema: public; Owner: newhart
---
-
-CREATE TRIGGER audit_agent_bootstrap_context AFTER INSERT OR DELETE OR UPDATE ON public.agent_bootstrap_context FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_context_change();
-
-
---
 -- Name: git_issue_queue coder_queue_notify; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -9135,20 +8386,6 @@ CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR
 --
 
 CREATE TRIGGER system_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agent_system_config FOR EACH ROW EXECUTE FUNCTION public.notify_system_config_changed();
-
-
---
--- Name: bootstrap_context_agents trg_audit_bootstrap_agents; Type: TRIGGER; Schema: public; Owner: newhart
---
-
-CREATE TRIGGER trg_audit_bootstrap_agents AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_agents FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_agents();
-
-
---
--- Name: bootstrap_context_universal trg_audit_bootstrap_universal; Type: TRIGGER; Schema: public; Owner: newhart
---
-
-CREATE TRIGGER trg_audit_bootstrap_universal AFTER INSERT OR DELETE OR UPDATE ON public.bootstrap_context_universal FOR EACH ROW EXECUTE FUNCTION public.audit_bootstrap_universal();
 
 
 --
@@ -10042,36 +9279,6 @@ GRANT SELECT ON TABLE public.asset_classes TO gidget;
 GRANT SELECT ON TABLE public.asset_classes TO ticker;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.asset_classes TO athena;
 GRANT ALL ON TABLE public.asset_classes TO "nova-staging";
-
-
---
--- Name: TABLE bootstrap_context_agents; Type: ACL; Schema: public; Owner: newhart
---
-
-GRANT SELECT ON TABLE public.bootstrap_context_agents TO nova;
-
-
---
--- Name: TABLE bootstrap_context_audit; Type: ACL; Schema: public; Owner: newhart
---
-
-GRANT SELECT,INSERT ON TABLE public.bootstrap_context_audit TO PUBLIC;
-GRANT SELECT ON TABLE public.bootstrap_context_audit TO nova;
-
-
---
--- Name: TABLE bootstrap_context_config; Type: ACL; Schema: public; Owner: newhart
---
-
-GRANT SELECT ON TABLE public.bootstrap_context_config TO PUBLIC;
-GRANT SELECT ON TABLE public.bootstrap_context_config TO nova;
-
-
---
--- Name: TABLE bootstrap_context_universal; Type: ACL; Schema: public; Owner: newhart
---
-
-GRANT SELECT ON TABLE public.bootstrap_context_universal TO nova;
 
 
 --
@@ -11371,5 +10578,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict mBbviPcje1dtFn3c3Cxc3eNji4emcFkWC5NpkfBrGKF4Cvx94PblsInOhgI1pu0
+\unrestrict 0IshkSbyfWYKKLgHddByHFzPrC0OhdLIGW692tuzo1PyRCdzjdL87FRKHSZcLGT
 
