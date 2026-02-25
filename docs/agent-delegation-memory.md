@@ -122,7 +122,7 @@ Query: "How do I fix this code?"
 ### Seeding Initial Knowledge
 
 ```bash
-cd ~/clawd/nova-memory
+cd ~/.openclaw/workspace/nova-memory
 psql -h localhost -U nova -d nova_memory -f scripts/seed-delegation-knowledge.sql
 ./scripts/embed-delegation-facts.sh
 ```
@@ -158,7 +158,7 @@ LIMIT 10;
 
 ```bash
 # Will surface relevant agent info
-python3 ~/clawd/nova-memory/scripts/proactive-recall.py "I need help debugging this Python code"
+python3 ~/.openclaw/workspace/nova-memory/scripts/proactive-recall.py "I need help debugging this Python code"
 # → Returns: "NOVA delegates to Coder for coding tasks"
 ```
 

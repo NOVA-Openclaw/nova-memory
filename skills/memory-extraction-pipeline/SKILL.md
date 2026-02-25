@@ -101,7 +101,7 @@ This captures:
 - Cache: `~/.openclaw/memory-message-cache.json`
 - State: `~/.openclaw/memory-catchup-state.json`
 - Logs: `~/.openclaw/logs/memory-extractions.log`
-- Scripts: `~/clawd/scripts/memory-*.sh`, `extract-memories.sh`, `store-memories.sh`
+- Scripts: `~/.openclaw/workspace/scripts/memory-*.sh`, `extract-memories.sh`, `store-memories.sh`
 
 ## Notes
 

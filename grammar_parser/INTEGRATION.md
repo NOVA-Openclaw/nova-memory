@@ -35,7 +35,7 @@ memory-extract hook
 
 ## Current System
 
-**Location:** `~/clawd/nova-memory/hooks/memory-extract/`
+**Location:** `~/.openclaw/workspace/nova-memory/hooks/memory-extract/`
 
 **Current Flow:**
 1. Hook triggered by Signal messages
@@ -45,7 +45,7 @@ memory-extract hook
 5. Stored in `entity_facts` and `entity_relationships` tables
 
 **Scripts:**
-- `~/clawd/scripts/extract-memories.sh` - Main extraction script
+- `~/.openclaw/workspace/scripts/extract-memories.sh` - Main extraction script
 - Prompt defined inline (long system prompt)
 
 ---
@@ -63,7 +63,7 @@ Add grammar parser as **first stage** before LLM:
 MESSAGE="$1"
 
 # NEW: Grammar-based extraction
-GRAMMAR_RELATIONS=$(python ~/clawd/nova-memory/grammar_parser/extract_cli.py "$MESSAGE")
+GRAMMAR_RELATIONS=$(python ~/.openclaw/workspace/nova-memory/grammar_parser/extract_cli.py "$MESSAGE")
 
 # Check if high-confidence relations found
 if [ -n "$GRAMMAR_RELATIONS" ]; then
@@ -127,7 +127,7 @@ Completely replace LLM for testing:
 # extract-memories-grammar-only.sh
 MESSAGE="$1"
 
-python ~/clawd/nova-memory/grammar_parser/extract_cli.py "$MESSAGE" | \
+python ~/.openclaw/workspace/nova-memory/grammar_parser/extract_cli.py "$MESSAGE" | \
     python store_relations.py
 ```
 
@@ -139,7 +139,7 @@ Use for development and cost-free testing.
 
 ### Step 1: Create CLI Wrapper
 
-**File:** `~/clawd/nova-memory/grammar_parser/extract_cli.py`
+**File:** `~/.openclaw/workspace/nova-memory/grammar_parser/extract_cli.py`
 
 ```python
 #!/usr/bin/env python3
@@ -174,14 +174,14 @@ if __name__ == "__main__":
 
 **Make executable:**
 ```bash
-chmod +x ~/clawd/nova-memory/grammar_parser/extract_cli.py
+chmod +x ~/.openclaw/workspace/nova-memory/grammar_parser/extract_cli.py
 ```
 
 ---
 
 ### Step 2: Create Relation Storage Script
 
-**File:** `~/clawd/nova-memory/grammar_parser/store_relations.py`
+**File:** `~/.openclaw/workspace/nova-memory/grammar_parser/store_relations.py`
 
 ```python
 #!/usr/bin/env python3
@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
 ### Step 3: Modify memory-extract Hook
 
-**Original:** `~/clawd/nova-memory/hooks/memory-extract/hook.sh`
+**Original:** `~/.openclaw/workspace/nova-memory/hooks/memory-extract/hook.sh`
 
 **Add grammar parser stage:**
 
@@ -284,10 +284,10 @@ MESSAGE_FILE="$1"
 MESSAGE=$(cat "$MESSAGE_FILE")
 
 # Grammar-based extraction
-GRAMMAR_OUTPUT=$(python ~/clawd/nova-memory/grammar_parser/extract_cli.py "$MESSAGE" 2>&1)
+GRAMMAR_OUTPUT=$(python ~/.openclaw/workspace/nova-memory/grammar_parser/extract_cli.py "$MESSAGE" 2>&1)
 
 if [ $? -eq 0 ] && [ -n "$GRAMMAR_OUTPUT" ]; then
-    echo "$GRAMMAR_OUTPUT" | python ~/clawd/nova-memory/grammar_parser/store_relations.py
+    echo "$GRAMMAR_OUTPUT" | python ~/.openclaw/workspace/nova-memory/grammar_parser/store_relations.py
     
     # Calculate average confidence
     AVG_CONFIDENCE=$(echo "$GRAMMAR_OUTPUT" | jq '[.[] | .confidence] | add / length' 2>/dev/null)
@@ -300,7 +300,7 @@ if [ $? -eq 0 ] && [ -n "$GRAMMAR_OUTPUT" ]; then
 fi
 
 # Fall back to existing LLM extraction
-exec ~/clawd/scripts/extract-memories.sh "$MESSAGE"
+exec ~/.openclaw/workspace/scripts/extract-memories.sh "$MESSAGE"
 ```
 
 ---
@@ -575,4 +575,4 @@ python extract_cli.py "message" 2>> extraction.log
 Questions? Check:
 - `GRAMMAR_RULES.md` - Detailed pattern documentation
 - `tests/` - Example usage and test cases
-- Task spec: `~/clawd/docs/tasks/grammar-parsing-rules-for-memory-extraction.md`
+- Task spec: `~/.openclaw/workspace/docs/tasks/grammar-parsing-rules-for-memory-extraction.md`

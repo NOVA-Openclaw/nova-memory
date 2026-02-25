@@ -13,8 +13,8 @@ Enable meaning-based search across agent memory using vector embeddings. Query b
 
 Search memory semantically:
 ```bash
-source ~/clawd/scripts/tts-venv/bin/activate
-python ~/clawd/scripts/proactive-recall.py "user's question here"
+source ~/.openclaw/workspace/scripts/tts-venv/bin/activate
+python ~/.openclaw/workspace/scripts/proactive-recall.py "user's question here"
 ```
 
 ## Architecture

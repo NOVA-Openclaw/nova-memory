@@ -174,18 +174,18 @@ openclaw init
 
 ```bash
 # Copy memory extraction hook
-cp -r ~/nova-memory/hooks/memory-extract ~/clawd/hooks/
+cp -r ~/nova-memory/hooks/memory-extract ~/.openclaw/workspace/hooks/
 
 # Enable the hook
 openclaw hooks enable memory-extract
 
 # Configure hook environment
-echo "NOVA_MEMORY_SCRIPTS=$HOME/nova-memory/scripts" >> ~/clawd/.env
+echo "NOVA_MEMORY_SCRIPTS=$HOME/nova-memory/scripts" >> ~/.openclaw/workspace/.env
 ```
 
 ### 3. Agent Configuration
 
-Configure NOVA's memory system in `~/clawd/AGENTS.md`:
+Configure NOVA's memory system in `~/.openclaw/workspace/AGENTS.md`:
 
 ```markdown
 ## Database Priority
@@ -284,7 +284,7 @@ sudo systemctl start nova-memory.service
 ```bash
 # Clone plugin repository  
 git clone https://github.com/NOVA-Openclaw/nova_scripts.git
-cp -r nova_scripts/clawdbot-plugins/agent-chat-channel ~/clawd/plugins/
+cp -r nova_scripts/clawdbot-plugins/agent-chat-channel ~/.openclaw/workspace/plugins/
 
 # Enable plugin
 openclaw plugins enable agent-chat-channel

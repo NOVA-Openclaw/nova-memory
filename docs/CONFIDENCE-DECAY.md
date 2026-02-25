@@ -6,7 +6,7 @@ The confidence decay system is designed to fade learned facts over time, priorit
 
 ### Key Components
 
-- **Script:** `~/clawd/scripts/decay-confidence.sh`
+- **Script:** `~/.openclaw/workspace/scripts/decay-confidence.sh`
 - **Schedule:** Runs via cron daily at 4:00 AM UTC
 - **Purpose:** Automatically reduce confidence scores for facts that haven't been recently referenced or reconfirmed
 

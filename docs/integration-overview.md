@@ -152,7 +152,7 @@ Nova-cognition subagents automatically inherit memory context:
 SELECT seed_context FROM agents WHERE name = 'research-agent';
 -- Returns:
 {
-  "files": ["~/clawd/AGENTS.md", "~/clawd/MEMORY.md"],
+  "files": ["~/.openclaw/workspace/AGENTS.md", "~/.openclaw/workspace/MEMORY.md"],
   "sops": ["research-methodology", "source-reliability-assessment"],
   "db_queries": [
     "SELECT lesson FROM lessons WHERE context ILIKE '%research%'",
@@ -277,8 +277,8 @@ cd nova-cognition
 echo "NOVA_MEMORY_DB=postgresql://nova:password@localhost/nova_memory" >> ~/.bashrc
 
 # 4. Install integration hooks
-cp nova-memory/hooks/memory-extract ~/clawd/hooks/
-cp nova-cognition/hooks/job-system ~/clawd/hooks/
+cp nova-memory/hooks/memory-extract ~/.openclaw/workspace/hooks/
+cp nova-cognition/hooks/job-system ~/.openclaw/workspace/hooks/
 openclaw hooks enable memory-extract job-system
 
 # 5. Populate agent registry

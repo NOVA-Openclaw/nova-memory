@@ -207,7 +207,7 @@ WHERE name = 'nova-memory';
 ### Making Schema Changes
 ```bash
 # 1. Update schema.sql
-vim ~/clawd/nova-memory/schema.sql
+vim ~/.openclaw/workspace/nova-memory/schema.sql
 
 # 2. Test on development database
 createdb nova_memory_test  

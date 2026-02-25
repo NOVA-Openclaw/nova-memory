@@ -4,12 +4,12 @@
 
 Successfully enhanced the `semantic-recall` hook to load entity context alongside semantic memories. The hook now resolves message senders to entities in the database and injects their profile information before the agent processes messages.
 
-**Recent Update (Task #38):** Refactored entity resolution logic into a reusable shared library at `~/clawd/lib/entity-resolver/` to enable reuse across multiple hooks and components.
+**Recent Update (Task #38):** Refactored entity resolution logic into a reusable shared library at `~/.openclaw/workspace/lib/entity-resolver/` to enable reuse across multiple hooks and components.
 
 ## Changes Made
 
 ### 1. Shared Entity Resolver Library (NEW)
-Created reusable library at `~/clawd/lib/entity-resolver/`:
+Created reusable library at `~/.openclaw/workspace/lib/entity-resolver/`:
 - **`types.ts`**: TypeScript interfaces for Entity, EntityFacts, EntityIdentifiers
 - **`resolver.ts`**: Core resolution logic with database connection pooling
 - **`cache.ts`**: Session-aware caching with configurable TTL (30 min default)
@@ -96,7 +96,7 @@ If no entity is found, the hook continues silently and only injects semantic rec
 ### Library Tests
 Test the shared entity-resolver library:
 ```bash
-cd ~/clawd/lib/entity-resolver
+cd ~/.openclaw/workspace/lib/entity-resolver
 npx tsx test.ts "(512) 692-7184"
 ```
 
@@ -110,7 +110,7 @@ Results:
 ### Hook Integration Tests
 Verify the refactored hook works:
 ```bash
-cd ~/clawd/hooks/semantic-recall
+cd ~/.openclaw/workspace/hooks/semantic-recall
 npx tsx verify-refactor.ts
 ```
 
@@ -124,7 +124,7 @@ Results:
 ### Legacy Test (Still Available)
 Original standalone test:
 ```bash
-cd ~/clawd/hooks/semantic-recall
+cd ~/.openclaw/workspace/hooks/semantic-recall
 node test-entity-resolution.js "+1 817-896-4104"
 ```
 
@@ -158,7 +158,7 @@ The hook integrates seamlessly with existing message flow:
 ## Architecture
 
 ```
-~/clawd/
+~/.openclaw/workspace/
 ├── lib/
 │   └── entity-resolver/          # Shared library
 │       ├── index.ts              # Main exports

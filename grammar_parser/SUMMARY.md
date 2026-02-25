@@ -222,7 +222,7 @@ Structured Relations (JSON)
 
 ### Installation
 ```bash
-cd ~/clawd/nova-memory/grammar_parser
+cd ~/.openclaw/workspace/nova-memory/grammar_parser
 ./setup.sh
 ```
 

@@ -77,7 +77,7 @@ Scripts: proactive-recall.py, memory-maintenance.py, confidence_helper.py, dedup
 | 18-I11 | PGUSER export present at former line ~237 | `grep "PGUSER" agent-install.sh` | Found, exports PGUSER | Match found |
 | 18-I12 | PGDATABASE export present at former line ~238 | `grep "PGDATABASE" agent-install.sh` | Found, exports PGDATABASE | Match found |
 | 18-I13 | No other POSTGRES_* refs remain in agent-install.sh | `grep "POSTGRES_" agent-install.sh` | Zero matches anywhere in file | grep empty |
-| 18-I14 | ~~MOVED to nova-relationships #19~~ | Stale `~/clawd/` path references are a separate concern (hardcoded workspace paths). Tracked in #19, not part of this batch | N/A | N/A |
+| 18-I14 | ~~MOVED to nova-relationships #19~~ | Stale `~/.openclaw/workspace/` path references are a separate concern (hardcoded workspace paths). Tracked in #19, not part of this batch | N/A | N/A |
 
 ## 6. nova-relationships #18 — resolver.ts (POSTGRES_*→PG* + loadPgEnv)
 
@@ -119,5 +119,5 @@ Scripts: proactive-recall.py, memory-maintenance.py, confidence_helper.py, dedup
 - 18-R03/R04: Updated to accept either loadPgEnv import or process-level loading (prefer loadPgEnv)  
 - 127-A05: Replaced docs test with agent-install.sh prerequisite check for nova-cognition  
 - 18-I07: Added note that content validation is intentionally out of scope  
-- 18-I14: New — verify stale `~/clawd/` paths updated in agent-install.sh error messages  
+- 18-I14: New — verify stale `~/.openclaw/workspace/` paths updated in agent-install.sh error messages  
 - X-06: New — full POSTGRES_* sweep across all 3 repos  

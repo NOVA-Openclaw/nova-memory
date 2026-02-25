@@ -308,7 +308,7 @@ captchaSolver: {
 ## 8. File Structure
 
 ```
-~/clawd/skills/captcha-solver/
+~/.openclaw/workspace/skills/captcha-solver/
 ├── SKILL.md           # Skill documentation
 ├── _meta.json         # Skill metadata
 ├── package.json       # Dependencies

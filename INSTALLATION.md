@@ -40,7 +40,7 @@ Before installing nova-memory, ensure you have the following:
 ## Quick Install
 
 ```bash
-cd ~/clawd/nova-memory
+cd ~/.openclaw/workspace/nova-memory
 ./install.sh
 ```
 
@@ -128,7 +128,7 @@ DB_NAME="${DB_USER//-/_}_memory"  # Replace hyphens with underscores
 
 ### 2. Hooks Now Use Relative Paths
 
-All hooks have been updated to reference scripts using relative paths instead of hardcoded `~/clawd/scripts/`:
+All hooks have been updated to reference scripts using relative paths instead of hardcoded `~/.openclaw/workspace/scripts/`:
 
 **Before:**
 ```typescript
@@ -143,7 +143,7 @@ const SCRIPTS_DIR = path.join(__dirname, "..", "..", "scripts");
 const RECALL_SCRIPT = path.join(SCRIPTS_DIR, "proactive-recall.py");
 ```
 
-This allows the repo to be installed anywhere, not just at `~/clawd/`.
+This allows the repo to be installed anywhere, not just at `~/.openclaw/workspace/`.
 
 **Files Updated:**
 - `hooks/memory-extract/handler.ts` - now uses relative path for `process-input.sh`
@@ -268,14 +268,14 @@ openclaw hooks list
 Monitor logs:
 
 ```bash
-tail -f ~/clawd/logs/memory-extract-hook.log
+tail -f ~/.openclaw/workspace/logs/memory-extract-hook.log
 ```
 
 If automatic configuration failed (e.g., jq not installed), you can manually enable hooks:
 
 ```bash
 # Option 1: Use the enable-hooks.sh script
-~/clawd/nova-memory/scripts/enable-hooks.sh
+~/.openclaw/workspace/nova-memory/scripts/enable-hooks.sh
 
 # Option 2: Use OpenClaw CLI (legacy method)
 openclaw hooks enable memory-extract
@@ -343,8 +343,8 @@ openclaw hooks list
 
 Check logs:
 ```bash
-tail -f ~/clawd/logs/memory-extract-hook.log
-tail -f ~/clawd/logs/openclaw-hooks.log
+tail -f ~/.openclaw/workspace/logs/memory-extract-hook.log
+tail -f ~/.openclaw/workspace/logs/openclaw-hooks.log
 ```
 
 ## Performance Optimization
@@ -439,7 +439,7 @@ This makes the installation **self-contained** - the workspace has everything it
 ## Portability
 
 The system is now fully portable:
-- No hardcoded paths to `~/clawd/`
+- No hardcoded paths to `~/.openclaw/workspace/`
 - Hooks use relative paths to find scripts
 - Installer detects workspace automatically
 - Database connection via environment variables

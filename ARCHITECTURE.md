@@ -74,7 +74,7 @@ Before performing any recurring task, check if an SOP exists.
 
 ### 2. Short-Term Memory (MEMORY.md) — Every Turn
 
-**Location:** `~/clawd/MEMORY.md` (workspace root)
+**Location:** `~/.openclaw/workspace/MEMORY.md` (workspace root)
 
 **Purpose:** Quick-reference context and behavioral reminders.
 
@@ -93,7 +93,7 @@ Before performing any recurring task, check if an SOP exists.
 
 ### 3. Daily Notes (memory/YYYY-MM-DD.md)
 
-**Location:** `~/clawd/memory/YYYY-MM-DD.md`
+**Location:** `~/.openclaw/workspace/memory/YYYY-MM-DD.md`
 
 **Purpose:** Raw session logs and scratch space.
 
@@ -105,7 +105,7 @@ Before performing any recurring task, check if an SOP exists.
 
 ### 4. Periodic Reminders (REMINDERS.md) — Every 30 Minutes
 
-**Location:** `~/clawd/REMINDERS.md`
+**Location:** `~/.openclaw/workspace/REMINDERS.md`
 
 **Purpose:** Actions to EXECUTE periodically, not just read.
 

@@ -233,7 +233,7 @@ COMMENT ON TABLE agents IS 'Agent registry. READ-ONLY for most agents. Modificat
 **seed_context for ephemeral agents:**
 ```json
 {
-  "files": ["~/clawd/AGENTS.md", "{project_dir}/README.md"],
+  "files": ["~/.openclaw/workspace/AGENTS.md", "{project_dir}/README.md"],
   "sops": ["git-workflow", "code-review"],
   "db_queries": ["SELECT steps FROM sops WHERE name LIKE 'git-%'"],
   "context_template": "You are a Git agent for {project_name}."

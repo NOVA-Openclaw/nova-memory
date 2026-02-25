@@ -24,7 +24,7 @@ received        (cron job)        extraction           with deduplication
 
 **Purpose:** Scans session transcripts and queues messages for processing
 
-**Location:** `~/clawd/nova-memory/scripts/memory-catchup.sh`
+**Location:** `~/.openclaw/workspace/nova-memory/scripts/memory-catchup.sh`
 
 **How it works:**
 1. Reads session transcripts from `~/.openclaw/agents/main/sessions/`
@@ -54,7 +54,7 @@ received        (cron job)        extraction           with deduplication
 
 **Purpose:** Uses Claude to extract structured data from conversational text
 
-**Location:** `~/clawd/nova-memory/scripts/extract-memories.sh`
+**Location:** `~/.openclaw/workspace/nova-memory/scripts/extract-memories.sh`
 
 **Input format:**
 ```
@@ -101,7 +101,7 @@ Context: [Last 20 messages for reference resolution]
 
 **Purpose:** Validates and stores extracted JSON in PostgreSQL with deduplication
 
-**Location:** `~/clawd/nova-memory/scripts/store-memories.sh`
+**Location:** `~/.openclaw/workspace/nova-memory/scripts/store-memories.sh`
 
 **Deduplication strategy:**
 - **Layer 1 (Prompt):** Existing facts queried and shown to Claude
@@ -169,7 +169,7 @@ Extraction: {"preferences": [{"holder": "user", "subject": "retro-futuristic aes
 ```bash
 # 1. PostgreSQL with nova_memory database
 createdb nova_memory
-psql -d nova_memory -f ~/clawd/nova-memory/schema.sql
+psql -d nova_memory -f ~/.openclaw/workspace/nova-memory/schema.sql
 
 # 2. Anthropic API key
 export ANTHROPIC_API_KEY="your-key-here"
@@ -361,7 +361,7 @@ CREATE TABLE extraction_stats (
 
 For automatic extraction on incoming messages:
 ```bash
-cp -r hooks/memory-extract ~/clawd/hooks/
+cp -r hooks/memory-extract ~/.openclaw/workspace/hooks/
 openclaw hooks enable memory-extract
 export NOVA_MEMORY_SCRIPTS="/path/to/nova-memory/scripts"
 ```

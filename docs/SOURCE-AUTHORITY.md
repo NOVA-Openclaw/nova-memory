@@ -137,7 +137,7 @@ export SENDER_NAME="CustomAuthority"
 Run the test suite:
 
 ```bash
-cd ~/clawd/nova-memory
+cd ~/.openclaw/workspace/nova-memory
 ./tests/test_authority_facts.sh
 ```
 
