@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- **Library domain schema** — New tables for storing written works (research papers, books, novels, poems, essays, articles, etc.) with normalized authors, flexible tagging, and work-to-work relationships. Database constraints enforce complete ingestion (summary, insights, and all core metadata are required). See `docs/library-schema.md` and `patches/add-library-schema.sql`.
+- **Library semantic embedding** — Added `library` source type to `embed-full-database.py`. Embeds concise summaries (not full text) for high-density semantic search. Full records are fetched on recall hit.
+- **embed-full-database.py** — Added full database embedding script covering all source types (entities, facts, tasks, projects, agents, lessons, events, positions, media, vocabulary, library works).
+
 ### Fixed
 - **Installer now handles schema migrations automatically** — when re-running `agent-install.sh` on an existing installation, missing columns are detected and added automatically. Users no longer need to run manual `ALTER TABLE` commands when the schema evolves. (#127)
 - Remove old pg-env.sh/pg_env imports from migrated scripts (#117)

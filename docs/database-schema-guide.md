@@ -362,6 +362,80 @@ CREATE TABLE sops (
 }
 ```
 
+### Library
+
+#### library_works table
+**Purpose:** Central storage for all written works — research papers, books, novels, poems, essays, articles, etc.
+
+```sql
+CREATE TABLE library_works (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    work_type TEXT NOT NULL,        -- paper, book, novel, poem, essay, article, etc.
+    publication_date DATE NOT NULL,
+    language TEXT NOT NULL DEFAULT 'en',
+    summary TEXT NOT NULL,          -- Semantic summary for embedding (200-400 words)
+    url TEXT,
+    doi TEXT,
+    arxiv_id TEXT,
+    isbn TEXT,
+    external_ids JSONB DEFAULT '{}',
+    abstract TEXT,                  -- Original abstract verbatim
+    content_text TEXT,              -- Full text (optional)
+    insights TEXT NOT NULL,         -- Key takeaways and relevance notes
+    subjects TEXT[] NOT NULL DEFAULT '{}',
+    publisher TEXT,
+    source_path TEXT,
+    shared_by TEXT NOT NULL,
+    extra_metadata JSONB DEFAULT '{}',
+    search_vector tsvector,         -- Auto-generated via trigger
+    added_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Key design patterns:**
+- **NOT NULL constraints enforce completeness** — the database rejects records without summary, insights, publication_date, etc.
+- **summary field is used for semantic embedding** — one high-density embedding per work instead of chunking full text
+- **Check constraints** validate summary length (>50 chars), insights length (>20 chars), and work_type values
+- **tsvector trigger** auto-generates weighted search vectors (title=A, summary/abstract=B, insights=C, content=D)
+
+#### library_authors table
+**Purpose:** Normalized, deduplicated author records
+
+```sql
+CREATE TABLE library_authors (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    biography TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Supporting tables
+- **library_work_authors** — Junction linking works to authors with ordering
+- **library_tags** / **library_work_tags** — Flexible topic/subject tagging
+- **library_work_relationships** — Citations, sequels, responses between works
+
+**Common queries:**
+```sql
+-- Full-text search
+SELECT id, title, ts_rank(search_vector, q) AS rank
+FROM library_works, plainto_tsquery('english', 'agent safety') q
+WHERE search_vector @@ q ORDER BY rank DESC;
+
+-- Find by subject
+SELECT title, work_type FROM library_works WHERE subjects @> ARRAY['AI Safety'];
+
+-- Find by author
+SELECT w.title FROM library_works w
+JOIN library_work_authors wa ON w.id = wa.work_id
+JOIN library_authors a ON wa.author_id = a.id
+WHERE a.name ILIKE '%shapira%';
+```
+
+See [Library Schema](library-schema.md) for full documentation.
+
 ### Memory and Search
 
 #### memory_embeddings table
