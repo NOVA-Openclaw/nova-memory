@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict cjSPO53wx2ZjSziwOohZdClGyOfFbDMqgHLJAlHqfa8J1jnhJmUyl9l4afhd02q
+\restrict VspMIcrbkhlp2SwkqCJPgjENrebAenaExKBA3UCLWZZIYaOiZPwtpwgj44RGPgi
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1154,6 +1154,28 @@ $$;
 
 
 ALTER FUNCTION public.insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean, p_deliverable_type text, p_deliverable_description text) OWNER TO postgres;
+
+--
+-- Name: library_works_search_trigger(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.library_works_search_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.search_vector :=
+        setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(NEW.summary, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(NEW.abstract, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(NEW.insights, '')), 'C') ||
+        setweight(to_tsvector('english', coalesce(NEW.content_text, '')), 'D');
+    NEW.updated_at := CURRENT_TIMESTAMP;
+    RETURN NEW;
+END
+$$;
+
+
+ALTER FUNCTION public.library_works_search_trigger() OWNER TO nova;
 
 --
 -- Name: link_github_issue(integer, integer); Type: FUNCTION; Schema: public; Owner: nova
@@ -4322,6 +4344,157 @@ ALTER SEQUENCE public.library_tags_id_seq OWNED BY public.library_tags.id;
 
 
 --
+-- Name: library_work_authors; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.library_work_authors (
+    work_id integer NOT NULL,
+    author_id integer NOT NULL,
+    author_order integer DEFAULT 0
+);
+
+
+ALTER TABLE public.library_work_authors OWNER TO nova;
+
+--
+-- Name: TABLE library_work_authors; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.library_work_authors IS 'Links works to their authors. author_order preserves original ordering.';
+
+
+--
+-- Name: library_work_relationships; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.library_work_relationships (
+    from_work_id integer NOT NULL,
+    to_work_id integer NOT NULL,
+    relation_type text NOT NULL
+);
+
+
+ALTER TABLE public.library_work_relationships OWNER TO nova;
+
+--
+-- Name: TABLE library_work_relationships; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.library_work_relationships IS 'Tracks relationships between works (citations, sequels, responses, etc).';
+
+
+--
+-- Name: library_work_tags; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.library_work_tags (
+    work_id integer NOT NULL,
+    tag_id integer NOT NULL
+);
+
+
+ALTER TABLE public.library_work_tags OWNER TO nova;
+
+--
+-- Name: TABLE library_work_tags; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.library_work_tags IS 'Links works to subject/topic tags.';
+
+
+--
+-- Name: library_works; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.library_works (
+    id integer NOT NULL,
+    title text NOT NULL,
+    work_type text NOT NULL,
+    publication_date date NOT NULL,
+    language text DEFAULT 'en'::text NOT NULL,
+    summary text NOT NULL,
+    url text,
+    doi text,
+    arxiv_id text,
+    isbn text,
+    external_ids jsonb DEFAULT '{}'::jsonb,
+    abstract text,
+    content_text text,
+    insights text NOT NULL,
+    subjects text[] DEFAULT '{}'::text[] NOT NULL,
+    publisher text,
+    source_path text,
+    shared_by text NOT NULL,
+    added_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector,
+    extra_metadata jsonb DEFAULT '{}'::jsonb,
+    CONSTRAINT insights_not_empty CHECK ((length(TRIM(BOTH FROM insights)) > 20)),
+    CONSTRAINT summary_not_empty CHECK ((length(TRIM(BOTH FROM summary)) > 50)),
+    CONSTRAINT valid_work_type CHECK ((work_type = ANY (ARRAY['paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text])))
+);
+
+
+ALTER TABLE public.library_works OWNER TO nova;
+
+--
+-- Name: TABLE library_works; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON TABLE public.library_works IS 'Library domain: all written works (papers, books, poems, etc). Managed by Athena (librarian agent). ALL core fields are NOT NULL — Athena must generate summary and insights during ingestion. The summary field is used for semantic embedding (200-400 words, high-density). On semantic recall hit, query this table for full details.';
+
+
+--
+-- Name: COLUMN library_works.summary; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.library_works.summary IS 'REQUIRED. Concise semantic summary for embedding. 200-400 words. Must capture: what the work is, who wrote it, key findings/themes, and why it matters. Athena generates this during ingestion.';
+
+
+--
+-- Name: COLUMN library_works.abstract; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.library_works.abstract IS 'Original abstract verbatim from source. May be NULL if source has none (e.g. poems).';
+
+
+--
+-- Name: COLUMN library_works.content_text; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.library_works.content_text IS 'Full text of the work. Optional — only store if available and not too large.';
+
+
+--
+-- Name: COLUMN library_works.insights; Type: COMMENT; Schema: public; Owner: nova
+--
+
+COMMENT ON COLUMN public.library_works.insights IS 'REQUIRED. Key takeaways, relevance to our work, notable connections. Athena generates this during ingestion.';
+
+
+--
+-- Name: library_works_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.library_works_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.library_works_id_seq OWNER TO nova;
+
+--
+-- Name: library_works_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.library_works_id_seq OWNED BY public.library_works.id;
+
+
+--
 -- Name: media_consumed; Type: TABLE; Schema: public; Owner: nova
 --
 
@@ -6797,6 +6970,13 @@ ALTER TABLE ONLY public.library_tags ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: library_works id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_works ALTER COLUMN id SET DEFAULT nextval('public.library_works_id_seq'::regclass);
+
+
+--
 -- Name: media_consumed id; Type: DEFAULT; Schema: public; Owner: nova
 --
 
@@ -7391,6 +7571,38 @@ ALTER TABLE ONLY public.library_tags
 
 ALTER TABLE ONLY public.library_tags
     ADD CONSTRAINT library_tags_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: library_work_authors library_work_authors_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_authors
+    ADD CONSTRAINT library_work_authors_pkey PRIMARY KEY (work_id, author_id);
+
+
+--
+-- Name: library_work_relationships library_work_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_relationships
+    ADD CONSTRAINT library_work_relationships_pkey PRIMARY KEY (from_work_id, to_work_id, relation_type);
+
+
+--
+-- Name: library_work_tags library_work_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_tags
+    ADD CONSTRAINT library_work_tags_pkey PRIMARY KEY (work_id, tag_id);
+
+
+--
+-- Name: library_works library_works_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_works
+    ADD CONSTRAINT library_works_pkey PRIMARY KEY (id);
 
 
 --
@@ -8216,6 +8428,55 @@ CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic)
 
 
 --
+-- Name: idx_library_authors_name; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_authors_name ON public.library_authors USING btree (name);
+
+
+--
+-- Name: idx_library_works_arxiv; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_arxiv ON public.library_works USING btree (arxiv_id) WHERE (arxiv_id IS NOT NULL);
+
+
+--
+-- Name: idx_library_works_doi; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_doi ON public.library_works USING btree (doi) WHERE (doi IS NOT NULL);
+
+
+--
+-- Name: idx_library_works_isbn; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_isbn ON public.library_works USING btree (isbn) WHERE (isbn IS NOT NULL);
+
+
+--
+-- Name: idx_library_works_search; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_search ON public.library_works USING gin (search_vector);
+
+
+--
+-- Name: idx_library_works_subjects; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_subjects ON public.library_works USING gin (subjects);
+
+
+--
+-- Name: idx_library_works_type; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_type ON public.library_works USING btree (work_type);
+
+
+--
 -- Name: idx_media_consumed_by; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -8905,6 +9166,13 @@ ALTER TABLE public.agent_chat ENABLE REPLICA TRIGGER trg_embed_chat_message;
 
 
 --
+-- Name: library_works trg_library_works_search; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_library_works_search BEFORE INSERT OR UPDATE ON public.library_works FOR EACH ROW EXECUTE FUNCTION public.library_works_search_trigger();
+
+
+--
 -- Name: agent_chat trg_normalize_mentions; Type: TRIGGER; Schema: public; Owner: nova
 --
 
@@ -9185,6 +9453,54 @@ ALTER TABLE ONLY public.job_messages
 
 ALTER TABLE ONLY public.job_messages
     ADD CONSTRAINT job_messages_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.agent_chat(id);
+
+
+--
+-- Name: library_work_authors library_work_authors_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_authors
+    ADD CONSTRAINT library_work_authors_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.library_authors(id) ON DELETE CASCADE;
+
+
+--
+-- Name: library_work_authors library_work_authors_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_authors
+    ADD CONSTRAINT library_work_authors_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+
+
+--
+-- Name: library_work_relationships library_work_relationships_from_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_relationships
+    ADD CONSTRAINT library_work_relationships_from_work_id_fkey FOREIGN KEY (from_work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+
+
+--
+-- Name: library_work_relationships library_work_relationships_to_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_relationships
+    ADD CONSTRAINT library_work_relationships_to_work_id_fkey FOREIGN KEY (to_work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+
+
+--
+-- Name: library_work_tags library_work_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_tags
+    ADD CONSTRAINT library_work_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.library_tags(id) ON DELETE CASCADE;
+
+
+--
+-- Name: library_work_tags library_work_tags_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.library_work_tags
+    ADD CONSTRAINT library_work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
 
 
 --
@@ -10978,5 +11294,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cjSPO53wx2ZjSziwOohZdClGyOfFbDMqgHLJAlHqfa8J1jnhJmUyl9l4afhd02q
+\unrestrict VspMIcrbkhlp2SwkqCJPgjENrebAenaExKBA3UCLWZZIYaOiZPwtpwgj44RGPgi
 
