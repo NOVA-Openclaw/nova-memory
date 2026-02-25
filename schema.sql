@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict oALubiXaksH9XcXG5N2s1eS66SfW2zJyH1CxcppSfUv6BmawnncjcUtDoOcyTGH
+\restrict Fk4pnwsq7wfgJdoebEIx13RuaKdZqr6LCd3v7FfH3OUDu0yMV1Laj89w4csHjcH
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -6566,7 +6566,6 @@ CREATE TABLE public.workflow_steps (
     id integer NOT NULL,
     workflow_id integer NOT NULL,
     step_order integer NOT NULL,
-    agent_id integer,
     description text NOT NULL,
     produces_deliverable boolean DEFAULT false,
     deliverable_type text,
@@ -6648,26 +6647,19 @@ CREATE VIEW public.workflow_steps_detail AS
  SELECT w.name AS workflow_name,
     w.description AS workflow_description,
     ws.step_order,
-    a.name AS agent_name,
+    ws.domain,
+    ws.domains,
     ws.description AS step_description,
     ws.produces_deliverable,
     ws.deliverable_type,
     ws.deliverable_description,
     ws.estimated_duration_minutes
-   FROM ((public.workflow_steps ws
+   FROM (public.workflow_steps ws
      JOIN public.workflows w ON ((w.id = ws.workflow_id)))
-     JOIN public.agents a ON ((a.id = ws.agent_id)))
   ORDER BY w.name, ws.step_order;
 
 
 ALTER VIEW public.workflow_steps_detail OWNER TO nova;
-
---
--- Name: VIEW workflow_steps_detail; Type: COMMENT; Schema: public; Owner: nova
---
-
-COMMENT ON VIEW public.workflow_steps_detail IS 'Human-readable view of workflows with agent names and deliverable details';
-
 
 --
 -- Name: workflow_steps_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
@@ -8900,13 +8892,6 @@ CREATE INDEX idx_work_tags_work ON public.work_tags USING btree (work_id);
 
 
 --
--- Name: idx_workflow_steps_agent; Type: INDEX; Schema: public; Owner: nova
---
-
-CREATE INDEX idx_workflow_steps_agent ON public.workflow_steps USING btree (agent_id);
-
-
---
 -- Name: idx_workflow_steps_domain; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -9038,6 +9023,13 @@ CREATE OR REPLACE VIEW public.v_media_with_tags AS
    FROM (public.media_consumed mc
      LEFT JOIN public.media_tags mt ON ((mc.id = mt.media_id)))
   GROUP BY mc.id;
+
+
+--
+-- Name: agents agent_config_changed; Type: TRIGGER; Schema: public; Owner: newhart
+--
+
+CREATE TRIGGER agent_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_agent_config_changed();
 
 
 --
@@ -9720,14 +9712,6 @@ ALTER TABLE ONLY public.work_tags
 
 ALTER TABLE ONLY public.work_tags
     ADD CONSTRAINT work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
-
-
---
--- Name: workflow_steps workflow_steps_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: nova
---
-
-ALTER TABLE ONLY public.workflow_steps
-    ADD CONSTRAINT workflow_steps_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id);
 
 
 --
@@ -11328,14 +11312,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workflows TO athena;
 
 
 --
--- Name: TABLE workflow_steps_detail; Type: ACL; Schema: public; Owner: nova
---
-
-GRANT SELECT ON TABLE public.workflow_steps_detail TO newhart;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workflow_steps_detail TO athena;
-
-
---
 -- Name: SEQUENCE workflow_steps_id_seq; Type: ACL; Schema: public; Owner: nova
 --
 
@@ -11395,5 +11371,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict oALubiXaksH9XcXG5N2s1eS66SfW2zJyH1CxcppSfUv6BmawnncjcUtDoOcyTGH
+\unrestrict Fk4pnwsq7wfgJdoebEIx13RuaKdZqr6LCd3v7FfH3OUDu0yMV1Laj89w4csHjcH
 
