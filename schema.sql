@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict KvRsTbgQOLe8wUUbYh4jYf8ecWYHQCPOYSiatheIQ0YRggKzKqaBspMd3FLOiro
+\restrict wUI1zQgvSQIsqPEFyTyOfVXVFIgCB5mP1s8kKr9fhKAqGmICNsnIbQaaZ7hkkvF
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2649,6 +2649,8 @@ CREATE TABLE public.agents (
     pronouns character varying(50),
     allowed_subagents text[],
     is_default boolean DEFAULT false NOT NULL,
+    context_type text DEFAULT 'persistent'::text NOT NULL,
+    CONSTRAINT agents_context_type_check CHECK ((context_type = ANY (ARRAY['ephemeral'::text, 'persistent'::text]))),
     CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY ((ARRAY['off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying])::text[])))
 );
 
@@ -11409,5 +11411,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict KvRsTbgQOLe8wUUbYh4jYf8ecWYHQCPOYSiatheIQ0YRggKzKqaBspMd3FLOiro
+\unrestrict wUI1zQgvSQIsqPEFyTyOfVXVFIgCB5mP1s8kKr9fhKAqGmICNsnIbQaaZ7hkkvF
 
