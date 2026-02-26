@@ -58,6 +58,7 @@ This is the actual installer. It:
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
+openclaw hooks enable agent-turn-context
 ```
 
 📖 **Full documentation:** See [INSTALLATION.md](./INSTALLATION.md)
@@ -92,6 +93,7 @@ export ANTHROPIC_API_KEY="your-key-here"
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
+openclaw hooks enable agent-turn-context
 ```
 
 </details>
@@ -161,6 +163,7 @@ The schema (`schema.sql`) includes tables for:
 - **lessons** - Things learned from experience (with correction learning + confidence decay)
 - **preferences** - User/system preferences
 - **agents** - Registry of AI agent instances for delegation
+- **agent_turn_context** - Per-turn context records injected into every agent message (UNIVERSAL, GLOBAL, DOMAIN, AGENT scopes; 500-char per record / 2000-char total budget)
 
 ### Access Control Architecture
 
@@ -783,6 +786,7 @@ The `hooks/` directory contains OpenClaw hooks that automatically extract and ma
 - **memory-extract** - Extracts structured memories from incoming messages
 - **semantic-recall** - Provides contextual memory recall during conversations
 - **session-init** - Generates privacy-filtered context when sessions start
+- **agent-turn-context** - Injects per-turn critical context from the `agent_turn_context` table (caches with 5-minute TTL)
 
 ### Installation
 
@@ -799,6 +803,7 @@ The hooks are installed automatically by `agent-install.sh`. To install manually
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
+openclaw hooks enable agent-turn-context
 ```
 
 ### ✅ Hook Active
@@ -820,6 +825,7 @@ To remove hooks, disable them via the OpenClaw CLI:
 openclaw hooks disable memory-extract
 openclaw hooks disable semantic-recall
 openclaw hooks disable session-init
+openclaw hooks disable agent-turn-context
 ```
 
 ## Resource Policies (1Password Integration)

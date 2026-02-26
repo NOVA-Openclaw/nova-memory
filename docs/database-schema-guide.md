@@ -306,6 +306,66 @@ INSERT INTO agent_jobs (
 );
 ```
 
+### Per-Turn Context Injection
+
+#### agent_turn_context table
+**Purpose:** Store short, high-priority context records injected into every agent turn
+
+```sql
+CREATE TABLE agent_turn_context (
+    id SERIAL PRIMARY KEY,
+    context_type TEXT NOT NULL CHECK (context_type IN ('UNIVERSAL', 'GLOBAL', 'DOMAIN', 'AGENT')),
+    context_key TEXT NOT NULL,   -- '*' for UNIVERSAL/GLOBAL, domain name, or agent name
+    file_key TEXT NOT NULL,      -- unique identifier for this record
+    content TEXT NOT NULL CHECK (LENGTH(content) > 0 AND LENGTH(content) <= 500),
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (context_type, file_key)
+);
+```
+
+**Scope priority (UNIVERSAL → GLOBAL → DOMAIN → AGENT):**
+
+| context_type | context_key | Who sees it |
+|---|---|---|
+| `UNIVERSAL` | `*` | All agents, always |
+| `GLOBAL` | `*` | All agents, always |
+| `DOMAIN` | domain name | Agents whose domains match via `agent_domains` |
+| `AGENT` | agent name | That specific agent only |
+
+**Size limits:**
+- **Per record:** 500 characters max (enforced by CHECK constraint)
+- **Per agent total:** 2000 characters max (enforced by `get_agent_turn_context()`)
+
+If the budget is exceeded, a visible warning is appended: `⚠️ Turn context truncated — some critical rules may be missing. Alert I)ruid.`
+
+**Related function:**
+```sql
+-- Get all context for an agent (used by the hook, cached for 5 min)
+SELECT content, truncated, records_skipped, total_chars
+FROM get_agent_turn_context('nova');
+```
+
+**Common queries:**
+```sql
+-- Add universal turn context (applies to all agents, every turn)
+INSERT INTO agent_turn_context (context_type, context_key, file_key, content)
+VALUES ('UNIVERSAL', '*', 'MY_RULE', 'Always confirm destructive operations before proceeding.');
+
+-- List all enabled records
+SELECT context_type, context_key, file_key, LEFT(content, 80) as preview
+FROM agent_turn_context WHERE enabled = true ORDER BY context_type, file_key;
+
+-- Disable a record without deleting it
+UPDATE agent_turn_context SET enabled = false WHERE file_key = 'MY_RULE';
+```
+
+**Note:** This is separate from `agent_bootstrap_context`, which is injected once at session start. `agent_turn_context` fires on every `message:received` event.
+
+**Migration:** `migrations/065_agent_turn_context.sql`  
+**Hook:** `hooks/agent-turn-context/` — see `HOOK.md` for full details.
+
 ### Knowledge and Learning
 
 #### lessons table

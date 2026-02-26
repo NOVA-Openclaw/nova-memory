@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ClO8l4cQBRSnuoIuaWLaQB4zGGSH2lkmnLJJLpmLeWkfL9zKXvaVSHcctCTLN31
+\restrict HfJemJExajEpX8uV7cigAGKMdMrAu5Ok3sVZUMpOgyg6m20KLFCaISxgpjpwdNv
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -762,6 +762,64 @@ $$;
 ALTER FUNCTION public.get_agent_bootstrap(p_agent_name text) OWNER TO nova;
 
 --
+-- Name: get_agent_turn_context(text); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.get_agent_turn_context(p_agent_name text) RETURNS TABLE(content text, truncated boolean, records_skipped integer, total_chars integer)
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE
+    v_content TEXT := '';
+    v_budget INT := 2000;
+    v_total_chars INT := 0;
+    v_records_skipped INT := 0;
+    v_truncated BOOLEAN := false;
+    rec RECORD;
+BEGIN
+    -- Iterate through records in priority order: UNIVERSAL → GLOBAL → DOMAIN → AGENT
+    FOR rec IN
+        SELECT atc.content AS rec_content, atc.context_type
+        FROM agent_turn_context atc
+        WHERE atc.enabled = true
+        AND (
+            atc.context_type IN ('UNIVERSAL', 'GLOBAL')
+            OR (atc.context_type = 'DOMAIN' AND atc.context_key IN (
+                SELECT ad.domain_topic FROM agent_domains ad
+                JOIN agents a ON a.id = ad.agent_id
+                WHERE a.name = p_agent_name
+            ))
+            OR (atc.context_type = 'AGENT' AND atc.context_key = p_agent_name)
+        )
+        ORDER BY
+            CASE atc.context_type
+                WHEN 'UNIVERSAL' THEN 1
+                WHEN 'GLOBAL' THEN 2
+                WHEN 'DOMAIN' THEN 3
+                WHEN 'AGENT' THEN 4
+            END,
+            atc.file_key
+    LOOP
+        IF v_total_chars + LENGTH(rec.rec_content) > v_budget THEN
+            v_truncated := true;
+            v_records_skipped := v_records_skipped + 1;
+        ELSE
+            IF v_content != '' THEN
+                v_content := v_content || E'\n\n';
+                v_total_chars := v_total_chars + 2;
+            END IF;
+            v_content := v_content || rec.rec_content;
+            v_total_chars := v_total_chars + LENGTH(rec.rec_content);
+        END IF;
+    END LOOP;
+
+    RETURN QUERY SELECT v_content, v_truncated, v_records_skipped, v_total_chars;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_agent_turn_context(p_agent_name text) OWNER TO nova;
+
+--
 -- Name: get_next_coder_issue(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -1462,6 +1520,22 @@ $$;
 ALTER FUNCTION public.table_comment(tbl text) OWNER TO nova;
 
 --
+-- Name: update_agent_turn_context_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
+--
+
+CREATE FUNCTION public.update_agent_turn_context_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_agent_turn_context_timestamp() OWNER TO nova;
+
+--
 -- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: nova
 --
 
@@ -1773,24 +1847,6 @@ ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNER TO newhart;
 --
 
 ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNED BY public.agent_bootstrap_context.id;
-
-
---
--- Name: agent_turn_context; Type: TABLE; Schema: public; Owner: nova
--- Issue: https://github.com/NOVA-Openclaw/nova-memory/issues/143
---
-
-CREATE TABLE IF NOT EXISTS public.agent_turn_context (
-    id SERIAL PRIMARY KEY,
-    context_type TEXT NOT NULL CHECK (context_type IN ('UNIVERSAL', 'GLOBAL', 'DOMAIN', 'AGENT')),
-    context_key TEXT NOT NULL,
-    file_key TEXT NOT NULL,
-    content TEXT NOT NULL CHECK (LENGTH(content) > 0 AND LENGTH(content) <= 500),
-    enabled BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (context_type, file_key)
-);
 
 
 --
@@ -2154,6 +2210,48 @@ COMMENT ON COLUMN public.agent_system_config.updated_by IS 'Agent or system that
 
 
 --
+-- Name: agent_turn_context; Type: TABLE; Schema: public; Owner: nova
+--
+
+CREATE TABLE public.agent_turn_context (
+    id integer NOT NULL,
+    context_type text NOT NULL,
+    context_key text NOT NULL,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT agent_turn_context_content_check CHECK (((length(content) > 0) AND (length(content) <= 500))),
+    CONSTRAINT agent_turn_context_context_type_check CHECK ((context_type = ANY (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'AGENT'::text])))
+);
+
+
+ALTER TABLE public.agent_turn_context OWNER TO nova;
+
+--
+-- Name: agent_turn_context_id_seq; Type: SEQUENCE; Schema: public; Owner: nova
+--
+
+CREATE SEQUENCE public.agent_turn_context_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.agent_turn_context_id_seq OWNER TO nova;
+
+--
+-- Name: agent_turn_context_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: nova
+--
+
+ALTER SEQUENCE public.agent_turn_context_id_seq OWNED BY public.agent_turn_context.id;
+
+
+--
 -- Name: agents; Type: TABLE; Schema: public; Owner: newhart
 --
 
@@ -2214,7 +2312,7 @@ COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_comman
 -- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: newhart
 --
 
-COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or openclaw config path for credentials';
+COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
 
 
 --
@@ -4958,7 +5056,7 @@ COMMENT ON COLUMN public.projects.locked IS 'When TRUE, project is repo-backed. 
 -- Name: COLUMN projects.skills; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/.openclaw/workspace/skills/) relevant to this project';
+COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/clawd/skills/) relevant to this project';
 
 
 --
@@ -6200,6 +6298,13 @@ ALTER TABLE ONLY public.agent_spawns ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: agent_turn_context id; Type: DEFAULT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_turn_context ALTER COLUMN id SET DEFAULT nextval('public.agent_turn_context_id_seq'::regclass);
+
+
+--
 -- Name: agents id; Type: DEFAULT; Schema: public; Owner: newhart
 --
 
@@ -6614,6 +6719,22 @@ ALTER TABLE ONLY public.agent_spawns
 
 ALTER TABLE ONLY public.agent_system_config
     ADD CONSTRAINT agent_system_config_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: agent_turn_context agent_turn_context_context_type_file_key_key; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_turn_context
+    ADD CONSTRAINT agent_turn_context_context_type_file_key_key UNIQUE (context_type, file_key);
+
+
+--
+-- Name: agent_turn_context agent_turn_context_pkey; Type: CONSTRAINT; Schema: public; Owner: nova
+--
+
+ALTER TABLE ONLY public.agent_turn_context
+    ADD CONSTRAINT agent_turn_context_pkey PRIMARY KEY (id);
 
 
 --
@@ -8455,6 +8576,13 @@ CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR
 --
 
 CREATE TRIGGER system_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agent_system_config FOR EACH ROW EXECUTE FUNCTION public.notify_system_config_changed();
+
+
+--
+-- Name: agent_turn_context trg_agent_turn_context_updated_at; Type: TRIGGER; Schema: public; Owner: nova
+--
+
+CREATE TRIGGER trg_agent_turn_context_updated_at BEFORE UPDATE ON public.agent_turn_context FOR EACH ROW EXECUTE FUNCTION public.update_agent_turn_context_timestamp();
 
 
 --
@@ -10647,5 +10775,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ClO8l4cQBRSnuoIuaWLaQB4zGGSH2lkmnLJJLpmLeWkfL9zKXvaVSHcctCTLN31
+\unrestrict HfJemJExajEpX8uV7cigAGKMdMrAu5Ok3sVZUMpOgyg6m20KLFCaISxgpjpwdNv
 
