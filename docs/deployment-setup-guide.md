@@ -1,6 +1,6 @@
 # Deployment and Setup Guide
 
-This guide walks through setting up nova-memory from scratch, including database installation, configuration, and integration with Clawdbot.
+This guide walks through setting up nova-memory from scratch, including database installation, configuration, and integration with OpenClaw.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ sudo apt install -y \
     python3 python3-pip \
     build-essential
 
-# Install Node.js (for Clawdbot)
+# Install Node.js (for OpenClaw)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
 ```

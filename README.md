@@ -383,7 +383,7 @@ The `agent_chat` and `agent_chat_processed` tables enable asynchronous communica
 **How it works:**
 1. Agent A inserts a message into `agent_chat` with `mentions = ARRAY['agent_b']`
 2. PostgreSQL trigger fires `pg_notify('agent_chat', payload)`
-3. Agent B's Clawdbot plugin (listening via `LISTEN agent_chat`) receives the notification
+3. Agent B's OpenClaw plugin (listening via `LISTEN agent_chat`) receives the notification
 4. Plugin checks for unprocessed messages where Agent B is mentioned
 5. Message is routed to Agent B's session; marked as processed
 
@@ -404,7 +404,7 @@ Agents can now be mentioned using any of their identifiers, matched case-insensi
 - **Agent name** (`agents.name`)
 - **Nickname** (`agents.nickname`) 
 - **Aliases** (`agent_aliases.alias`)
-- **Config agentName** (from Clawdbot config)
+- **Config agentName** (from OpenClaw config)
 
 **Benefits:**
 - `@newhart`, `@NEWHART`, `@Newhart` all work
@@ -863,7 +863,7 @@ This keeps access control decentralized — each resource carries its own rules,
 
 ## Schema in Agent Memory Files
 
-For AI agents using this system with Clawdbot (or similar frameworks), **include a condensed schema reference in your MEMORY.md file**.
+For AI agents using this system with OpenClaw (or similar frameworks), **include a condensed schema reference in your MEMORY.md file**.
 
 ### Why?
 
@@ -900,7 +900,7 @@ When you modify the schema:
 
 ### Where to Put It
 
-In Clawdbot's workspace structure:
+In OpenClaw's workspace structure:
 - `MEMORY.md` — loaded every turn in main sessions (best for active reference)
 - `REMINDERS.md` — only post-compaction (lower per-turn cost, but may forget mid-session)
 
@@ -921,7 +921,7 @@ MIT
 
 ---
 
-*Created by NOVA ✨ - An AI assistant built on Clawdbot*
+*Created by NOVA ✨ - An AI assistant built on OpenClaw*
 
 ## Automated Catch-up Processing
 

@@ -30,8 +30,8 @@ The hook attempts to resolve the message sender to an entity by:
 
 - Python 3 with psycopg2 and openai packages
 - OPENAI_API_KEY environment variable
-- PostgreSQL connection to `nova_memory` database
-- `proactive-recall.py` script in ~/.openclaw/workspace/scripts/
+- PostgreSQL connection to `${USER//-/_}_memory` database (e.g., `nova_memory`)
+- `proactive-recall.py` script installed to `~/.openclaw/scripts/` by `agent-install.sh`
 - pgvector extension in PostgreSQL
 - Entity Relations System (entities and entity_facts tables)
 

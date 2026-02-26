@@ -637,7 +637,7 @@ VACUUM ANALYZE memory_embeddings;
 
 ## Integration Examples
 
-### 1. Clawdbot Integration
+### 1. OpenClaw Integration
 
 ```javascript
 // openclaw-plugin: semantic-memory-search
@@ -662,7 +662,7 @@ function searchMemories(query, limit = 10) {
     });
 }
 
-// Register as Clawdbot tool
+// Register as OpenClaw tool
 module.exports = {
     name: 'semantic_memory_search',
     description: 'Search memories using natural language',
