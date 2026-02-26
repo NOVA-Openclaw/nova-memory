@@ -26,7 +26,9 @@ SOURCE_TYPE = "library"
 
 LIBRARY_QUERY = """
     SELECT w.id,
-        w.title || ' by ' ||
+        w.title ||
+        COALESCE(' (' || w.edition || ')', '') ||
+        ' by ' ||
         COALESCE((
             SELECT string_agg(a.name, ', ' ORDER BY wa.author_order)
             FROM library_authors a
@@ -37,6 +39,7 @@ LIBRARY_QUERY = """
         w.summary ||
         COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '')
     FROM library_works w
+    WHERE w.embed = true
 """
 
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ybRFBw3SoaSb5oH8lYDCUI3y7gaxajMatrUin1bblqjIhT2UuNhtbomYOCJkMvc
+\restrict EHEiI5NohZuGYjomVTZ1ZIqbiYIo10KrD8W0DU9ZmBdxgH8047oIpxkFLwvC1O0
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -3758,6 +3758,8 @@ CREATE TABLE public.library_works (
     search_vector tsvector,
     extra_metadata jsonb DEFAULT '{}'::jsonb,
     notable_quotes text[],
+    edition text,
+    embed boolean DEFAULT true NOT NULL,
     CONSTRAINT insights_not_empty CHECK ((length(TRIM(BOTH FROM insights)) > 20)),
     CONSTRAINT summary_not_empty CHECK ((length(TRIM(BOTH FROM summary)) > 50)),
     CONSTRAINT valid_work_type CHECK ((work_type = ANY (ARRAY['paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text])))
@@ -7701,6 +7703,13 @@ CREATE INDEX idx_library_works_doi ON public.library_works USING btree (doi) WHE
 
 
 --
+-- Name: idx_library_works_embed; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE INDEX idx_library_works_embed ON public.library_works USING btree (embed) WHERE (embed = true);
+
+
+--
 -- Name: idx_library_works_isbn; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -10577,5 +10586,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ybRFBw3SoaSb5oH8lYDCUI3y7gaxajMatrUin1bblqjIhT2UuNhtbomYOCJkMvc
+\unrestrict EHEiI5NohZuGYjomVTZ1ZIqbiYIo10KrD8W0DU9ZmBdxgH8047oIpxkFLwvC1O0
 
