@@ -1,4 +1,4 @@
-#!/home/nova/clawd/.venv/bin/python3
+#!/usr/bin/env python3
 """
 Deduplication Helper - Smart deduplication for memory extractor.
 

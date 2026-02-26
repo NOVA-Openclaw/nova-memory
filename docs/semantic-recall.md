@@ -44,7 +44,7 @@ python proactive-recall.py "query" --inject
 
 ### Hook (semantic-recall/)
 
-Clawdbot hook that runs on `message:received`:
+OpenClaw hook that runs on `message:received`:
 1. Receives incoming message
 2. Resolves sender to entity (phone/UUID lookup)
 3. Runs semantic search
@@ -119,7 +119,7 @@ CREATE TABLE memory_embeddings (
 
 ## Integration
 
-To use in a Clawdbot installation:
+To use in an OpenClaw installation:
 
 1. Copy `scripts/proactive-recall.py` to your scripts directory
 2. Copy `hooks/semantic-recall/` to your hooks directory

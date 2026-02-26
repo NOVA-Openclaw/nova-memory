@@ -19,7 +19,7 @@ This guide explains how nova-memory integrates with nova-cognition to create a c
 │         ↕ ️              │              ↕️                       │
 │    SHARED PROTOCOLS     │       SHARED DATABASE                 │
 ├─────────────────────────┴───────────────────────────────────────┤
-│                      CLAWDBOT RUNTIME                           │
+│                      OPENCLAW RUNTIME                           │
 │            Sessions • Hooks • Plugins • Tools                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -41,8 +41,8 @@ INSERT INTO agents (
     'Specialized coding agent with Ralph Loop patterns',
     'coding',
     'anthropic', 'claude-sonnet-4',
-    'clawdbot_session', 
-    '{"session_key": "agent:coder:main", "workspace": "/home/nova/projects"}',
+    'openclaw_session', 
+    '{"session_key": "agent:coder:main", "workspace": "~/.openclaw/workspace"}',
     ARRAY['git', 'code-review', 'debugging', 'refactoring'],
     false, -- Task-based, not collaborative
     false, -- Ephemeral, spawned on-demand  
@@ -145,21 +145,13 @@ steps:
 
 ### 4. Subagent Context Inheritance
 
-Nova-cognition subagents automatically inherit memory context:
+OpenClaw subagents inherit memory context injected at spawn time. Workflow context (SOPs) is stored in `agent_bootstrap_context` and injected automatically via `get_agent_bootstrap()`.
 
 ```sql
--- Subagent seed context from agents table
-SELECT seed_context FROM agents WHERE name = 'research-agent';
--- Returns:
-{
-  "files": ["~/.openclaw/workspace/AGENTS.md", "~/.openclaw/workspace/MEMORY.md"],
-  "sops": ["research-methodology", "source-reliability-assessment"],
-  "db_queries": [
-    "SELECT lesson FROM lessons WHERE context ILIKE '%research%'",
-    "SELECT * FROM sops WHERE name LIKE 'research-%'"
-  ],
-  "context_template": "You are a research agent. Follow established SOPs and learn from past lessons."
-}
+-- Query an agent's bootstrap context (auto-injected at session start)
+SELECT file_key, LEFT(content, 100) as preview, source
+FROM get_agent_bootstrap('research')
+ORDER BY file_key;
 ```
 
 **Subagent spawning with memory:**
@@ -169,7 +161,7 @@ async def spawn_research_agent(topic: str, requester: str):
     # 1. Query memory for relevant context
     context_query = f"""
         SELECT content FROM memory_embeddings 
-        WHERE source_type IN ('lesson', 'entity_fact', 'sop')
+        WHERE source_type IN ('lesson', 'entity_fact')
         ORDER BY embedding <=> get_embedding('{topic}')
         LIMIT 10
     """
@@ -177,18 +169,17 @@ async def spawn_research_agent(topic: str, requester: str):
     
     # 2. Get agent configuration  
     agent_config = await db.fetchrow(
-        "SELECT seed_context, instantiation_sop FROM agents WHERE name = 'research-agent'"
+        "SELECT instantiation_sop FROM agents WHERE name = 'research-agent'"
     )
     
     # 3. Spawn with enriched context
-    subagent = await clawdbot.spawn_subagent(
+    subagent = await openclaw.spawn_subagent(
         agent_name="research-agent",
         initial_context={
             "topic": topic,
             "requester": requester,
             "memory_context": memory_context,
-            "sops": agent_config['seed_context']['sops'],
-            "instructions": f"Research {topic} using methodology SOPs and past lessons"
+            "instructions": f"Research {topic} using methodology from agent bootstrap context"
         }
     )
     
@@ -274,7 +265,7 @@ cd nova-cognition
 ./scripts/setup.sh
 
 # 3. Configure shared database connection
-echo "NOVA_MEMORY_DB=postgresql://nova:password@localhost/nova_memory" >> ~/.bashrc
+echo "NOVA_MEMORY_DB=postgresql://${USER}@localhost/${USER//-/_}_memory" >> ~/.bashrc
 
 # 4. Install integration hooks
 cp nova-memory/hooks/memory-extract ~/.openclaw/workspace/hooks/
@@ -282,7 +273,7 @@ cp nova-cognition/hooks/job-system ~/.openclaw/workspace/hooks/
 openclaw hooks enable memory-extract job-system
 
 # 5. Populate agent registry
-psql -d nova_memory -f integration/seed-agents.sql
+psql -d "${USER//-/_}_memory" -f integration/seed-agents.sql
 
 # 6. Start background services
 systemctl --user start nova-memory-extraction
@@ -296,7 +287,7 @@ echo "Ecosystem setup complete!"
 ```yaml
 # ~/.nova-config.yaml
 database:
-  memory_db: "postgresql://nova:password@localhost/nova_memory"
+  memory_db: "postgresql://${USER}@localhost/${USER//-/_}_memory"
   cognition_db: "same"  # Share database for consistency
 
 agents:
@@ -577,7 +568,7 @@ class SharedConnectionManager:
         
     async def setup(self):
         self.memory_pool = await asyncpg.create_pool(
-            "postgresql://nova:password@localhost/nova_memory",
+            "postgresql://${USER}@localhost/${USER//-/_}_memory",
             min_size=5, max_size=20
         )
         

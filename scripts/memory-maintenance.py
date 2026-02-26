@@ -1,9 +1,9 @@
-#!/home/nova/clawd/scripts/memory-venv/bin/python
+#!/usr/bin/env python3
 """
 Memory confidence decay and soft-deletion script.
 Task: #53 - Memory Confidence & Expiration System
 
-Run daily via cron: 0 4 * * * /home/nova/clawd/scripts/memory-decay.py
+Run daily via cron: 0 4 * * * ~/.openclaw/scripts/memory-decay.py
 
 Usage:
     memory-decay.py [--dry-run] [--verbose] [--skip-dedup]
@@ -572,7 +572,7 @@ def log_summary(duplicates_merged: int, decayed_facts: int, decayed_events: int,
                f"{conflicts_archived} conflicts resolved, {conflicts_pending} pending review")
     
     # Write to daily memory file
-    memory_dir = Path.home() / 'clawd' / 'memory'
+    memory_dir = Path.home() / '.openclaw' / 'workspace' / 'memory'
     memory_dir.mkdir(parents=True, exist_ok=True)
     
     daily_file = memory_dir / f'{datetime.now():%Y-%m-%d}.md'

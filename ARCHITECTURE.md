@@ -29,8 +29,8 @@ NOVA uses a multi-layer memory system designed to handle different types of info
 │  - Check SOPs from database   │                                 │
 │  - Review pending tasks       │                                 │
 ├───────────────────────────────┼─────────────────────────────────┤
-│  SEMANTIC (Clawdbot SQLite)   │ Embeddings for memory_search.   │
-│  - Vector search over files   │ Auto-indexed by Clawdbot.       │
+│  SEMANTIC (OpenClaw SQLite)   │ Embeddings for memory_search.   │
+│  - Vector search over files   │ Auto-indexed by OpenClaw.       │
 │  - Full-text search           │                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -39,7 +39,7 @@ NOVA uses a multi-layer memory system designed to handle different types of info
 
 ### 1. Long-Term Memory (PostgreSQL) — PRIMARY
 
-**Database:** `nova_memory` on localhost
+**Database:** `${USER//-/_}_memory` on localhost (e.g., `nova_memory` for user `nova`)
 
 **Priority:** ALWAYS check database first before flat files.
 
@@ -63,14 +63,14 @@ This is the source of truth for persistent information.
 
 #### SOPs (Standard Operating Procedures)
 
-The `sops` table stores documented procedures for recurring tasks.
+SOPs are stored in the `agent_bootstrap_context` table as DOMAIN or GLOBAL context entries. They are automatically injected into agent sessions at startup via `get_agent_bootstrap()`.
+
+Before performing any recurring task, check the agent bootstrap context for relevant SOPs:
 
 ```sql
-SELECT name, description FROM sops;
-SELECT * FROM sops WHERE name ILIKE '%keyword%';
+SELECT file_key, LEFT(content, 200) FROM agent_bootstrap_context 
+WHERE context_type IN ('GLOBAL', 'DOMAIN') AND file_key ILIKE '%WORKFLOW%';
 ```
-
-Before performing any recurring task, check if an SOP exists.
 
 ### 2. Short-Term Memory (MEMORY.md) — Every Turn
 
@@ -78,7 +78,7 @@ Before performing any recurring task, check if an SOP exists.
 
 **Purpose:** Quick-reference context and behavioral reminders.
 
-**How it works:** Clawdbot automatically loads workspace files (MEMORY.md, AGENTS.md, etc.) into the system prompt at the start of every turn. This survives context compaction because it's re-read from disk each time.
+**How it works:** OpenClaw automatically loads workspace files (MEMORY.md, AGENTS.md, etc.) into the system prompt at the start of every turn. This survives context compaction because it's re-read from disk each time.
 
 **Contents should include:**
 - Key entity IDs (e.g., I)ruid = Entity 2)
@@ -118,13 +118,13 @@ Before performing any recurring task, check if an SOP exists.
 
 See `REMINDERS.md` in this repo for the template.
 
-### 5. Semantic Memory (Clawdbot SQLite)
+### 5. Semantic Memory (OpenClaw SQLite)
 
 **Location:** `~/.openclaw/memory/main.sqlite`
 
 **Purpose:** Powers the `memory_search` tool.
 
-Clawdbot automatically indexes workspace markdown files and stores embeddings for semantic search. This is separate from the PostgreSQL long-term memory.
+OpenClaw automatically indexes workspace markdown files and stores embeddings for semantic search. This is separate from the PostgreSQL long-term memory.
 
 ## Memory Extraction Pipeline
 
@@ -169,22 +169,22 @@ Every 30 min → Cron fires
 ## Key Principles
 
 1. **Database first** — PostgreSQL is the source of truth
-2. **SOPs exist** — Check `sops` table before improvising recurring tasks
+2. **SOPs exist** — Check `agent_bootstrap_context` for workflow documentation before improvising recurring tasks
 3. **MEMORY.md is lean** — Quick reference only, loaded every turn
 4. **REMINDERS.md is active** — Execute actions, don't just read
 5. **Log important events** — Use `events` table, not just markdown
 6. **Vocabulary grows** — New words auto-extracted and loaded to STT
 
-## Modifications from Default Clawdbot
+## Modifications from Default OpenClaw
 
-This setup extends the default Clawdbot memory with:
+This setup extends the default OpenClaw memory with:
 
 1. **PostgreSQL database** — Structured long-term storage (entities, events, SOPs, etc.)
 2. **Memory extraction pipeline** — Auto-extracts memories from chat every minute
 3. **REMINDERS.md + cron** — Periodic active scans to refresh memory
 4. **Vocabulary table** — STT correction words, auto-loaded on restart
 
-The default Clawdbot provides:
+The default OpenClaw provides:
 - MEMORY.md/AGENTS.md workspace file injection
 - Semantic memory search via SQLite embeddings
 - Heartbeat system for periodic check-ins

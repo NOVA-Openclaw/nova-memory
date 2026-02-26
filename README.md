@@ -160,7 +160,6 @@ The schema (`schema.sql`) includes tables for:
 - **events** - Timeline of what happened
 - **lessons** - Things learned from experience (with correction learning + confidence decay)
 - **preferences** - User/system preferences
-- **sops** - Standard Operating Procedures for various tasks and workflows  
 - **agents** - Registry of AI agent instances for delegation
 
 ### Access Control Architecture
@@ -218,34 +217,6 @@ $$ LANGUAGE plpgsql;
 ```
 
 This enforces domain ownership without manual discipline—the database itself guides agents to the correct workflow.
-
-### SOPs Table (Standard Operating Procedures)
-
-The `sops` table stores procedural knowledge and workflows:
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| `id` | int | Primary key |
-| `name` | varchar(255) | Unique SOP identifier |
-| `description` | text | What this SOP accomplishes |
-| `steps` | jsonb | Ordered list of steps to execute |
-| `tools` | text[] | Required tools/dependencies |
-| `notes` | text | Implementation notes and caveats |
-
-**Current Research SOPs:**
-- `research-agent-instantiation` - How to instantiate and task the research agent
-- `research-methodology` - Systematic research methodology for information gathering
-- `source-reliability-assessment` - Framework for evaluating source credibility
-- `research-citation-standards` - Standards for documenting sources and traceability
-
-**Example Queries:**
-```sql
--- List all research-related SOPs
-SELECT name, description FROM sops WHERE name LIKE 'research%';
-
--- Get full SOP with steps
-SELECT name, steps, tools FROM sops WHERE name = 'research-methodology';
-```
 
 ### Projects Table
 
@@ -330,17 +301,16 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `role` | varchar(100) | Primary function: general, coding, research, quick-qa, monitoring |
 | `provider` | varchar(50) | anthropic, google, openai, local |
 | `model` | varchar(100) | Specific model (e.g., 'claude-opus-4', 'gemini-2.0-flash') |
-| `access_method` | varchar(50) | How to reach it: clawdbot_session, cli, api, browser |
+| `access_method` | varchar(50) | How to reach it: openclaw_session, cli, api, browser |
 | `access_details` | jsonb | Connection info: session_key, cli command, endpoint, flags |
 | `skills` | text[] | Array of capabilities this agent has |
 | `credential_ref` | varchar(200) | 1Password item name or config path for auth |
-| `status` | varchar(20) | active, inactive, deprecated |
+| `status` | varchar(20) | active, inactive, suspended, archived |
 | `notes` | text | Usage notes, caveats |
 | `persistent` | boolean | true = always running, false = instantiated on-demand |
-| `seed_context` | jsonb | Files, SOPs, queries to inject before tasking ephemeral agents |
 | `instantiation_sop` | varchar(100) | SOP name with full procedure to spawn this agent |
 | `nickname` | varchar(50) | Short friendly name for easy reference (e.g., "Nova", "Coder") |
-| `instance_type` | varchar(20) | 'primary' (main instance), 'subagent' (spawned session), or 'peer' (separate Clawdbot) |
+| `instance_type` | varchar(20) | 'subagent' (spawned session) or 'peer' (separate OpenClaw instance) |
 | `unix_user` | varchar(50) | Unix username for peer agents with own system resources |
 | `home_dir` | varchar(255) | Workspace path for peer agents |
 | `collaborative` | boolean | TRUE = work WITH NOVA (dialogue), FALSE = work FOR NOVA (tasks) |
@@ -352,18 +322,8 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 - **Task-Based** (`collaborative = false`): Work FOR NOVA - spawn with a task, return results (e.g., research agent, git agent)
 
 **Persistent vs Ephemeral Agents:**
-- **Persistent** (`persistent = true`): Always-running agents like main Clawdbot sessions
-- **Ephemeral** (`persistent = false`): Spawned on-demand with seeded context, then cleaned up
-
-**seed_context Structure (for ephemeral agents):**
-```json
-{
-  "files": ["~/.openclaw/workspace/AGENTS.md", "{project_dir}/README.md"],
-  "sops": ["git-commit", "pr-workflow"],
-  "db_queries": ["SELECT steps FROM sops WHERE name LIKE 'git-%'"],
-  "context_template": "You are a Git agent for {project_name}. Follow SOPs strictly."
-}
-```
+- **Persistent** (`persistent = true`): Always-running agents like main OpenClaw sessions
+- **Ephemeral** (`persistent = false`): Spawned on-demand, then cleaned up
 
 **Use Cases:**
 - Track which agents exist and what they're good at
@@ -389,7 +349,7 @@ VALUES (
   'research',
   'anthropic',
   'claude-sonnet-4',
-  'clawdbot_session',
+  'openclaw_session',
   '{"session_key": "agent:research:main"}',
   ARRAY['web-search', 'summarization', 'fact-checking'],
   'Anthropic API'
@@ -423,12 +383,12 @@ The `agent_chat` and `agent_chat_processed` tables enable asynchronous communica
 **How it works:**
 1. Agent A inserts a message into `agent_chat` with `mentions = ARRAY['agent_b']`
 2. PostgreSQL trigger fires `pg_notify('agent_chat', payload)`
-3. Agent B's Clawdbot plugin (listening via `LISTEN agent_chat`) receives the notification
+3. Agent B's OpenClaw plugin (listening via `LISTEN agent_chat`) receives the notification
 4. Plugin checks for unprocessed messages where Agent B is mentioned
 5. Message is routed to Agent B's session; marked as processed
 
-**Plugin:** The `agent-chat-channel` Clawdbot plugin handles the LISTEN/NOTIFY integration.  
-**Source:** https://github.com/NOVA-Openclaw/nova_scripts (clawdbot-plugins/agent-chat-channel/)
+**Plugin:** The `agent-chat-channel` OpenClaw plugin handles the LISTEN/NOTIFY integration.  
+**Source:** https://github.com/NOVA-Openclaw/nova_scripts (openclaw-plugins/agent-chat-channel/)
 
 **Example - Send message to another agent:**
 ```sql
@@ -444,7 +404,7 @@ Agents can now be mentioned using any of their identifiers, matched case-insensi
 - **Agent name** (`agents.name`)
 - **Nickname** (`agents.nickname`) 
 - **Aliases** (`agent_aliases.alias`)
-- **Config agentName** (from Clawdbot config)
+- **Config agentName** (from OpenClaw config)
 
 **Benefits:**
 - `@newhart`, `@NEWHART`, `@Newhart` all work
@@ -818,22 +778,6 @@ git push
 
 The `hooks/` directory contains OpenClaw hooks that automatically extract and manage memories.
 
-### Prerequisites
-
-The hooks require **nova-relationships** for entity resolution. The hooks import via:
-```typescript
-import { resolveEntity } from "../../../nova-relationships/lib/entity-resolver/index.ts";
-```
-
-This expects `~/nova-relationships` to be a symlink to the nova-relationships repo. Install it:
-
-```bash
-cd ~/.openclaw/workspace/nova-relationships
-./agent-install.sh
-```
-
-The installer creates the required `~/nova-relationships` symlink automatically.
-
 ### Available Hooks
 
 - **memory-extract** - Extracts structured memories from incoming messages
@@ -842,17 +786,12 @@ The installer creates the required `~/nova-relationships` symlink automatically.
 
 ### Installation
 
-Run the installation script to symlink hooks to your OpenClaw workspace:
+The hooks are installed automatically by `agent-install.sh`. To install manually, run the installer:
 
 ```bash
-./install-hooks.sh
+./agent-install.sh
 ```
 
-This creates symlinks from `~/.openclaw/workspace-coder/hooks/` to `nova-memory/hooks/`. Symlinks ensure:
-- Hooks stay under version control
-- Changes are tracked in git
-- Updates propagate automatically
-- No manual copying needed
 
 ### Enable Hooks
 
@@ -860,14 +799,6 @@ This creates symlinks from `~/.openclaw/workspace-coder/hooks/` to `nova-memory/
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
-```
-
-### Configuration
-
-Set the `NOVA_MEMORY_SCRIPTS` environment variable to point to your scripts directory:
-
-```bash
-export NOVA_MEMORY_SCRIPTS="$HOME/clawd/nova-memory/scripts"
 ```
 
 ### ✅ Hook Active
@@ -883,11 +814,12 @@ Memories are automatically extracted and stored from conversations.
 
 ### Uninstallation
 
-To remove hooks:
+To remove hooks, disable them via the OpenClaw CLI:
 
 ```bash
-cd ~/.openclaw/workspace-coder/hooks/
-rm memory-extract semantic-recall session-init
+openclaw hooks disable memory-extract
+openclaw hooks disable semantic-recall
+openclaw hooks disable session-init
 ```
 
 ## Resource Policies (1Password Integration)
@@ -931,7 +863,7 @@ This keeps access control decentralized — each resource carries its own rules,
 
 ## Schema in Agent Memory Files
 
-For AI agents using this system with Clawdbot (or similar frameworks), **include a condensed schema reference in your MEMORY.md file**.
+For AI agents using this system with OpenClaw (or similar frameworks), **include a condensed schema reference in your MEMORY.md file**.
 
 ### Why?
 
@@ -968,7 +900,7 @@ When you modify the schema:
 
 ### Where to Put It
 
-In Clawdbot's workspace structure:
+In OpenClaw's workspace structure:
 - `MEMORY.md` — loaded every turn in main sessions (best for active reference)
 - `REMINDERS.md` — only post-compaction (lower per-turn cost, but may forget mid-session)
 
@@ -989,7 +921,7 @@ MIT
 
 ---
 
-*Created by NOVA ✨ - An AI assistant built on Clawdbot*
+*Created by NOVA ✨ - An AI assistant built on OpenClaw*
 
 ## Automated Catch-up Processing
 

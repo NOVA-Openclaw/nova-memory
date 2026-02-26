@@ -30,18 +30,18 @@ The hook attempts to resolve the message sender to an entity by:
 
 - Python 3 with psycopg2 and openai packages
 - OPENAI_API_KEY environment variable
-- PostgreSQL connection to `nova_memory` database
-- `proactive-recall.py` script in ~/.openclaw/workspace/scripts/
+- PostgreSQL connection to `${USER//-/_}_memory` database (e.g., `nova_memory`)
+- `proactive-recall.py` script installed to `~/.openclaw/scripts/` by `agent-install.sh`
 - pgvector extension in PostgreSQL
 - Entity Relations System (entities and entity_facts tables)
 
 ## Configuration
 
-Uses environment variables for database connection:
-- `POSTGRES_HOST` (default: localhost)
-- `POSTGRES_DB` (default: nova_memory)
-- `POSTGRES_USER` (default: nova)
-- `POSTGRES_PASSWORD` (optional)
+Database connection is configured via `~/.openclaw/postgres.json` (loaded by `~/.openclaw/lib/pg-env.sh`). Environment variable overrides are supported:
+- `PGHOST` (default: localhost)
+- `PGDATABASE` (default: `${USER//-/_}_memory`, e.g., `nova_memory`)
+- `PGUSER` (default: current OS user)
+- `PGPASSWORD` (optional)
 
 Recall settings (configurable via environment variables):
 - `SEMANTIC_RECALL_TOKEN_BUDGET` - Max tokens to inject (default: 1000)

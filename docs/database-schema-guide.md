@@ -64,7 +64,10 @@ CREATE TABLE entity_facts (
     value TEXT NOT NULL,
     confidence FLOAT DEFAULT 1.0,
     source VARCHAR(255),
-    created_at TIMESTAMP DEFAULT NOW()
+    learned_at TIMESTAMP DEFAULT NOW(),
+    data_type VARCHAR(20) DEFAULT 'observation', -- permanent, identity, preference, temporal, observation
+    vote_count INT DEFAULT 1,
+    last_confirmed TIMESTAMP DEFAULT NOW()
 );
 ```
 
@@ -93,18 +96,19 @@ WHERE e.name = 'druid' AND ef.key = 'preference';
 ```sql
 CREATE TABLE entity_relationships (
     id SERIAL PRIMARY KEY,
-    from_entity_id INT REFERENCES entities(id),
-    to_entity_id INT REFERENCES entities(id),
-    relationship_type VARCHAR(100), -- friend, colleague, reports_to, member_of
-    strength INT DEFAULT 5, -- 1-10 scale
+    entity_a INT REFERENCES entities(id),
+    entity_b INT REFERENCES entities(id),
+    relationship VARCHAR(100) NOT NULL, -- friend, colleague, reports_to, member_of
+    since TIMESTAMP,
     notes TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    is_long_distance BOOLEAN DEFAULT FALSE,
+    seriousness VARCHAR(20) DEFAULT 'standard'
 );
 ```
 
 **Relationship types:**
 - **friend, colleague, mentor** - Personal connections
-- **reports_to, manages** - Organizational hierarchy  
+- **partner, casual** - Romantic/relationship connections  
 - **member_of, founder_of** - Group membership
 - **collaborates_with** - Working relationships
 
@@ -194,25 +198,32 @@ UPDATE projects SET locked = TRUE WHERE name = 'nova-memory';
 ```sql
 CREATE TABLE agents (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL, -- e.g., 'nova-main', 'gemini-cli'
+    name VARCHAR(100) UNIQUE NOT NULL,     -- e.g., 'nova', 'coder'
     description TEXT,
-    role VARCHAR(100), -- general, coding, research, quick-qa, monitoring
-    provider VARCHAR(50), -- anthropic, google, openai, local
-    model VARCHAR(100), -- claude-sonnet-4, gemini-2.0-flash
-    access_method VARCHAR(50), -- clawdbot_session, cli, api, browser
-    access_details JSONB, -- connection info
-    skills TEXT[], -- capabilities array
-    credential_ref VARCHAR(200), -- 1Password item reference
-    status VARCHAR(20) DEFAULT 'active', -- active, inactive, deprecated
-    persistent BOOLEAN DEFAULT FALSE, -- always-running vs on-demand
-    collaborative BOOLEAN DEFAULT FALSE, -- work WITH vs work FOR
-    seed_context JSONB, -- files/SOPs to inject before tasking
-    instantiation_sop VARCHAR(100), -- SOP name for spawning procedure
-    nickname VARCHAR(50), -- friendly short name
-    created_at TIMESTAMP DEFAULT NOW()
+    role VARCHAR(100),                     -- general, coding, research, quick-qa, monitoring
+    provider VARCHAR(50),                  -- anthropic, google, openai, local
+    model VARCHAR(100),                    -- claude-sonnet-4, gemini-2.0-flash
+    access_method VARCHAR(50) NOT NULL,    -- openclaw_session, cli, api, browser
+    access_details JSONB,                  -- connection info (session_key, cli command, etc.)
+    skills TEXT[],                         -- capabilities array
+    credential_ref VARCHAR(200),           -- 1Password item reference
+    status VARCHAR(20) DEFAULT 'active',   -- active, inactive, suspended, archived
+    notes TEXT,
+    persistent BOOLEAN DEFAULT TRUE,       -- always-running vs on-demand
+    collaborative BOOLEAN DEFAULT FALSE,   -- work WITH vs work FOR
+    instantiation_sop VARCHAR(100),        -- SOP name for spawning procedure
+    nickname VARCHAR(50),                  -- friendly short name
+    instance_type VARCHAR(20) DEFAULT 'subagent', -- subagent or peer
+    home_dir VARCHAR(255),                 -- workspace path for peer agents
+    unix_user VARCHAR(50),                 -- unix username for peer agents
+    config_reasoning TEXT,                 -- why this agent is configured this way
+    fallback_model VARCHAR(100),           -- alternative model if primary fails
+    context_type TEXT DEFAULT 'persistent', -- ephemeral or persistent
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-COMMENT ON TABLE agents IS 'Agent registry. READ-ONLY for most agents. Modifications via NHR (Newhart) only.';
+COMMENT ON TABLE agents IS 'Agent definitions. READ-ONLY except Newhart (Agent Design/Management domain).';
 ```
 
 **Agent Categories:**
@@ -225,20 +236,10 @@ COMMENT ON TABLE agents IS 'Agent registry. READ-ONLY for most agents. Modificat
 | **Monitoring Agent** | true | false | System health, alerts |
 
 **Access Methods:**
-- **clawdbot_session:** Spawn via Clawdbot subagent system
+- **openclaw_session:** Spawn via OpenClaw subagent system
 - **cli:** Command-line tools (e.g., `gemini "prompt"`)
 - **api:** Direct API endpoints
 - **browser:** Web-based interfaces
-
-**seed_context for ephemeral agents:**
-```json
-{
-  "files": ["~/.openclaw/workspace/AGENTS.md", "{project_dir}/README.md"],
-  "sops": ["git-workflow", "code-review"],
-  "db_queries": ["SELECT steps FROM sops WHERE name LIKE 'git-%'"],
-  "context_template": "You are a Git agent for {project_name}."
-}
-```
 
 #### agent_chat table
 **Purpose:** Inter-agent messaging via PostgreSQL NOTIFY
@@ -334,34 +335,6 @@ WHERE last_referenced < NOW() - INTERVAL '30 days'
   AND confidence > 0.1;
 ```
 
-#### sops table (Standard Operating Procedures)
-**Purpose:** Procedural knowledge and workflows
-
-```sql
-CREATE TABLE sops (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    steps JSONB, -- Ordered list of steps
-    tools TEXT[], -- Required tools/dependencies  
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-**Steps structure:**
-```json
-{
-  "steps": [
-    {"step": 1, "action": "Check project status", "command": "git status"},
-    {"step": 2, "action": "Create feature branch", "command": "git checkout -b feature/description"},
-    {"step": 3, "action": "Make changes and test"},
-    {"step": 4, "action": "Commit with conventional format", "command": "git commit -m 'feat: description'"}
-  ]
-}
-```
-
 ### Library
 
 #### library_works table
@@ -384,10 +357,13 @@ CREATE TABLE library_works (
     content_text TEXT,              -- Full text (optional)
     insights TEXT NOT NULL,         -- Key takeaways and relevance notes
     subjects TEXT[] NOT NULL DEFAULT '{}',
+    notable_quotes TEXT[],          -- 3-10 memorable passages; included in embedding
     publisher TEXT,
     source_path TEXT,
     shared_by TEXT NOT NULL,
     extra_metadata JSONB DEFAULT '{}',
+    edition TEXT,                   -- Edition identifier (e.g., "5th Edition"); nullable
+    embed BOOLEAN NOT NULL DEFAULT TRUE, -- Whether to include in semantic embedding
     search_vector tsvector,         -- Auto-generated via trigger
     added_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -397,6 +373,10 @@ CREATE TABLE library_works (
 **Key design patterns:**
 - **NOT NULL constraints enforce completeness** — the database rejects records without summary, insights, publication_date, etc.
 - **summary field is used for semantic embedding** — one high-density embedding per work instead of chunking full text
+- **edition field** — nullable; identifies specific editions (e.g., "5th Edition", "2nd Edition")
+- **embed flag** — controls whether a work is included in semantic embedding; defaults to `true`
+- **Unique index** on `(LOWER(title), COALESCE(edition, ''))` — prevents duplicate records (same title+edition)
+- **Partial index** on `embed WHERE embed = true` — optimizes embedding pipeline queries
 - **Check constraints** validate summary length (>50 chars), insights length (>20 chars), and work_type values
 - **tsvector trigger** auto-generates weighted search vectors (title=A, summary/abstract=B, insights=C, content=D)
 
@@ -444,16 +424,18 @@ See [Library Schema](library-schema.md) for full documentation.
 ```sql
 CREATE TABLE memory_embeddings (
     id SERIAL PRIMARY KEY,
-    source_type VARCHAR(50), -- agent_chat, entity_fact, event, etc.
+    source_type VARCHAR(50), -- agent_chat, entity_fact, event, lesson, library, etc.
     source_id TEXT, -- ID in source table
-    content TEXT, -- Text that was embedded
-    embedding VECTOR(1536), -- OpenAI embedding dimension
-    created_at TIMESTAMP DEFAULT NOW()
+    content TEXT NOT NULL, -- Text that was embedded
+    embedding VECTOR(1536), -- OpenAI text-embedding-3-small dimension
+    confidence REAL DEFAULT 1.0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Vector similarity index
-CREATE INDEX memory_embeddings_embedding_idx ON memory_embeddings 
-USING hnsw (embedding vector_cosine_ops);
+-- Vector similarity index (IVFFlat; only create after > 1000 rows — see INSTALLATION.md)
+CREATE INDEX idx_memory_embeddings_vector ON memory_embeddings 
+USING ivfflat (embedding vector_cosine_ops) WITH (lists='100');
 ```
 
 **Semantic search example:**
@@ -554,10 +536,10 @@ WHERE 'research' = ANY(skills) AND status = 'active';
 ### Recent Activity Timeline
 ```sql
 -- Combined timeline of recent events and lessons
-SELECT 'event' as type, date, event as description FROM events WHERE date > NOW() - INTERVAL '7 days'
+SELECT 'event' as type, event_date, title as description FROM events WHERE event_date > NOW() - INTERVAL '7 days'
 UNION ALL
 SELECT 'lesson', learned_at::date, lesson FROM lessons WHERE learned_at > NOW() - INTERVAL '7 days'
-ORDER BY date DESC;
+ORDER BY event_date DESC;
 ```
 
 ## Schema Maintenance
@@ -589,7 +571,7 @@ CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);
 CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
 CREATE INDEX IF NOT EXISTS idx_entity_facts_entity_id ON entity_facts(entity_id);
 CREATE INDEX IF NOT EXISTS idx_entity_facts_key ON entity_facts(key);
-CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
+CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
 CREATE INDEX IF NOT EXISTS idx_agent_chat_mentions ON agent_chat USING gin(mentions);
 ```
 
@@ -604,7 +586,7 @@ WHERE e.id IS NULL;
 
 -- Invalid relationships (self-referencing)
 SELECT * FROM entity_relationships 
-WHERE from_entity_id = to_entity_id;
+WHERE entity_a = entity_b;
 
 -- Projects with invalid status
 SELECT name, status FROM projects 

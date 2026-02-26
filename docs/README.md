@@ -71,9 +71,9 @@ LEFT JOIN entity_facts ef ON e.id = ef.entity_id
 WHERE e.name ILIKE 'druid';
 
 -- Recent events timeline
-SELECT date, event FROM events 
-WHERE date > NOW() - INTERVAL '7 days' 
-ORDER BY date DESC;
+SELECT event_date, title FROM events 
+WHERE event_date > NOW() - INTERVAL '7 days' 
+ORDER BY event_date DESC;
 
 -- Active projects  
 SELECT name, status, goal FROM projects 
@@ -107,7 +107,7 @@ tail -f ~/.openclaw/logs/memory-catchup.log
 ./scripts/search-memories.sh "pizza places in Brooklyn" 10
 
 # SQL full-text search
-psql -d nova_memory -c "
+psql -c "
 SELECT content FROM memory_embeddings 
 WHERE to_tsvector(content) @@ plainto_tsquery('brooklyn pizza');"
 ```
@@ -188,7 +188,7 @@ WHERE name = 'nova-memory';
 1. **Check API connectivity:** `echo "test" | ./scripts/extract-memories.sh`
 2. **Verify cron job:** `crontab -l | grep memory-catchup`  
 3. **Review logs:** `tail -50 ~/.openclaw/logs/memory-catchup.log`
-4. **Test database:** `psql -d nova_memory -c "SELECT COUNT(*) FROM entities;"`
+4. **Test database:** `psql -c "SELECT COUNT(*) FROM entities;"`
 
 ### Performance Problems
 1. **Check indexes:** `ANALYZE; EXPLAIN ANALYZE SELECT ...`
@@ -197,7 +197,7 @@ WHERE name = 'nova-memory';
 4. **Review slow queries:** `SELECT * FROM pg_stat_statements ORDER BY mean_time DESC;`
 
 ### Integration Failures
-1. **Verify Clawdbot hooks:** `openclaw hooks list`
+1. **Verify OpenClaw hooks:** `openclaw hooks list`
 2. **Test agent communication:** Insert test message in `agent_chat` table
 3. **Check environment variables:** `env | grep NOVA_MEMORY`
 4. **Review plugin logs:** `tail -f ~/.openclaw/logs/plugin-*.log`
@@ -211,10 +211,10 @@ vim ~/.openclaw/workspace/nova-memory/schema.sql
 
 # 2. Test on development database
 createdb nova_memory_test  
-psql -d nova_memory_test -f schema.sql
+psql_test -f schema.sql
 
 # 3. Run migration on production
-psql -d nova_memory -f migration-YYYY-MM-DD.sql
+psql -f migration-YYYY-MM-DD.sql
 
 # 4. Update documentation
 vim docs/database-schema-guide.md

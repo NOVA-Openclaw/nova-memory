@@ -132,7 +132,7 @@ All hooks have been updated to reference scripts using relative paths instead of
 
 **Before:**
 ```typescript
-const RECALL_SCRIPT = path.join(os.homedir(), "clawd/scripts/proactive-recall.py");
+const RECALL_SCRIPT = path.join(os.homedir(), ".openclaw/scripts/proactive-recall.py");
 ```
 
 **After:**
@@ -242,9 +242,9 @@ The installer and hooks use these environment variables:
 
 ### Optional Configuration
 - `OPENCLAW_WORKSPACE` - Override default workspace path
-- `PGUSER` - PostgreSQL user (default: nova)
-- `POSTGRES_HOST` - Database host (default: localhost)
-- `POSTGRES_DB` - Database name (default: nova_memory)
+- `PGUSER` - PostgreSQL user (default: current OS user)
+- `PGHOST` - Database host (default: localhost)
+- `PGDATABASE` - Database name (default: `${USER//-/_}_memory`, e.g., `nova_memory`)
 - `POSTGRES_PASSWORD` - Database password (optional)
 
 ### Hook-Specific Settings
@@ -291,9 +291,9 @@ The new `install.sh` copies hooks instead, which is more reliable.
 If you previously used symlinks, remove them first:
 
 ```bash
-rm -rf ~/.openclaw/workspace-coder/hooks/memory-extract
-rm -rf ~/.openclaw/workspace-coder/hooks/semantic-recall
-rm -rf ~/.openclaw/workspace-coder/hooks/session-init
+rm -rf ~/.openclaw/workspace/hooks/memory-extract
+rm -rf ~/.openclaw/workspace/hooks/semantic-recall
+rm -rf ~/.openclaw/workspace/hooks/session-init
 ```
 
 Then run the new installer:
@@ -331,7 +331,7 @@ pip3 install psycopg2-binary anthropic openai
 
 Check PostgreSQL is accepting connections:
 ```bash
-psql -U nova -d nova_memory -c '\conninfo'
+psql -c '\conninfo'
 ```
 
 ### Hook Not Working
@@ -420,7 +420,7 @@ nova-memory/
 
 ### After Installation (Workspace)
 ```
-~/.openclaw/workspace-coder/
+~/.openclaw/workspace/
 ├── hooks/                  # Installed hooks
 │   ├── memory-extract/     # → Uses ../../scripts/process-input.sh
 │   ├── semantic-recall/    # → Uses ../../scripts/proactive-recall.py

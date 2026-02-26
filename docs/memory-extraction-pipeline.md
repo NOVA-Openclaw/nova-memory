@@ -355,7 +355,7 @@ CREATE TABLE extraction_stats (
 );
 ```
 
-## Integration with Clawdbot
+## Integration with OpenClaw
 
 ### Hook Installation
 
@@ -368,7 +368,7 @@ export NOVA_MEMORY_SCRIPTS="/path/to/nova-memory/scripts"
 
 ### Memory Search Integration
 
-The extracted data becomes searchable via Clawdbot's memory system:
+The extracted data becomes searchable via OpenClaw's memory system:
 ```bash
 # Semantic search across all memory
 /memory_search "pizza places in Brooklyn" 
