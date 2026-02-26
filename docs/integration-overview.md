@@ -145,21 +145,13 @@ steps:
 
 ### 4. Subagent Context Inheritance
 
-Nova-cognition subagents automatically inherit memory context:
+OpenClaw subagents inherit memory context injected at spawn time. Workflow context (SOPs) is stored in `agent_bootstrap_context` and injected automatically via `get_agent_bootstrap()`.
 
 ```sql
--- Subagent seed context from agents table
-SELECT seed_context FROM agents WHERE name = 'research-agent';
--- Returns:
-{
-  "files": ["~/.openclaw/workspace/AGENTS.md", "~/.openclaw/workspace/MEMORY.md"],
-  "sops": ["research-methodology", "source-reliability-assessment"],
-  "db_queries": [
-    "SELECT lesson FROM lessons WHERE context ILIKE '%research%'",
-    "SELECT * FROM sops WHERE name LIKE 'research-%'"
-  ],
-  "context_template": "You are a research agent. Follow established SOPs and learn from past lessons."
-}
+-- Query an agent's bootstrap context (auto-injected at session start)
+SELECT file_key, LEFT(content, 100) as preview, source
+FROM get_agent_bootstrap('research')
+ORDER BY file_key;
 ```
 
 **Subagent spawning with memory:**
@@ -169,7 +161,7 @@ async def spawn_research_agent(topic: str, requester: str):
     # 1. Query memory for relevant context
     context_query = f"""
         SELECT content FROM memory_embeddings 
-        WHERE source_type IN ('lesson', 'entity_fact', 'sop')
+        WHERE source_type IN ('lesson', 'entity_fact')
         ORDER BY embedding <=> get_embedding('{topic}')
         LIMIT 10
     """
@@ -177,7 +169,7 @@ async def spawn_research_agent(topic: str, requester: str):
     
     # 2. Get agent configuration  
     agent_config = await db.fetchrow(
-        "SELECT seed_context, instantiation_sop FROM agents WHERE name = 'research-agent'"
+        "SELECT instantiation_sop FROM agents WHERE name = 'research-agent'"
     )
     
     # 3. Spawn with enriched context
@@ -187,8 +179,7 @@ async def spawn_research_agent(topic: str, requester: str):
             "topic": topic,
             "requester": requester,
             "memory_context": memory_context,
-            "sops": agent_config['seed_context']['sops'],
-            "instructions": f"Research {topic} using methodology SOPs and past lessons"
+            "instructions": f"Research {topic} using methodology from agent bootstrap context"
         }
     )
     
