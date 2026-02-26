@@ -65,6 +65,7 @@ The installer now **automatically enables hooks** in the OpenClaw config:
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
+openclaw hooks enable agent-turn-context
 openclaw gateway restart
 ```
 
@@ -281,6 +282,7 @@ If automatic configuration failed (e.g., jq not installed), you can manually ena
 openclaw hooks enable memory-extract
 openclaw hooks enable semantic-recall
 openclaw hooks enable session-init
+openclaw hooks enable agent-turn-context
 ```
 
 ## Manual Installation (Old Method)
@@ -288,12 +290,16 @@ openclaw hooks enable session-init
 The old `install-hooks.sh` script used symlinks, which caused issues with OpenClaw. 
 The new `install.sh` copies hooks instead, which is more reliable.
 
-If you previously used symlinks, remove them first:
+If you previously used symlinks (old method installed to `~/.openclaw/workspace/hooks/`), remove them first:
 
 ```bash
 rm -rf ~/.openclaw/workspace/hooks/memory-extract
 rm -rf ~/.openclaw/workspace/hooks/semantic-recall
 rm -rf ~/.openclaw/workspace/hooks/session-init
+rm -rf ~/.openclaw/hooks/memory-extract
+rm -rf ~/.openclaw/hooks/semantic-recall
+rm -rf ~/.openclaw/hooks/session-init
+rm -rf ~/.openclaw/hooks/agent-turn-context
 ```
 
 Then run the new installer:
@@ -404,13 +410,18 @@ SELECT COUNT(*) FROM memory_embeddings;
 ### Source Repository
 ```
 nova-memory/
-├── install.sh              # Comprehensive installer
+├── install.sh              # Comprehensive installer (legacy; prefer agent-install.sh)
+├── agent-install.sh        # Primary installer for AI agents
+├── shell-install.sh        # Human-facing installer (prompts for config, then execs agent-install.sh)
 ├── verify-installation.sh  # Verification script
 ├── schema.sql              # Database schema (idempotent)
+├── migrations/             # Incremental schema migrations (applied by agent-install.sh)
+│   └── 065_agent_turn_context.sql  # agent_turn_context table + get_agent_turn_context()
 ├── hooks/                  # OpenClaw hooks (source)
 │   ├── memory-extract/     # Extracts memories from messages
 │   ├── semantic-recall/    # Recalls relevant context
-│   └── session-init/       # Initializes session context
+│   ├── session-init/       # Initializes session context
+│   └── agent-turn-context/ # Injects per-turn critical context from DB
 └── scripts/                # Shell and Python scripts (source)
     ├── process-input.sh    # Entry point for memory extraction
     ├── extract-memories.sh # Memory extraction logic
@@ -420,16 +431,11 @@ nova-memory/
 
 ### After Installation (Workspace)
 ```
-~/.openclaw/workspace/
-├── hooks/                  # Installed hooks
-│   ├── memory-extract/     # → Uses ../../scripts/process-input.sh
-│   ├── semantic-recall/    # → Uses ../../scripts/proactive-recall.py
-│   └── session-init/       # → Uses ../../scripts/generate-session-context.sh
-└── scripts/                # Copied scripts (self-contained)
-    ├── process-input.sh
-    ├── extract-memories.sh
-    ├── proactive-recall.py
-    └── ...
+~/.openclaw/hooks/
+├── memory-extract/         # → Uses scripts/process-input.sh
+├── semantic-recall/        # → Uses scripts/proactive-recall.py
+├── session-init/           # → Uses scripts/generate-session-context.sh
+└── agent-turn-context/     # → Queries agent_turn_context table directly via DB
 ```
 
 All hooks use **relative paths** to find scripts in `../../scripts/` from their location.

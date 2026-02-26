@@ -60,6 +60,21 @@ This is the source of truth for persistent information.
 | `sops` | Standard Operating Procedures |
 | `vocabulary` | Words for STT correction |
 | `preferences` | User and system preferences |
+| `agent_turn_context` | Per-turn context injected before every agent response (UNIVERSAL → GLOBAL → DOMAIN → AGENT priority) |
+
+#### Turn Context Injection (`agent_turn_context`)
+
+The `agent_turn_context` table stores short, high-priority context records that are injected into **every agent turn** via the `agent-turn-context` hook. Unlike `agent_bootstrap_context` (session-level bootstrap), these records fire on every `message:received` event.
+
+**Key properties:**
+- Each record capped at **500 characters** (CHECK constraint in DB)
+- Total injected per agent capped at **2000 characters** (enforced by `get_agent_turn_context()`)
+- Truncation appends a visible warning to the agent: `⚠️ Turn context truncated — some critical rules may be missing.`
+- Cache TTL: **5 minutes** per agent — avoids per-turn DB queries
+- Scopes: `UNIVERSAL` (all agents), `GLOBAL` (all agents), `DOMAIN` (agents in matching `agent_domains`), `AGENT` (specific agent)
+
+**Migration:** `migrations/065_agent_turn_context.sql`  
+**Hook:** `hooks/agent-turn-context/` (handler.ts, package.json, HOOK.md)
 
 #### SOPs (Standard Operating Procedures)
 
