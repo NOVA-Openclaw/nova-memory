@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict TxBGdkIR4dC2LFe0q6a49n7ldqrzCf3d3nUz8L9VklGqcScJlXXZLJWuQfVQ7jt
+\restrict ClO8l4cQBRSnuoIuaWLaQB4zGGSH2lkmnLJJLpmLeWkfL9zKXvaVSHcctCTLN31
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -671,26 +671,62 @@ BEGIN
 
         UNION ALL
 
-        -- 4. WORKFLOW — inject workflows the agent participates in (by domain overlap)
+        -- 4. WORKFLOW — inject workflow SUMMARIES with agent role context
         SELECT
             'WORKFLOW_' || upper(replace(w.name, '-', '_')) || '.md' AS filename,
             w.name || ': ' || w.description ||
-            CASE WHEN steps_text IS NOT NULL
-                 THEN E'\n\nSteps:\n' || steps_text
-                 ELSE ''
-            END AS content,
+            E'\n\n' ||
+            -- Orchestrator note
+            CASE WHEN EXISTS (
+                SELECT 1 FROM agent_domains ad
+                WHERE ad.agent_id = v_agent_id
+                  AND ad.domain_topic = w.orchestrator_domain
+            )
+            THEN 'You are the **orchestrator** of this workflow (via ' || w.orchestrator_domain || ' domain). '
+                 || 'You are responsible for reading and understanding the entire workflow, maintaining state, delegating to domain-appropriate agents, and tracking progress.'
+                 || E'\n\n'
+            ELSE ''
+            END ||
+            -- Agent's steps
+            'Your steps: ' || COALESCE(agent_steps.step_list, 'none directly assigned') ||
+            E'\n' ||
+            -- All domains
+            'All domains involved: ' || COALESCE(all_domains.domain_list, 'none') ||
+            ' (' || COALESCE(step_count.cnt, 0) || ' steps total).' ||
+            E'\n\n' ||
+            '> When you are employed to participate in this workflow, understand your role and what is expected of you in the steps you own before beginning. ' ||
+            'Query your steps for full details:' ||
+            E'\n> ```sql' ||
+            E'\n> SELECT step_order, domain, requires_discussion, requires_authorization, description' ||
+            E'\n> FROM workflow_steps WHERE workflow_id = ' || w.id || ' ORDER BY step_order;' ||
+            E'\n> ```'
+            AS content,
             'workflow:' || w.name AS source,
             4 AS priority
         FROM workflows w
+        -- Agent's specific steps (by domain match)
         LEFT JOIN LATERAL (
             SELECT string_agg(
-                ws.step_order || '. ' || ws.description ||
-                COALESCE(' [domain: ' || ws.domain || ']', ''),
-                E'\n' ORDER BY ws.step_order
-            ) AS steps_text
+                'Step ' || ws.step_order || ' (' || ws.domain || ')',
+                ', ' ORDER BY ws.step_order
+            ) AS step_list
+            FROM workflow_steps ws
+            JOIN agent_domains ad ON ad.agent_id = v_agent_id
+            WHERE ws.workflow_id = w.id
+              AND (ad.domain_topic = ws.domain OR ad.domain_topic = ANY(ws.domains))
+        ) agent_steps ON true
+        -- All domains across all steps
+        LEFT JOIN LATERAL (
+            SELECT string_agg(DISTINCT ws.domain, ', ' ORDER BY ws.domain) AS domain_list
             FROM workflow_steps ws
             WHERE ws.workflow_id = w.id
-        ) ws_agg ON true
+        ) all_domains ON true
+        -- Step count
+        LEFT JOIN LATERAL (
+            SELECT count(*)::int AS cnt
+            FROM workflow_steps ws
+            WHERE ws.workflow_id = w.id
+        ) step_count ON true
         WHERE w.status = 'active'
           AND (
             -- Workflow's orchestrator domain matches one of the agent's domains
@@ -10593,5 +10629,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict TxBGdkIR4dC2LFe0q6a49n7ldqrzCf3d3nUz8L9VklGqcScJlXXZLJWuQfVQ7jt
+\unrestrict ClO8l4cQBRSnuoIuaWLaQB4zGGSH2lkmnLJJLpmLeWkfL9zKXvaVSHcctCTLN31
 
