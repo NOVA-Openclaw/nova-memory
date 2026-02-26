@@ -843,6 +843,15 @@ echo "Scripts setup..."
 SCRIPTS_SOURCE="$SCRIPT_DIR/scripts"
 SCRIPTS_TARGET_WORKSPACE="$WORKSPACE/scripts"
 SCRIPTS_TARGET_OPENCLAW="$HOME/.openclaw/scripts"
+OPENCLAW_LOGS_DIR="$HOME/.openclaw/logs"
+
+# Ensure logs directory exists
+if [ ! -d "$OPENCLAW_LOGS_DIR" ]; then
+    mkdir -p "$OPENCLAW_LOGS_DIR"
+    echo -e "  ${CHECK_MARK} Created logs directory: $OPENCLAW_LOGS_DIR"
+else
+    echo -e "  ${INFO} Logs directory exists: $OPENCLAW_LOGS_DIR"
+fi
 
 # Copy scripts directory to both locations:
 # 1. Workspace scripts (for hooks using relative paths)
@@ -1461,7 +1470,7 @@ if [ -n "${GATEWAY_RESTART_NEEDED:-}" ]; then
     echo "   $0 --verify-only"
     echo ""
     echo "3. Check logs:"
-    echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
+    echo "   tail -f ~/.openclaw/logs/memory-extract-hook.log"
     echo ""
 else
     echo "1. Hooks were not automatically enabled. Enable them manually:"
@@ -1479,6 +1488,6 @@ else
     echo "   $0 --verify-only"
     echo ""
     echo "5. Check logs:"
-    echo "   tail -f ~/clawd/logs/memory-extract-hook.log"
+    echo "   tail -f ~/.openclaw/logs/memory-extract-hook.log"
     echo ""
 fi

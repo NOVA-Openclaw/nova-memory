@@ -132,7 +132,7 @@ All hooks have been updated to reference scripts using relative paths instead of
 
 **Before:**
 ```typescript
-const RECALL_SCRIPT = path.join(os.homedir(), "clawd/scripts/proactive-recall.py");
+const RECALL_SCRIPT = path.join(os.homedir(), ".openclaw/scripts/proactive-recall.py");
 ```
 
 **After:**

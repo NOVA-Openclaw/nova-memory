@@ -161,12 +161,12 @@ chmod +x scripts/*.sh
 ### 1. Install Clawdbot
 
 ```bash
-# Install Clawdbot (if not already installed)
+# Install OpenClaw (if not already installed)
 npm install -g openclaw
 
 # Initialize workspace
-mkdir -p ~/clawd
-cd ~/clawd
+mkdir -p ~/.openclaw/workspace
+cd ~/.openclaw/workspace
 openclaw init
 ```
 
@@ -284,7 +284,7 @@ sudo systemctl start nova-memory.service
 ```bash
 # Clone plugin repository  
 git clone https://github.com/NOVA-Openclaw/nova_scripts.git
-cp -r nova_scripts/clawdbot-plugins/agent-chat-channel ~/.openclaw/workspace/plugins/
+cp -r nova_scripts/openclaw-plugins/agent-chat-channel ~/.openclaw/workspace/plugins/
 
 # Enable plugin
 openclaw plugins enable agent-chat-channel

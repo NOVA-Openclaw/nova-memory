@@ -19,7 +19,7 @@ This guide explains how nova-memory integrates with nova-cognition to create a c
 │         ↕ ️              │              ↕️                       │
 │    SHARED PROTOCOLS     │       SHARED DATABASE                 │
 ├─────────────────────────┴───────────────────────────────────────┤
-│                      CLAWDBOT RUNTIME                           │
+│                      OPENCLAW RUNTIME                           │
 │            Sessions • Hooks • Plugins • Tools                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -41,8 +41,8 @@ INSERT INTO agents (
     'Specialized coding agent with Ralph Loop patterns',
     'coding',
     'anthropic', 'claude-sonnet-4',
-    'clawdbot_session', 
-    '{"session_key": "agent:coder:main", "workspace": "/home/nova/projects"}',
+    'openclaw_session', 
+    '{"session_key": "agent:coder:main", "workspace": "~/.openclaw/workspace"}',
     ARRAY['git', 'code-review', 'debugging', 'refactoring'],
     false, -- Task-based, not collaborative
     false, -- Ephemeral, spawned on-demand  
@@ -181,7 +181,7 @@ async def spawn_research_agent(topic: str, requester: str):
     )
     
     # 3. Spawn with enriched context
-    subagent = await clawdbot.spawn_subagent(
+    subagent = await openclaw.spawn_subagent(
         agent_name="research-agent",
         initial_context={
             "topic": topic,

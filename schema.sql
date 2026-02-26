@@ -2160,7 +2160,7 @@ COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_comman
 -- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: newhart
 --
 
-COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
+COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or openclaw config path for credentials';
 
 
 --
@@ -4904,7 +4904,7 @@ COMMENT ON COLUMN public.projects.locked IS 'When TRUE, project is repo-backed. 
 -- Name: COLUMN projects.skills; Type: COMMENT; Schema: public; Owner: nova
 --
 
-COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/clawd/skills/) relevant to this project';
+COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/.openclaw/workspace/skills/) relevant to this project';
 
 
 --

@@ -64,7 +64,10 @@ CREATE TABLE entity_facts (
     value TEXT NOT NULL,
     confidence FLOAT DEFAULT 1.0,
     source VARCHAR(255),
-    created_at TIMESTAMP DEFAULT NOW()
+    learned_at TIMESTAMP DEFAULT NOW(),
+    data_type VARCHAR(20) DEFAULT 'observation', -- permanent, identity, preference, temporal, observation
+    vote_count INT DEFAULT 1,
+    last_confirmed TIMESTAMP DEFAULT NOW()
 );
 ```
 
@@ -93,18 +96,19 @@ WHERE e.name = 'druid' AND ef.key = 'preference';
 ```sql
 CREATE TABLE entity_relationships (
     id SERIAL PRIMARY KEY,
-    from_entity_id INT REFERENCES entities(id),
-    to_entity_id INT REFERENCES entities(id),
-    relationship_type VARCHAR(100), -- friend, colleague, reports_to, member_of
-    strength INT DEFAULT 5, -- 1-10 scale
+    entity_a INT REFERENCES entities(id),
+    entity_b INT REFERENCES entities(id),
+    relationship VARCHAR(100) NOT NULL, -- friend, colleague, reports_to, member_of
+    since TIMESTAMP,
     notes TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    is_long_distance BOOLEAN DEFAULT FALSE,
+    seriousness VARCHAR(20) DEFAULT 'standard'
 );
 ```
 
 **Relationship types:**
 - **friend, colleague, mentor** - Personal connections
-- **reports_to, manages** - Organizational hierarchy  
+- **partner, casual** - Romantic/relationship connections  
 - **member_of, founder_of** - Group membership
 - **collaborates_with** - Working relationships
 
@@ -199,7 +203,7 @@ CREATE TABLE agents (
     role VARCHAR(100), -- general, coding, research, quick-qa, monitoring
     provider VARCHAR(50), -- anthropic, google, openai, local
     model VARCHAR(100), -- claude-sonnet-4, gemini-2.0-flash
-    access_method VARCHAR(50), -- clawdbot_session, cli, api, browser
+    access_method VARCHAR(50), -- openclaw_session, cli, api, browser
     access_details JSONB, -- connection info
     skills TEXT[], -- capabilities array
     credential_ref VARCHAR(200), -- 1Password item reference
@@ -225,7 +229,7 @@ COMMENT ON TABLE agents IS 'Agent registry. READ-ONLY for most agents. Modificat
 | **Monitoring Agent** | true | false | System health, alerts |
 
 **Access Methods:**
-- **clawdbot_session:** Spawn via Clawdbot subagent system
+- **openclaw_session:** Spawn via OpenClaw subagent system
 - **cli:** Command-line tools (e.g., `gemini "prompt"`)
 - **api:** Direct API endpoints
 - **browser:** Web-based interfaces

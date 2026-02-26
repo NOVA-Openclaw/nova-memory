@@ -646,7 +646,7 @@ VACUUM ANALYZE memory_embeddings;
 ### 1. Clawdbot Integration
 
 ```javascript
-// clawdbot-plugin: semantic-memory-search
+// openclaw-plugin: semantic-memory-search
 const { spawn } = require('child_process');
 
 function searchMemories(query, limit = 10) {

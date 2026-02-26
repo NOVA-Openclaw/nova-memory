@@ -25,8 +25,8 @@ import psycopg2
 import openai
 
 # Configuration
-MEMORY_DIR = Path.home() / "clawd" / "memory"
-MEMORY_MD = Path.home() / "clawd" / "MEMORY.md"
+MEMORY_DIR = Path.home() / ".openclaw" / "workspace" / "memory"
+MEMORY_MD = Path.home() / ".openclaw" / "workspace" / "MEMORY.md"
 CHUNK_SIZE = 1000  # Characters per chunk (with overlap)
 CHUNK_OVERLAP = 200
 EMBEDDING_MODEL = "text-embedding-3-small"
@@ -48,7 +48,7 @@ def get_openai_client():
 
     if not api_key:
         # Legacy fallback
-        config_path = Path.home() / ".clawdbot" / "clawdbot.json"
+        config_path = Path.home() / ".openclaw" / "openclaw.json"
         if config_path.exists():
             with open(config_path) as f:
                 config = json.load(f)
