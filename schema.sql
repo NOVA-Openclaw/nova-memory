@@ -1776,6 +1776,24 @@ ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNED BY public.agent_boots
 
 
 --
+-- Name: agent_turn_context; Type: TABLE; Schema: public; Owner: nova
+-- Issue: https://github.com/NOVA-Openclaw/nova-memory/issues/143
+--
+
+CREATE TABLE IF NOT EXISTS public.agent_turn_context (
+    id SERIAL PRIMARY KEY,
+    context_type TEXT NOT NULL CHECK (context_type IN ('UNIVERSAL', 'GLOBAL', 'DOMAIN', 'AGENT')),
+    context_key TEXT NOT NULL,
+    file_key TEXT NOT NULL,
+    content TEXT NOT NULL CHECK (LENGTH(content) > 0 AND LENGTH(content) <= 500),
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (context_type, file_key)
+);
+
+
+--
 -- Name: agent_chat; Type: TABLE; Schema: public; Owner: nova
 --
 

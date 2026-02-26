@@ -262,6 +262,21 @@ SELECT COUNT(*) FROM updated;" 2>/dev/null | tr -d '[:space:]')
     fi
 
     # ----------------------------------------------------------------
+    # agent_turn_context table (issue #143)
+    # ----------------------------------------------------------------
+    TABLE_EXISTS=$(_psql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='agent_turn_context';" | tr -d '[:space:]')
+    if [ "$TABLE_EXISTS" = "0" ]; then
+        MIGRATION_FILE="$SCRIPT_DIR/migrations/065_agent_turn_context.sql"
+        if [ -f "$MIGRATION_FILE" ]; then
+            psql -U "$DB_USER" -d "$DB_NAME" -f "$MIGRATION_FILE" > /dev/null 2>&1
+            echo -e "  ${CHECK_MARK} Created table 'agent_turn_context' and function 'get_agent_turn_context'"
+            MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+        else
+            echo -e "  ${WARNING} Migration file not found: $MIGRATION_FILE"
+        fi
+    fi
+
+    # ----------------------------------------------------------------
     # Summary
     # ----------------------------------------------------------------
     if [ "$MIGRATIONS_APPLIED" -eq 0 ]; then
@@ -545,7 +560,7 @@ verify_config() {
         echo -e "  ${CHECK_MARK} OpenClaw hook config exists"
         
         # Check if our hooks are registered
-        for hook in "memory-extract" "semantic-recall" "session-init"; do
+        for hook in "memory-extract" "semantic-recall" "session-init" "agent-turn-context"; do
             if grep -q "\"$hook\"" "$HOOK_CONFIG" 2>/dev/null; then
                 ENABLED=$(grep -A5 "\"$hook\"" "$HOOK_CONFIG" | grep -c "\"enabled\": true" || echo "0")
                 if [ "$ENABLED" -gt 0 ]; then
@@ -820,7 +835,7 @@ install_hook() {
 # Install each hook
 INSTALLED_HOOKS=()
 SKIPPED_HOOKS=()
-for hook in "memory-extract" "semantic-recall" "session-init"; do
+for hook in "memory-extract" "semantic-recall" "session-init" "agent-turn-context"; do
     install_hook "$hook" && result=$? || result=$?
     if [ $result -eq 0 ]; then
         INSTALLED_HOOKS+=("$hook")
@@ -1125,6 +1140,7 @@ else
         echo "      • memory-extract"
         echo "      • semantic-recall"
         echo "      • session-init"
+        echo "      • agent-turn-context"
         GATEWAY_RESTART_NEEDED=1
     else
         echo -e "  ${WARNING} Failed to patch OpenClaw config"
