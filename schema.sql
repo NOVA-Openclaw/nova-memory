@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 72ZYRYQR0Sh039Kwy7CfyUwaOmP9QfxCLDvzmVUZ9akxEbi4HmEimggdoWJUmWi
+\restrict zQAyjFlGJjuo2JhWpRKDGPB0yZ2nP3nEJwuL5cKyJSILdzD7g2XllNoductMybD
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -9218,13 +9218,6 @@ ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agent_turn_context WH
 
 
 --
--- Name: graybeard_sync_pub agents; Type: PUBLICATION TABLE; Schema: public; Owner: postgres
---
-
-ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agents WHERE (((name)::text = 'graybeard'::text));
-
-
---
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
 --
 
@@ -10805,5 +10798,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 72ZYRYQR0Sh039Kwy7CfyUwaOmP9QfxCLDvzmVUZ9akxEbi4HmEimggdoWJUmWi
+\unrestrict zQAyjFlGJjuo2JhWpRKDGPB0yZ2nP3nEJwuL5cKyJSILdzD7g2XllNoductMybD
 
