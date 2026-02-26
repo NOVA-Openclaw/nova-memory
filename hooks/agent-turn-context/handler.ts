@@ -99,7 +99,7 @@ const handler = async (event: any) => {
     const ctx = await getTurnContext(agentName);
 
     if (ctx.content) {
-      let injected = ctx.content;
+      let injected = '📌 **Per-Turn Reminders:**\n' + ctx.content;
 
       if (ctx.truncated) {
         console.warn(
