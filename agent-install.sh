@@ -847,7 +847,7 @@ OPENCLAW_LOGS_DIR="$HOME/.openclaw/logs"
 
 # Ensure logs directory exists
 if [ ! -d "$OPENCLAW_LOGS_DIR" ]; then
-    mkdir -p "$OPENCLAW_LOGS_DIR"
+    mkdir -p "$HOME/.openclaw/logs"
     echo -e "  ${CHECK_MARK} Created logs directory: $OPENCLAW_LOGS_DIR"
 else
     echo -e "  ${INFO} Logs directory exists: $OPENCLAW_LOGS_DIR"
