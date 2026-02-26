@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0IshkSbyfWYKKLgHddByHFzPrC0OhdLIGW692tuzo1PyRCdzjdL87FRKHSZcLGT
+\restrict ybRFBw3SoaSb5oH8lYDCUI3y7gaxajMatrUin1bblqjIhT2UuNhtbomYOCJkMvc
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -1094,7 +1094,6 @@ BEGIN
         'id', NEW.id,
         'workflow_id', NEW.workflow_id,
         'step_order', NEW.step_order,
-        'agent_id', NEW.agent_id,
         'description', NEW.description,
         'domain', NEW.domain
     )::text);
@@ -10578,5 +10577,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0IshkSbyfWYKKLgHddByHFzPrC0OhdLIGW692tuzo1PyRCdzjdL87FRKHSZcLGT
+\unrestrict ybRFBw3SoaSb5oH8lYDCUI3y7gaxajMatrUin1bblqjIhT2UuNhtbomYOCJkMvc
 
