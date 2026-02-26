@@ -39,10 +39,10 @@ CREATE TABLE memory_embeddings (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Vector similarity index (HNSW for fast approximate search)
-CREATE INDEX memory_embeddings_embedding_idx 
+-- Vector similarity index (IVFFlat; only create after > 1000 embeddings — see INSTALLATION.md)
+CREATE INDEX idx_memory_embeddings_vector
 ON memory_embeddings 
-USING hnsw (embedding vector_cosine_ops);
+USING ivfflat (embedding vector_cosine_ops) WITH (lists='100');
 ```
 
 ### 2. Automatic Embedding Generation
@@ -77,7 +77,7 @@ A background service processes embeddings that don't have vectors yet:
 #!/bin/bash
 
 # Find records without embeddings
-psql -U nova -d nova_memory -t -c "
+psql -t -c "
 SELECT id, content FROM memory_embeddings 
 WHERE embedding IS NULL 
 ORDER BY created_at ASC 
@@ -87,11 +87,11 @@ LIMIT 50;" | while IFS='|' read -r id content; do
     embedding=$(curl -s https://api.openai.com/v1/embeddings \
         -H "Authorization: Bearer $OPENAI_API_KEY" \
         -H "Content-Type: application/json" \
-        -d "{\"input\": \"$content\", \"model\": \"text-embedding-ada-002\"}" \
+        -d "{\"input\": \"$content\", \"model\": \"text-embedding-3-small\"}" \
         | jq -r '.data[0].embedding | @json')
     
     # Store embedding in database
-    psql -U nova -d nova_memory -c "
+    psql -c "
         UPDATE memory_embeddings 
         SET embedding = '$embedding'::vector, 
             updated_at = NOW() 
@@ -236,7 +236,7 @@ When memories are extracted and stored, they're automatically queued for embeddi
 # In store-memories.sh, after inserting data:
 
 # Check if new entities were created
-NEW_ENTITIES=$(psql -U nova -d nova_memory -t -c "
+NEW_ENTITIES=$(psql -t -c "
     SELECT COUNT(*) FROM entities 
     WHERE created_at > NOW() - INTERVAL '1 minute';")
 
@@ -308,11 +308,11 @@ fi
 QUERY_EMBEDDING=$(curl -s https://api.openai.com/v1/embeddings \
     -H "Authorization: Bearer $OPENAI_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"input\": \"$QUERY\", \"model\": \"text-embedding-ada-002\"}" \
+    -d "{\"input\": \"$QUERY\", \"model\": \"text-embedding-3-small\"}" \
     | jq -r '.data[0].embedding | @json')
 
 # Search database
-psql -U nova -d nova_memory -c "
+psql -c "
 SELECT 
     source_type,
     substring(content, 1, 100) as preview,
@@ -353,14 +353,14 @@ async def search_memories(request: SearchRequest):
     # Generate query embedding
     response = openai.Embedding.create(
         input=request.query,
-        model="text-embedding-ada-002"
+        model="text-embedding-3-small"
     )
     query_embedding = response['data'][0]['embedding']
     
     # Search database
     conn = psycopg2.connect(
         host="localhost",
-        database="nova_memory", 
+        # use ~/.openclaw/postgres.json or PGDATABASE env var, 
         user="nova",
         password="nova_password"
     )
@@ -501,20 +501,14 @@ $$ LANGUAGE plpgsql;
 ```sql
 -- Different index types for different query patterns
 
--- HNSW for approximate nearest neighbor (default)
-CREATE INDEX memory_embeddings_hnsw_idx 
-ON memory_embeddings 
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
-
--- IVFFlat for exact search (slower but precise)
--- WARNING: Only create IVFFlat index after you have > 1000 embeddings
--- With < 1000 rows, IVFFlat breaks queries and returns wrong results
+-- IVFFlat for approximate nearest neighbor (used in production schema)
+-- WARNING: Only create after you have > 1000 embeddings
+-- With < 1000 rows, IVFFlat returns wrong results — use exact search (no index) instead
 -- See INSTALLATION.md for details
--- CREATE INDEX memory_embeddings_ivf_idx
--- ON memory_embeddings  
--- USING ivfflat (embedding vector_cosine_ops)
--- WITH (lists = 100);
+CREATE INDEX idx_memory_embeddings_vector
+ON memory_embeddings 
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
 
 -- Composite indexes for filtered searches
 CREATE INDEX memory_embeddings_type_embedding_idx
@@ -560,7 +554,7 @@ DELAY=1  # Seconds between batches
 
 while true; do
     # Get batch of unembedded content
-    BATCH=$(psql -U nova -d nova_memory -t -c "
+    BATCH=$(psql -t -c "
         SELECT id, content FROM memory_embeddings 
         WHERE embedding IS NULL 
         LIMIT $BATCH_SIZE;" | grep -v '^$')
@@ -726,7 +720,7 @@ Support for image and audio content:
 -- Extended embedding table
 ALTER TABLE memory_embeddings ADD COLUMN content_type VARCHAR(20) DEFAULT 'text';
 ALTER TABLE memory_embeddings ADD COLUMN media_url TEXT;
-ALTER TABLE memory_embeddings ADD COLUMN embedding_model VARCHAR(50) DEFAULT 'text-embedding-ada-002';
+ALTER TABLE memory_embeddings ADD COLUMN embedding_model VARCHAR(50) DEFAULT 'text-embedding-3-small';
 
 -- Different embedding dimensions for different modalities
 ALTER TABLE memory_embeddings ALTER COLUMN embedding TYPE VECTOR(1024); -- CLIP embeddings
@@ -771,7 +765,7 @@ import psycopg2
 from asyncpg import Connection
 
 async def stream_search_updates(query_embedding: list[float]):
-    conn = await asyncpg.connect("postgresql://nova:pass@localhost/nova_memory")
+    conn = await asyncpg.connect(os.environ.get("DATABASE_URL")  # use pg-env.py to load credentials)
     
     await conn.add_listener('new_embedding', handle_new_embedding)
     

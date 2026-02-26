@@ -70,10 +70,10 @@ conn = psycopg2.connect(
 ### From nova-memory installer
 ```bash
 # Default: uses ${USER}_memory
-./install.sh
+./agent-install.sh
 
 # Override for shared database
-./install.sh --database nova_memory
+./agent-install.sh --database nova_memory
 ```
 
 ## Configuration

@@ -49,10 +49,11 @@ sudo systemctl enable postgresql
 # Set password for postgres user
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'secure_password';"
 
-# Create nova user and database
-sudo -u postgres createuser nova --createdb --login
-sudo -u postgres psql -c "ALTER USER nova PASSWORD 'nova_password';"
-sudo -u postgres createdb nova_memory --owner=nova
+# Create your OS user's database (database name follows the pattern ${USER}_memory)
+DB_USER=$(whoami)
+DB_NAME="${DB_USER//-/_}_memory"
+sudo -u postgres createuser "$DB_USER" --createdb --login
+sudo -u postgres createdb "$DB_NAME" --owner="$DB_USER"
 ```
 
 ### 2. Install pgvector Extension
@@ -101,14 +102,13 @@ sudo systemctl restart postgresql
 
 ```bash
 # Clone nova-memory repository
-git clone https://github.com/NOVA-Openclaw/nova-memory.git
-cd nova-memory
+git clone https://github.com/NOVA-Openclaw/nova-memory.git ~/.openclaw/workspace/nova-memory
+cd ~/.openclaw/workspace/nova-memory
 
-# Apply database schema
-psql -U nova -d nova_memory -f schema.sql
-
-# Verify installation
-psql -U nova -d nova_memory -c "\dt"
+# Run the installer (handles schema application, hooks, and config)
+./shell-install.sh    # Interactive: prompts for DB details and API keys
+# OR
+./agent-install.sh    # Non-interactive: reads ~/.openclaw/postgres.json
 ```
 
 ## Environment Configuration
@@ -117,33 +117,26 @@ psql -U nova -d nova_memory -c "\dt"
 
 Create environment configuration:
 
+Database credentials are managed through `~/.openclaw/postgres.json` (created by `shell-install.sh`):
+
+```json
+{
+  "host": "localhost",
+  "port": 5432,
+  "database": "nova_memory",
+  "user": "nova",
+  "password": "your_password"
+}
+```
+
+See [Database Configuration](database-config.md) for full details on the config file format and resolution order.
+
+API keys go in `~/.openclaw/openclaw.json` (also created by `shell-install.sh`):
+
 ```bash
-# Create .env file
-cat > ~/.nova-memory-env << EOF
-# Database connection
-PGHOST=localhost
-PGPORT=5432
-PGUSER=nova
-PGPASSWORD=nova_password
-PGDATABASE=nova_memory
-
-# API keys
-ANTHROPIC_API_KEY=your_anthropic_key_here
-OPENAI_API_KEY=your_openai_key_here  # Optional: for embeddings
-
-# Script paths
-NOVA_MEMORY_SCRIPTS=$(pwd)/scripts
-NOVA_MEMORY_ROOT=$(pwd)
-
-# Processing settings
-EXTRACTION_BATCH_SIZE=3
-CONTEXT_WINDOW_SIZE=20
-MAX_API_CALLS_PER_MINUTE=10
-EOF
-
-# Source in shell profiles
-echo "source ~/.nova-memory-env" >> ~/.bashrc
-source ~/.nova-memory-env
+# Or set directly in environment:
+export ANTHROPIC_API_KEY=your_anthropic_key_here
+export OPENAI_API_KEY=your_openai_key_here  # Required for semantic recall embeddings
 ```
 
 ### 2. Script Permissions
@@ -156,31 +149,26 @@ chmod +x scripts/*.sh
 ./scripts/process-input.sh "Test setup - Hello world"
 ```
 
-## Clawdbot Integration
+## OpenClaw Integration
 
-### 1. Install Clawdbot
+### 1. Install Hooks
 
 ```bash
-# Install OpenClaw (if not already installed)
-npm install -g openclaw
-
-# Initialize workspace
-mkdir -p ~/.openclaw/workspace
-cd ~/.openclaw/workspace
-openclaw init
+# Run the agent installer (handles hook installation automatically)
+cd ~/.openclaw/workspace/nova-memory
+./agent-install.sh
 ```
 
-### 2. Memory Hook Installation
+The installer copies hooks to the OpenClaw hooks directory and enables them automatically.
+
+### 2. Memory Hook Installation (Manual)
 
 ```bash
 # Copy memory extraction hook
-cp -r ~/nova-memory/hooks/memory-extract ~/.openclaw/workspace/hooks/
+cp -r ~/.openclaw/workspace/nova-memory/hooks/memory-extract ~/.openclaw/workspace/hooks/
 
 # Enable the hook
 openclaw hooks enable memory-extract
-
-# Configure hook environment
-echo "NOVA_MEMORY_SCRIPTS=$HOME/nova-memory/scripts" >> ~/.openclaw/workspace/.env
 ```
 
 ### 3. Agent Configuration
@@ -306,10 +294,10 @@ SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction';
 
 ```bash
 # Terminal 1: Start listener
-psql -U nova -d nova_memory -c "LISTEN agent_chat;"
+psql -c "LISTEN agent_chat;"
 
 # Terminal 2: Send message  
-psql -U nova -d nova_memory -c "INSERT INTO agent_chat (sender, message, mentions) VALUES ('nova', 'Hello world', ARRAY['test_agent']);"
+psql -c "INSERT INTO agent_chat (sender, message, mentions) VALUES ('nova', 'Hello world', ARRAY['test_agent']);"
 ```
 
 ## Performance Optimization
@@ -392,7 +380,7 @@ echo "=== NOVA Memory System Health Check ==="
 
 # Database connectivity
 echo -n "Database connection: "
-if psql -U nova -d nova_memory -c "SELECT 1" >/dev/null 2>&1; then
+if psql -c "SELECT 1" >/dev/null 2>&1; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
@@ -405,7 +393,7 @@ EXPECTED_TABLES=("entities" "entity_facts" "projects" "agents" "agent_chat" "sop
 MISSING_TABLES=()
 
 for table in "${EXPECTED_TABLES[@]}"; do
-    if ! psql -U nova -d nova_memory -c "\dt $table" 2>/dev/null | grep -q "$table"; then
+    if ! psql -c "\dt $table" 2>/dev/null | grep -q "$table"; then
         MISSING_TABLES+=("$table")
     fi
 done
@@ -438,7 +426,7 @@ fi
 
 # Recent extraction activity
 echo -n "Recent extractions: "
-RECENT_COUNT=$(psql -U nova -d nova_memory -t -c "SELECT COUNT(*) FROM entities WHERE created_at > NOW() - INTERVAL '1 hour';" 2>/dev/null || echo 0)
+RECENT_COUNT=$(psql -t -c "SELECT COUNT(*) FROM entities WHERE created_at > NOW() - INTERVAL '1 hour';" 2>/dev/null || echo 0)
 if [ "$RECENT_COUNT" -gt 0 ]; then
     echo -e "${GREEN}$RECENT_COUNT in last hour${NC}"
 else
@@ -490,7 +478,7 @@ SELECT * FROM system_stats;
 ### 1. Database Security
 
 ```sql
--- Create read-only user for monitoring
+-- Create read-only user for monitoring (replace nova_memory with your actual DB name)
 CREATE USER nova_readonly WITH PASSWORD 'readonly_password';
 GRANT CONNECT ON DATABASE nova_memory TO nova_readonly;
 GRANT USAGE ON SCHEMA public TO nova_readonly;
@@ -503,10 +491,10 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 ### 2. File Permissions
 
 ```bash
-# Secure configuration files
-chmod 600 ~/.nova-memory-env
-chmod 700 ~/nova-memory/scripts/
-chmod +x ~/nova-memory/scripts/*.sh
+# Secure OpenClaw config directory
+chmod 700 ~/.openclaw/
+chmod 600 ~/.openclaw/postgres.json
+chmod +x ~/.openclaw/workspace/nova-memory/scripts/*.sh
 
 # Secure log directory
 mkdir -p ~/.openclaw/logs
@@ -604,7 +592,7 @@ BACKUP_FILE="$BACKUP_DIR/nova_memory_$DATE.sql"
 mkdir -p "$BACKUP_DIR"
 
 # Create backup
-pg_dump -U nova -d nova_memory -f "$BACKUP_FILE"
+pg_dump -f "$BACKUP_FILE"
 
 # Compress
 gzip "$BACKUP_FILE"
@@ -625,10 +613,10 @@ chmod +x ~/nova-memory/scripts/backup.sh
 
 ```bash
 # Restore from backup
-gunzip -c nova_memory_20260208_020000.sql.gz | psql -U nova -d nova_memory_restore
+gunzip -c nova_memory_20260208_020000.sql.gz | psql_restore
 
 # Verify restoration
-psql -U nova -d nova_memory_restore -c "SELECT COUNT(*) FROM entities;"
+psql_restore -c "SELECT COUNT(*) FROM entities;"
 ```
 
 ## Production Deployment Checklist

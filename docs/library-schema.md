@@ -60,6 +60,8 @@ Only the `summary` field gets embedded into `memory_embeddings`. This is intenti
 | source_path | TEXT | | Path to local file (if any) |
 | shared_by | TEXT | ✅ | Who shared/recommended the work |
 | extra_metadata | JSONB | | Type-specific fields (conference, meter, etc.) |
+| edition | TEXT | | Edition identifier (e.g., "5th Edition", "2nd Edition"); nullable |
+| embed | BOOLEAN | ✅ (default true) | Whether to include this work in semantic embedding; set false to exclude |
 | search_vector | tsvector | auto | Auto-generated full-text search vector |
 | added_at | TIMESTAMPTZ | auto | When the record was created |
 | updated_at | TIMESTAMPTZ | auto | Last modification time |
@@ -113,6 +115,8 @@ Only the `summary` field gets embedded into `memory_embeddings`. This is intenti
 - `GIN(subjects)` — Array containment queries
 - `btree(work_type)` — Filter by type
 - Partial indexes on `arxiv_id`, `isbn`, `doi` (WHERE NOT NULL)
+- **Unique index** on `(LOWER(TRIM(title)), COALESCE(edition, ''))` — prevents duplicate records with the same title and edition
+- **Partial index** on `embed WHERE embed = true` — optimizes embedding pipeline queries (only considers embeddable works)
 
 ## Search Vector Weights
 
@@ -133,7 +137,10 @@ The library uses source_type `library` in `memory_embeddings` and `memory_type_p
 
 ### Embedding Query
 
+Only works where `embed = true` are included in the semantic embedding pipeline. This allows selectively excluding works (e.g., drafts or exact duplicates of another edition).
+
 ```sql
+-- Fetch works to embed (respects the embed flag)
 SELECT w.id,
     w.title || ' by ' ||
     COALESCE((
@@ -145,6 +152,24 @@ SELECT w.id,
     ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
     w.summary
 FROM library_works w
+WHERE w.embed = true
+```
+
+### Edition Handling
+
+Use the `edition` field to distinguish multiple editions of the same work. The unique index on `(LOWER(TRIM(title)), COALESCE(edition, ''))` prevents accidental duplicates:
+
+```sql
+-- Correct: two distinct editions coexist
+INSERT INTO library_works (title, edition, ...) VALUES ('Thinking, Fast and Slow', NULL, ...);
+INSERT INTO library_works (title, edition, ...) VALUES ('Thinking, Fast and Slow', '10th Anniversary Edition', ...);
+
+-- Error: duplicate (same title, same edition)
+INSERT INTO library_works (title, edition, ...) VALUES ('Thinking, Fast and Slow', NULL, ...);
+-- → violates unique constraint idx_library_works_title_edition
+
+-- Exclude an older edition from embedding in favor of a newer one
+UPDATE library_works SET embed = false WHERE title = 'Thinking, Fast and Slow' AND edition IS NULL;
 ```
 
 ### Priority

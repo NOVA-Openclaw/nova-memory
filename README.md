@@ -301,11 +301,11 @@ The `agents` table tracks AI agent instances you can delegate tasks to:
 | `role` | varchar(100) | Primary function: general, coding, research, quick-qa, monitoring |
 | `provider` | varchar(50) | anthropic, google, openai, local |
 | `model` | varchar(100) | Specific model (e.g., 'claude-opus-4', 'gemini-2.0-flash') |
-| `access_method` | varchar(50) | How to reach it: subagent, cli, api, browser |
+| `access_method` | varchar(50) | How to reach it: openclaw_session, cli, api, browser |
 | `access_details` | jsonb | Connection info: session_key, cli command, endpoint, flags |
 | `skills` | text[] | Array of capabilities this agent has |
 | `credential_ref` | varchar(200) | 1Password item name or config path for auth |
-| `status` | varchar(20) | active, inactive, deprecated |
+| `status` | varchar(20) | active, inactive, suspended, archived |
 | `notes` | text | Usage notes, caveats |
 | `persistent` | boolean | true = always running, false = instantiated on-demand |
 | `instantiation_sop` | varchar(100) | SOP name with full procedure to spawn this agent |
@@ -349,7 +349,7 @@ VALUES (
   'research',
   'anthropic',
   'claude-sonnet-4',
-  'subagent',
+  'openclaw_session',
   '{"session_key": "agent:research:main"}',
   ARRAY['web-search', 'summarization', 'fact-checking'],
   'Anthropic API'
@@ -786,13 +786,12 @@ The `hooks/` directory contains OpenClaw hooks that automatically extract and ma
 
 ### Installation
 
-The hooks are installed automatically by `agent-install.sh`. To install manually:
+The hooks are installed automatically by `agent-install.sh`. To install manually, run the installer:
 
 ```bash
 ./agent-install.sh
 ```
 
-Hooks are copied to the OpenClaw hooks directory and enabled automatically.
 
 ### Enable Hooks
 

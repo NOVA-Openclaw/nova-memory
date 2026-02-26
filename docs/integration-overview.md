@@ -274,7 +274,7 @@ cd nova-cognition
 ./scripts/setup.sh
 
 # 3. Configure shared database connection
-echo "NOVA_MEMORY_DB=postgresql://nova:password@localhost/nova_memory" >> ~/.bashrc
+echo "NOVA_MEMORY_DB=postgresql://${USER}@localhost/${USER//-/_}_memory" >> ~/.bashrc
 
 # 4. Install integration hooks
 cp nova-memory/hooks/memory-extract ~/.openclaw/workspace/hooks/
@@ -282,7 +282,7 @@ cp nova-cognition/hooks/job-system ~/.openclaw/workspace/hooks/
 openclaw hooks enable memory-extract job-system
 
 # 5. Populate agent registry
-psql -d nova_memory -f integration/seed-agents.sql
+psql -d "${USER//-/_}_memory" -f integration/seed-agents.sql
 
 # 6. Start background services
 systemctl --user start nova-memory-extraction
@@ -296,7 +296,7 @@ echo "Ecosystem setup complete!"
 ```yaml
 # ~/.nova-config.yaml
 database:
-  memory_db: "postgresql://nova:password@localhost/nova_memory"
+  memory_db: "postgresql://${USER}@localhost/${USER//-/_}_memory"
   cognition_db: "same"  # Share database for consistency
 
 agents:
@@ -577,7 +577,7 @@ class SharedConnectionManager:
         
     async def setup(self):
         self.memory_pool = await asyncpg.create_pool(
-            "postgresql://nova:password@localhost/nova_memory",
+            "postgresql://${USER}@localhost/${USER//-/_}_memory",
             min_size=5, max_size=20
         )
         

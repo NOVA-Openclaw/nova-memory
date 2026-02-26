@@ -70,12 +70,12 @@ Created reusable library at `~/.openclaw/workspace/lib/entity-resolver/`:
 
 ## Configuration
 
-Environment variables for database connection:
+Database connection is configured via `~/.openclaw/postgres.json` (loaded by `~/.openclaw/lib/pg-env.sh`). Standard `PG*` environment variables override the config file:
 ```bash
-POSTGRES_HOST=localhost      # default
-POSTGRES_DB=nova_memory      # default
-POSTGRES_USER=nova           # default
-POSTGRES_PASSWORD=           # optional
+PGHOST=localhost          # default
+PGDATABASE=nova_memory    # default: ${USER//-/_}_memory
+PGUSER=nova               # default: current OS user
+PGPASSWORD=               # optional
 ```
 
 ## Output Format
