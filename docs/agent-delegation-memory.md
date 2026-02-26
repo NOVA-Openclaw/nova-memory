@@ -123,7 +123,7 @@ Query: "How do I fix this code?"
 
 ```bash
 cd ~/.openclaw/workspace/nova-memory
-psql -h localhost -U nova -d nova_memory -f scripts/seed-delegation-knowledge.sql
+psql -f scripts/seed-delegation-knowledge.sql  # Uses PG* env vars from ~/.openclaw/lib/pg-env.sh
 ./scripts/embed-delegation-facts.sh
 ```
 

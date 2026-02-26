@@ -367,7 +367,7 @@ sudo sysctl -p
 Create monitoring script:
 
 ```bash
-cat > ~/nova-memory/scripts/health-check.sh << 'EOF'
+HEALTH_CHECK_SCRIPT="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}/nova-memory/scripts/health-check.sh" && cat > "$HEALTH_CHECK_SCRIPT" << 'EOF'
 #!/bin/bash
 
 # Colors for output
@@ -442,7 +442,7 @@ fi
 echo "=== Health Check Complete ==="
 EOF
 
-chmod +x ~/nova-memory/scripts/health-check.sh
+chmod +x "${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}/nova-memory/scripts/health-check.sh"
 ```
 
 ### 2. Monitoring Dashboard
@@ -521,7 +521,7 @@ op item create \
 
 ```bash
 # Test basic connectivity
-pg_isready -h localhost -p 5432 -U nova
+pg_isready -h localhost -p 5432 -U "${PGUSER:-$(whoami)}"
 
 # Check PostgreSQL status
 sudo systemctl status postgresql
@@ -582,7 +582,7 @@ openclaw hooks run memory-extract '{"type": "message:received", "message": "test
 
 ```bash
 # Create backup script
-cat > ~/nova-memory/scripts/backup.sh << 'EOF'
+BACKUP_SCRIPT="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}/nova-memory/scripts/backup.sh" && cat > "$BACKUP_SCRIPT" << 'EOF'
 #!/bin/bash
 
 BACKUP_DIR="$HOME/nova-memory-backups"
@@ -603,20 +603,20 @@ find "$BACKUP_DIR" -name "*.sql.gz" -mtime +7 -delete
 echo "Backup created: $BACKUP_FILE.gz"
 EOF
 
-chmod +x ~/nova-memory/scripts/backup.sh
+chmod +x "${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}/nova-memory/scripts/backup.sh"
 
 # Schedule daily backups
-(crontab -l 2>/dev/null; echo "0 2 * * * $HOME/nova-memory/scripts/backup.sh") | crontab -
+(crontab -l 2>/dev/null; echo "0 2 * * * ${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}/nova-memory/scripts/backup.sh") | crontab -
 ```
 
 ### 2. Recovery Process
 
 ```bash
 # Restore from backup
-gunzip -c nova_memory_20260208_020000.sql.gz | psql_restore
+gunzip -c nova_memory_20260208_020000.sql.gz | psql -d "${PGDATABASE:-${USER//-/_}_memory}_restore"
 
 # Verify restoration
-psql_restore -c "SELECT COUNT(*) FROM entities;"
+psql -d "${PGDATABASE:-${USER//-/_}_memory}_restore" -c "SELECT COUNT(*) FROM entities;"
 ```
 
 ## Production Deployment Checklist

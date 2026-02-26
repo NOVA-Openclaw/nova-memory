@@ -56,8 +56,14 @@ CREATE TABLE memory_embeddings (
 ## Embedding Content
 
 ```python
+import os
 import openai
 from psycopg2 import connect
+
+# Database name is dynamic: ${USER//-/_}_memory (e.g., nova_memory, argus_memory)
+# Uses PG* environment variables set by ~/.openclaw/lib/pg_env.py or pg-env.sh
+def get_db_name() -> str:
+    return os.environ.get("PGDATABASE", f"{os.environ.get('USER', 'nova').replace('-', '_')}_memory")
 
 def embed_and_store(content: str, source_type: str, source_id: str):
     # Generate embedding
@@ -67,8 +73,8 @@ def embed_and_store(content: str, source_type: str, source_id: str):
     )
     embedding = response.data[0].embedding
     
-    # Store in PostgreSQL
-    conn = connect(dbname="nova_memory")
+    # Store in PostgreSQL (reads PGHOST, PGUSER, PGDATABASE, PGPASSWORD from environment)
+    conn = connect(dbname=get_db_name())
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO memory_embeddings (source_type, source_id, content, embedding)
@@ -88,8 +94,8 @@ def search_memory(query: str, limit: int = 5) -> list:
     )
     query_embedding = response.data[0].embedding
     
-    # Find similar content
-    conn = connect(dbname="nova_memory")
+    # Find similar content (reads PG* env vars set by pg_env.py / pg-env.sh)
+    conn = connect(dbname=get_db_name())
     cur = conn.cursor()
     cur.execute("""
         SELECT source_type, source_id, content,
