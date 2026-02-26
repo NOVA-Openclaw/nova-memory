@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict QB3dcvjLZmGR664m1UzjvFoLXnr2p8DlaQrcS5gpaX0JKBrJ4yLLx4UbWfVe22E
+\restrict zLCWnnTRC7H5a9jNIehxRfJ3IQnHRwYTXNEkf3dH2ZeYOBnbGbLyJS1yzHa1RGl
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -8591,8 +8591,6 @@ CREATE TRIGGER trg_agent_turn_context_updated_at BEFORE UPDATE ON public.agent_t
 
 CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.embed_chat_message();
 
-ALTER TABLE public.agent_chat ENABLE REPLICA TRIGGER trg_embed_chat_message;
-
 
 --
 -- Name: library_works trg_library_works_search; Type: TRIGGER; Schema: public; Owner: nova
@@ -9420,7 +9418,7 @@ GRANT SELECT ON TABLE public.agents TO athena;
 GRANT ALL ON TABLE public.agents TO "nova-staging";
 GRANT SELECT ON TABLE public.agents TO PUBLIC;
 GRANT ALL ON TABLE public.agents TO graybeard;
-GRANT SELECT,REFERENCES ON TABLE public.agents TO nova;
+GRANT SELECT ON TABLE public.agents TO nova;
 
 
 --
@@ -10775,5 +10773,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict QB3dcvjLZmGR664m1UzjvFoLXnr2p8DlaQrcS5gpaX0JKBrJ4yLLx4UbWfVe22E
+\unrestrict zLCWnnTRC7H5a9jNIehxRfJ3IQnHRwYTXNEkf3dH2ZeYOBnbGbLyJS1yzHa1RGl
 
