@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict EHEiI5NohZuGYjomVTZ1ZIqbiYIo10KrD8W0DU9ZmBdxgH8047oIpxkFLwvC1O0
+\restrict TxBGdkIR4dC2LFe0q6a49n7ldqrzCf3d3nUz8L9VklGqcScJlXXZLJWuQfVQ7jt
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -7731,6 +7731,13 @@ CREATE INDEX idx_library_works_subjects ON public.library_works USING gin (subje
 
 
 --
+-- Name: idx_library_works_title_edition; Type: INDEX; Schema: public; Owner: nova
+--
+
+CREATE UNIQUE INDEX idx_library_works_title_edition ON public.library_works USING btree (lower(TRIM(BOTH FROM title)), COALESCE(edition, ''::text));
+
+
+--
 -- Name: idx_library_works_type; Type: INDEX; Schema: public; Owner: nova
 --
 
@@ -10586,5 +10593,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict EHEiI5NohZuGYjomVTZ1ZIqbiYIo10KrD8W0DU9ZmBdxgH8047oIpxkFLwvC1O0
+\unrestrict TxBGdkIR4dC2LFe0q6a49n7ldqrzCf3d3nUz8L9VklGqcScJlXXZLJWuQfVQ7jt
 

@@ -19,4 +19,8 @@ ALTER TABLE library_works ADD COLUMN IF NOT EXISTS embed BOOLEAN NOT NULL DEFAUL
 -- Add index for embed filtering (used by embed-library.py)
 CREATE INDEX IF NOT EXISTS idx_library_works_embed ON library_works (embed) WHERE embed = true;
 
+-- Unique constraint: prevent duplicate title+edition combinations
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_works_title_edition
+ON library_works (LOWER(TRIM(title)), COALESCE(edition, ''));
+
 COMMIT;
