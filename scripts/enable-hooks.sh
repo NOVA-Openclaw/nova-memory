@@ -5,7 +5,7 @@
 set -e
 
 CONFIG_FILE="${1:-$HOME/.openclaw/openclaw.json}"
-HOOKS_TO_ENABLE=("memory-extract" "semantic-recall" "session-init")
+HOOKS_TO_ENABLE=("memory-extract" "semantic-recall" "session-init" "agent-turn-context")
 DRY_RUN="${DRY_RUN:-0}"
 
 # Color codes
@@ -91,7 +91,8 @@ else . end |
 # Enable each hook
 .hooks.internal.entries["memory-extract"] = {"enabled": true} |
 .hooks.internal.entries["semantic-recall"] = {"enabled": true} |
-.hooks.internal.entries["session-init"] = {"enabled": true}
+.hooks.internal.entries["session-init"] = {"enabled": true} |
+.hooks.internal.entries["agent-turn-context"] = {"enabled": true}
 '
 
 # Apply the filter
