@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict VNTz5sd9v8OKAfMurRi6xm9MMNLxwan2lqmuqBf2vNOeAGIZhfbcZ23IJsIMged
+\restrict 72ZYRYQR0Sh039Kwy7CfyUwaOmP9QfxCLDvzmVUZ9akxEbi4HmEimggdoWJUmWi
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -9188,10 +9188,40 @@ CREATE PUBLICATION agent_chat_pub WITH (publish = 'insert, update, delete, trunc
 ALTER PUBLICATION agent_chat_pub OWNER TO postgres;
 
 --
+-- Name: graybeard_sync_pub; Type: PUBLICATION; Schema: -; Owner: postgres
+--
+
+CREATE PUBLICATION graybeard_sync_pub WITH (publish = 'insert, update, delete, truncate');
+
+
+ALTER PUBLICATION graybeard_sync_pub OWNER TO postgres;
+
+--
+-- Name: graybeard_sync_pub agent_bootstrap_context; Type: PUBLICATION TABLE; Schema: public; Owner: postgres
+--
+
+ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agent_bootstrap_context WHERE (((context_type = 'UNIVERSAL'::text) OR ((context_type = 'AGENT'::text) AND (agent_name = 'graybeard'::text))));
+
+
+--
 -- Name: agent_chat_pub agent_chat; Type: PUBLICATION TABLE; Schema: public; Owner: postgres
 --
 
 ALTER PUBLICATION agent_chat_pub ADD TABLE ONLY public.agent_chat;
+
+
+--
+-- Name: graybeard_sync_pub agent_turn_context; Type: PUBLICATION TABLE; Schema: public; Owner: postgres
+--
+
+ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agent_turn_context WHERE (((context_type = 'UNIVERSAL'::text) OR ((context_type = 'AGENT'::text) AND (context_key = 'graybeard'::text))));
+
+
+--
+-- Name: graybeard_sync_pub agents; Type: PUBLICATION TABLE; Schema: public; Owner: postgres
+--
+
+ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agents WHERE (((name)::text = 'graybeard'::text));
 
 
 --
@@ -10775,5 +10805,5 @@ ALTER EVENT TRIGGER schema_change_trigger OWNER TO postgres;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict MNSsFoHx0av2mdJYr7gtLGrPgho7sy3NefYWkVO4VGfPrzKCbyO2XQHZe1orMty
+\unrestrict 72ZYRYQR0Sh039Kwy7CfyUwaOmP9QfxCLDvzmVUZ9akxEbi4HmEimggdoWJUmWi
 
