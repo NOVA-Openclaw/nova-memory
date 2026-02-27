@@ -10,7 +10,7 @@ Usage:
 Requires:
     - OPENAI_API_KEY environment variable
     - PostgreSQL with pgvector extension
-    - library_works, library_authors, library_work_authors tables
+    - library_works, library_authors, library_work_authors, library_tags, library_work_tags tables
 """
 
 import os
@@ -37,7 +37,13 @@ LIBRARY_QUERY = """
         ), 'Unknown') ||
         ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
         w.summary ||
-        COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '')
+        COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '') ||
+        COALESCE(' Topics: ' || (
+            SELECT string_agg(t.name, ', ' ORDER BY t.name)
+            FROM library_tags t
+            JOIN library_work_tags wt ON t.id = wt.tag_id
+            WHERE wt.work_id = w.id
+        ), '')
     FROM library_works w
     WHERE w.embed = true
 """

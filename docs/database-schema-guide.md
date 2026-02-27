@@ -432,7 +432,7 @@ CREATE TABLE library_works (
 
 **Key design patterns:**
 - **NOT NULL constraints enforce completeness** — the database rejects records without summary, insights, publication_date, etc.
-- **summary field is used for semantic embedding** — one high-density embedding per work instead of chunking full text
+- **rich embedding per work** — one high-density embedding combining title, authors, summary, notable quotes, and tags; on recall hit the full record is fetched
 - **edition field** — nullable; identifies specific editions (e.g., "5th Edition", "2nd Edition")
 - **embed flag** — controls whether a work is included in semantic embedding; defaults to `true`
 - **Unique index** on `(LOWER(title), COALESCE(edition, ''))` — prevents duplicate records (same title+edition)

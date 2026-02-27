@@ -63,7 +63,9 @@ TABLES_TO_EMBED = {
     """,
     "library": """
         SELECT w.id,
-            w.title || ' by ' ||
+            w.title ||
+            COALESCE(' (' || w.edition || ')', '') ||
+            ' by ' ||
             COALESCE((
                 SELECT string_agg(a.name, ', ' ORDER BY wa.author_order)
                 FROM library_authors a
@@ -72,8 +74,15 @@ TABLES_TO_EMBED = {
             ), 'Unknown') ||
             ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
             w.summary ||
-            COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '')
+            COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '') ||
+            COALESCE(' Topics: ' || (
+                SELECT string_agg(t.name, ', ' ORDER BY t.name)
+                FROM library_tags t
+                JOIN library_work_tags wt ON t.id = wt.tag_id
+                WHERE wt.work_id = w.id
+            ), '')
         FROM library_works w
+        WHERE w.embed = true
     """,
 }
 
