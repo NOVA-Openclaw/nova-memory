@@ -775,10 +775,16 @@ fi
 # Step C: If no hazards, apply the schema diff
 if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 0 ]; then
     echo "  Applying schema changes..."
+    # If plan validation was skipped, skip it for apply too
+    APPLY_EXTRA_FLAGS=""
+    if [ "$PLAN_VALIDATION_OK" -eq 0 ]; then
+        APPLY_EXTRA_FLAGS="--disable-plan-validation"
+    fi
     APPLY_OUTPUT=$(pg-schema-diff apply \
         --from-dsn "$PG_DSN" \
         --to-dir "$SCHEMA_DIR_FOR_DIFF" \
-        --skip-confirm-prompt 2>&1)
+        --skip-confirm-prompt \
+        $APPLY_EXTRA_FLAGS 2>&1)
     APPLY_EXIT_CODE=$?
 
     if [ $APPLY_EXIT_CODE -eq 0 ]; then
