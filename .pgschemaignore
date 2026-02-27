@@ -1,0 +1,12 @@
+# Objects to exclude from pgschema management
+# See https://www.pgschema.com/cli/ignore
+#
+# Use TOML format to specify patterns for each object type.
+# Patterns support wildcards (*) and negation (!) prefixes.
+#
+# Example:
+# [tables]
+# patterns = ["temp_*", "legacy_*"]
+#
+# [functions]
+# patterns = ["fn_debug_*"]

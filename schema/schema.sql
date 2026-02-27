@@ -1,363 +1,3025 @@
-pg_dump: warning: subscriptions not dumped because current user is not a superuser
 --
--- PostgreSQL database dump
+-- pgschema database dump
 --
 
-\restrict gTRYCYrdxDe2fg6GM9bUfKtxYeB857LLKNmqkvTjxwqzRMcCqQ9kpJbINGku9y9
+-- Dumped from database version PostgreSQL 16.11
+-- Dumped by pgschema version 1.7.2
 
--- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
--- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
 
 --
--- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+-- Extensions (must be installed by a superuser before running pgschema)
+-- Listed here so agent-install.sh can verify they are present.
 --
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
-
---
--- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
-
-
---
--- Name: vector; Type: EXTENSION; Schema: -; Owner: -
---
-
 CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 
---
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
-
 
 --
--- Name: agent_chat_status; Type: TYPE; Schema: public; Owner: -
+-- Name: agent_chat_status; Type: TYPE; Schema: -; Owner: -
 --
 
-CREATE TYPE public.agent_chat_status AS ENUM (
+CREATE TYPE agent_chat_status AS ENUM (
     'received',
     'routed',
     'responded',
     'failed'
 );
 
-
 --
--- Name: agent_set_collaborative(integer, boolean, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.agent_set_collaborative(p_agent_id integer, p_collaborative boolean, p_collaborate_config jsonb DEFAULT NULL::jsonb, p_modified_by text DEFAULT 'system'::text) RETURNS TABLE(success boolean, message text)
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_old_collaborative BOOLEAN;
-    v_old_config JSONB;
-BEGIN
-    -- Get old values
-    SELECT collaborative, collaborate_config 
-    INTO v_old_collaborative, v_old_config
-    FROM agents
-    WHERE id = p_agent_id;
-    
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT FALSE, 'Agent not found';
-        RETURN;
-    END IF;
-    
-    -- Update collaborative settings
-    UPDATE agents
-    SET collaborative = p_collaborative,
-        collaborate_config = COALESCE(p_collaborate_config, collaborate_config),
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = p_agent_id;
-    
-    -- Log collaborative change
-    PERFORM log_agent_modification(
-        p_agent_id, p_modified_by, 'collaborative',
-        v_old_collaborative::TEXT, p_collaborative::TEXT
-    );
-    
-    -- Log config change if provided
-    IF p_collaborate_config IS NOT NULL THEN
-        PERFORM log_agent_modification(
-            p_agent_id, p_modified_by, 'collaborate_config',
-            v_old_config::TEXT, p_collaborate_config::TEXT
-        );
-    END IF;
-    
-    RETURN QUERY SELECT TRUE, 'Collaborative settings updated successfully';
-END;
-$$;
-
-
---
--- Name: agent_set_model(integer, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: postgres:SEQUENCES:erato; Type: DEFAULT_PRIVILEGE; Schema: default_privileges; Owner: -
 --
 
-CREATE FUNCTION public.agent_set_model(p_agent_id integer, p_new_model text, p_new_fallback text DEFAULT NULL::text, p_modified_by text DEFAULT 'system'::text) RETURNS TABLE(success boolean, message text)
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_old_model TEXT;
-    v_old_fallback TEXT;
-BEGIN
-    -- Get old values
-    SELECT model, fallback_model INTO v_old_model, v_old_fallback
-    FROM agents
-    WHERE id = p_agent_id;
-    
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT FALSE, 'Agent not found';
-        RETURN;
-    END IF;
-    
-    -- Update model
-    UPDATE agents
-    SET model = p_new_model,
-        fallback_model = COALESCE(p_new_fallback, fallback_model),
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = p_agent_id;
-    
-    -- Log model change
-    PERFORM log_agent_modification(
-        p_agent_id, p_modified_by, 'model', 
-        v_old_model, p_new_model
-    );
-    
-    -- Log fallback change if provided
-    IF p_new_fallback IS NOT NULL THEN
-        PERFORM log_agent_modification(
-            p_agent_id, p_modified_by, 'fallback_model',
-            v_old_fallback, p_new_fallback
-        );
-    END IF;
-    
-    RETURN QUERY SELECT TRUE, 'Model configuration updated successfully';
-END;
-$$;
-
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO erato;
 
 --
--- Name: agent_set_status(integer, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: postgres:TABLES:erato; Type: DEFAULT_PRIVILEGE; Schema: default_privileges; Owner: -
 --
 
-CREATE FUNCTION public.agent_set_status(p_agent_id integer, p_new_status text, p_modified_by text DEFAULT 'system'::text) RETURNS TABLE(success boolean, message text)
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_old_status TEXT;
-    v_valid_statuses TEXT[] := ARRAY['active', 'inactive', 'suspended', 'archived'];
-BEGIN
-    -- Validate status value
-    IF NOT (p_new_status = ANY(v_valid_statuses)) THEN
-        RETURN QUERY SELECT FALSE, 
-            'Invalid status. Must be one of: active, inactive, suspended, archived';
-        RETURN;
-    END IF;
-    
-    -- Get old status
-    SELECT status INTO v_old_status
-    FROM agents
-    WHERE id = p_agent_id;
-    
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT FALSE, 'Agent not found';
-        RETURN;
-    END IF;
-    
-    -- Update status
-    UPDATE agents
-    SET status = p_new_status,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = p_agent_id;
-    
-    -- Log modification
-    PERFORM log_agent_modification(
-        p_agent_id, p_modified_by, 'status', v_old_status, p_new_status
-    );
-    
-    RETURN QUERY SELECT TRUE, 'Status updated successfully';
-END;
-$$;
-
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT DELETE, INSERT, SELECT, UPDATE ON TABLES TO erato;
 
 --
--- Name: agent_update(integer, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: postgres:TABLES:newhart; Type: DEFAULT_PRIVILEGE; Schema: default_privileges; Owner: -
 --
 
-CREATE FUNCTION public.agent_update(p_agent_id integer, p_field_name text, p_new_value text, p_modified_by text DEFAULT 'system'::text) RETURNS TABLE(success boolean, message text)
-    LANGUAGE plpgsql
-    AS $_$
-DECLARE
-    v_old_value TEXT;
-    v_protected_fields TEXT[] := ARRAY['id', 'created_at'];
-    v_sql TEXT;
-BEGIN
-    -- Check if field is protected
-    IF p_field_name = ANY(v_protected_fields) THEN
-        RETURN QUERY SELECT FALSE, 
-            'Cannot modify protected field: ' || p_field_name;
-        RETURN;
-    END IF;
-    
-    -- Verify agent exists and get old value
-    v_sql := format('SELECT %I::TEXT FROM agents WHERE id = $1', p_field_name);
-    BEGIN
-        EXECUTE v_sql INTO v_old_value USING p_agent_id;
-    EXCEPTION
-        WHEN undefined_column THEN
-            RETURN QUERY SELECT FALSE, 'Invalid field name: ' || p_field_name;
-            RETURN;
-        WHEN OTHERS THEN
-            RETURN QUERY SELECT FALSE, 'Error reading field: ' || SQLERRM;
-            RETURN;
-    END;
-    
-    IF v_old_value IS NULL AND NOT FOUND THEN
-        RETURN QUERY SELECT FALSE, 'Agent not found';
-        RETURN;
-    END IF;
-    
-    -- Update the field
-    v_sql := format(
-        'UPDATE agents SET %I = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        p_field_name
-    );
-    BEGIN
-        EXECUTE v_sql USING p_new_value, p_agent_id;
-    EXCEPTION
-        WHEN OTHERS THEN
-            RETURN QUERY SELECT FALSE, 'Error updating field: ' || SQLERRM;
-            RETURN;
-    END;
-    
-    -- Log modification
-    PERFORM log_agent_modification(
-        p_agent_id, p_modified_by, p_field_name, v_old_value, p_new_value
-    );
-    
-    RETURN QUERY SELECT TRUE, 'Field updated successfully';
-END;
-$_$;
-
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO newhart;
 
 --
--- Name: agent_update_jsonb(integer, text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: agent_bootstrap_context; Type: TABLE; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.agent_update_jsonb(p_agent_id integer, p_field_name text, p_new_value jsonb, p_modified_by text DEFAULT 'system'::text) RETURNS TABLE(success boolean, message text)
-    LANGUAGE plpgsql
-    AS $_$
-DECLARE
-    v_old_value JSONB;
-    v_protected_fields TEXT[] := ARRAY['id', 'created_at'];
-    v_sql TEXT;
-BEGIN
-    -- Check if field is protected
-    IF p_field_name = ANY(v_protected_fields) THEN
-        RETURN QUERY SELECT FALSE, 
-            'Cannot modify protected field: ' || p_field_name;
-        RETURN;
-    END IF;
-    
-    -- Get old value
-    v_sql := format('SELECT %I FROM agents WHERE id = $1', p_field_name);
-    BEGIN
-        EXECUTE v_sql INTO v_old_value USING p_agent_id;
-    EXCEPTION
-        WHEN undefined_column THEN
-            RETURN QUERY SELECT FALSE, 'Invalid field name: ' || p_field_name;
-            RETURN;
-        WHEN OTHERS THEN
-            RETURN QUERY SELECT FALSE, 'Error reading field: ' || SQLERRM;
-            RETURN;
-    END;
-    
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT FALSE, 'Agent not found';
-        RETURN;
-    END IF;
-    
-    -- Update the field
-    v_sql := format(
-        'UPDATE agents SET %I = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        p_field_name
-    );
-    EXECUTE v_sql USING p_new_value, p_agent_id;
-    
-    -- Log modification
-    PERFORM log_agent_modification(
-        p_agent_id, p_modified_by, p_field_name,
-        v_old_value::TEXT, p_new_value::TEXT
-    );
-    
-    RETURN QUERY SELECT TRUE, 'Field updated successfully';
-END;
-$_$;
+CREATE TABLE IF NOT EXISTS agent_bootstrap_context (
+    id SERIAL,
+    context_type text NOT NULL,
+    domain_name text,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    description text,
+    updated_at timestamptz DEFAULT now(),
+    updated_by text DEFAULT 'system',
+    agent_name text,
+    CONSTRAINT agent_bootstrap_context_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_bootstrap_context_context_type_check CHECK (context_type IN ('UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'AGENT'::text)),
+    CONSTRAINT chk_universal_global_no_names CHECK ((context_type <> ALL (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text])) OR agent_name IS NULL AND domain_name IS NULL)
+);
 
+
+COMMENT ON TABLE agent_bootstrap_context IS 'Bootstrap context entries. READ-ONLY except Newhart (Agent Design/Management domain).';
+
+
+COMMENT ON COLUMN agent_bootstrap_context.context_type IS 'GLOBAL (all agents) or DOMAIN (agents in specific domain)';
+
+
+COMMENT ON COLUMN agent_bootstrap_context.domain_name IS 'NULL for GLOBAL, domain name from agent_domains for DOMAIN type';
+
+
+COMMENT ON COLUMN agent_bootstrap_context.file_key IS 'Identifier for context block, becomes filename in bootstrap';
 
 --
--- Name: agent_update_skills(integer, text[], text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: agent_bootstrap_context_unique_idx; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.agent_update_skills(p_agent_id integer, p_skills text[], p_modified_by text DEFAULT 'system'::text) RETURNS TABLE(success boolean, message text)
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    v_old_skills TEXT[];
-BEGIN
-    -- Get old skills
-    SELECT skills INTO v_old_skills
-    FROM agents
-    WHERE id = p_agent_id;
-    
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT FALSE, 'Agent not found';
-        RETURN;
-    END IF;
-    
-    -- Update skills
-    UPDATE agents
-    SET skills = p_skills,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = p_agent_id;
-    
-    -- Log modification
-    PERFORM log_agent_modification(
-        p_agent_id, p_modified_by, 'skills',
-        array_to_string(v_old_skills, ','),
-        array_to_string(p_skills, ',')
-    );
-    
-    RETURN QUERY SELECT TRUE, 'Skills updated successfully';
-END;
-$$;
-
+CREATE UNIQUE INDEX IF NOT EXISTS agent_bootstrap_context_unique_idx ON agent_bootstrap_context (context_type, COALESCE(agent_name, ''::text), COALESCE(domain_name, ''::text), file_key);
 
 --
--- Name: calculate_word_count(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: idx_abc_agent_name; Type: INDEX; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.calculate_word_count() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE INDEX IF NOT EXISTS idx_abc_agent_name ON agent_bootstrap_context (agent_name) WHERE (agent_name IS NOT NULL);
+
+--
+-- Name: agent_chat; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_chat (
+    id SERIAL,
+    channel varchar(50) DEFAULT 'system',
+    sender varchar(50) NOT NULL,
+    message text NOT NULL,
+    mentions text[],
+    reply_to integer,
+    created_at timestamptz DEFAULT now(),
+    CONSTRAINT agent_chat_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_chat_reply_to_fkey FOREIGN KEY (reply_to) REFERENCES agent_chat (id)
+);
+
+
+COMMENT ON TABLE agent_chat IS 'Agent messaging. INSERT allowed for all, UPDATE/DELETE only Newhart.';
+
+--
+-- Name: idx_agent_chat_channel; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_chat_channel ON agent_chat (channel, created_at DESC);
+
+--
+-- Name: idx_agent_chat_created_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_chat_created_at ON agent_chat (created_at);
+
+--
+-- Name: idx_agent_chat_mentions; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_chat_mentions ON agent_chat USING gin (mentions);
+
+--
+-- Name: idx_agent_chat_sender; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_chat_sender ON agent_chat (sender, created_at DESC);
+
+--
+-- Name: agent_chat_processed; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_chat_processed (
+    chat_id integer,
+    agent varchar(50),
+    received_at timestamp,
+    routed_at timestamp,
+    responded_at timestamp,
+    error_message text,
+    status agent_chat_status DEFAULT 'responded'::agent_chat_status,
+    CONSTRAINT agent_chat_processed_pkey PRIMARY KEY (chat_id, agent),
+    CONSTRAINT agent_chat_processed_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES agent_chat (id)
+);
+
+
+COMMENT ON TABLE agent_chat_processed IS 'Message processing state. Agents can track, Newhart manages.';
+
+--
+-- Name: idx_agent_chat_processed_agent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_chat_processed_agent ON agent_chat_processed (agent);
+
+--
+-- Name: idx_agent_chat_processed_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_chat_processed_status ON agent_chat_processed (status);
+
+--
+-- Name: idx_agent_chat_processed_unique; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_chat_processed_unique ON agent_chat_processed (chat_id, agent);
+
+--
+-- Name: idx_chat_processed_agent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_chat_processed_agent ON agent_chat_processed (agent);
+
+--
+-- Name: agent_jobs; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_jobs (
+    id SERIAL,
+    title varchar(200),
+    topic text,
+    job_type varchar(50) DEFAULT 'message_response',
+    agent_name varchar(50) NOT NULL,
+    requester_agent varchar(50),
+    parent_job_id integer,
+    root_job_id integer,
+    status varchar(20) DEFAULT 'pending',
+    priority integer DEFAULT 5,
+    notify_agents text[],
+    deliverable_path text,
+    deliverable_summary text,
+    error_message text,
+    created_at timestamptz DEFAULT now(),
+    started_at timestamptz,
+    completed_at timestamptz,
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT agent_jobs_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_jobs_parent_job_id_fkey FOREIGN KEY (parent_job_id) REFERENCES agent_jobs (id),
+    CONSTRAINT agent_jobs_root_job_id_fkey FOREIGN KEY (root_job_id) REFERENCES agent_jobs (id)
+);
+
+
+COMMENT ON TABLE agent_jobs IS 'Agent job definitions. READ-ONLY except Newhart.';
+
+--
+-- Name: idx_jobs_agent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_jobs_agent ON agent_jobs (agent_name, status);
+
+--
+-- Name: idx_jobs_parent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_jobs_parent ON agent_jobs (parent_job_id);
+
+--
+-- Name: idx_jobs_requester; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_jobs_requester ON agent_jobs (requester_agent, status);
+
+--
+-- Name: idx_jobs_root; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_jobs_root ON agent_jobs (root_job_id);
+
+--
+-- Name: idx_jobs_topic; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_jobs_topic ON agent_jobs (agent_name, topic) WHERE (status)::text <> ALL (ARRAY[('completed'::character varying)::text, ('cancelled'::character varying)::text]);
+
+--
+-- Name: agent_jobs; Type: RLS; Schema: -; Owner: -
+--
+
+ALTER TABLE agent_jobs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: agent_system_config; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_system_config (
+    key text,
+    value text NOT NULL,
+    value_type text DEFAULT 'text' NOT NULL,
+    description text,
+    updated_at timestamp DEFAULT now(),
+    updated_by text DEFAULT 'system',
+    CONSTRAINT agent_system_config_pkey PRIMARY KEY (key)
+);
+
+
+COMMENT ON TABLE agent_system_config IS 'Agent system configuration. READ-ONLY except Newhart.';
+
+
+COMMENT ON COLUMN agent_system_config.key IS 'Unique configuration key identifier';
+
+
+COMMENT ON COLUMN agent_system_config.value IS 'Configuration value (stored as text, cast based on value_type)';
+
+
+COMMENT ON COLUMN agent_system_config.value_type IS 'Type hint: text, json, boolean, number';
+
+
+COMMENT ON COLUMN agent_system_config.description IS 'Human-readable description of what this config controls';
+
+
+COMMENT ON COLUMN agent_system_config.updated_at IS 'Last modification timestamp';
+
+
+COMMENT ON COLUMN agent_system_config.updated_by IS 'Agent or system that last modified this config';
+
+--
+-- Name: agent_turn_context; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_turn_context (
+    id SERIAL,
+    context_type text NOT NULL,
+    context_key text NOT NULL,
+    file_key text NOT NULL,
+    content text NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT agent_turn_context_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_turn_context_context_type_file_key_key UNIQUE (context_type, file_key),
+    CONSTRAINT agent_turn_context_content_check CHECK (length(content) > 0 AND length(content) <= 500),
+    CONSTRAINT agent_turn_context_context_type_check CHECK (context_type IN ('UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'AGENT'::text))
+);
+
+--
+-- Name: agents; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agents (
+    id SERIAL,
+    name varchar(100) NOT NULL,
+    description text,
+    role varchar(100),
+    provider varchar(50),
+    model varchar(100),
+    access_method varchar(50) NOT NULL,
+    access_details jsonb,
+    skills text[],
+    credential_ref varchar(200),
+    status varchar(20) DEFAULT 'active',
+    notes text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    persistent boolean DEFAULT true,
+    instantiation_sop varchar(100),
+    nickname varchar(50),
+    instance_type varchar(20) DEFAULT 'subagent',
+    home_dir varchar(255),
+    unix_user varchar(50),
+    collaborative boolean DEFAULT false,
+    config_reasoning text,
+    fallback_model varchar(100),
+    collaborate jsonb,
+    decision_criteria text,
+    thinking varchar(20),
+    fallback_models text[],
+    pronouns varchar(50),
+    allowed_subagents text[],
+    is_default boolean DEFAULT false NOT NULL,
+    context_type text DEFAULT 'persistent' NOT NULL,
+    CONSTRAINT agents_pkey PRIMARY KEY (id),
+    CONSTRAINT agents_name_key UNIQUE (name),
+    CONSTRAINT agents_context_type_check CHECK (context_type IN ('ephemeral'::text, 'persistent'::text)),
+    CONSTRAINT agents_thinking_check CHECK (thinking::text IN ('off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying))
+);
+
+
+COMMENT ON TABLE agents IS 'Agent definitions. READ-ONLY except Newhart (Agent Design/Management domain).';
+
+
+COMMENT ON COLUMN agents.access_details IS 'JSON: session_key, cli_command, endpoint URL, etc.';
+
+
+COMMENT ON COLUMN agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
+
+
+COMMENT ON COLUMN agents.persistent IS 'true = always running, false = instantiated on-demand';
+
+
+COMMENT ON COLUMN agents.instantiation_sop IS 'SOP name for how to instantiate this agent (for ephemeral agents)';
+
+
+COMMENT ON COLUMN agents.nickname IS 'Short friendly name for easy reference';
+
+
+COMMENT ON COLUMN agents.instance_type IS 'subagent (spawned session) or peer (separate Clawdbot instance)';
+
+
+COMMENT ON COLUMN agents.home_dir IS 'Workspace path for peer agents';
+
+
+COMMENT ON COLUMN agents.unix_user IS 'Unix username for peer agents';
+
+
+COMMENT ON COLUMN agents.collaborative IS 'TRUE = work WITH NOVA in dialogue, FALSE = work FOR NOVA on tasks';
+
+
+COMMENT ON COLUMN agents.config_reasoning IS 'Newhart-maintained notes explaining why this agent is configured as it is (model, persistent, collaborative, etc.)';
+
+
+COMMENT ON COLUMN agents.fallback_model IS 'Fallback model if primary fails (auth issues, rate limits, etc.)';
+
+
+COMMENT ON COLUMN agents.collaborate IS 'Collaboration scope: null = task-only, JSONB defines topics/areas where this agent can collaborate vs just execute. Example: {"allowed": ["architecture", "design"], "excluded": ["execution"]}';
+
+
+COMMENT ON COLUMN agents.decision_criteria IS 'Criteria for when to spawn this agent - helps NOVA route tasks';
+
+--
+-- Name: idx_agents_provider; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agents_provider ON agents (provider);
+
+--
+-- Name: idx_agents_role; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agents_role ON agents (role);
+
+--
+-- Name: idx_agents_single_default; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_single_default ON agents (is_default) WHERE (is_default = true);
+
+--
+-- Name: idx_agents_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agents_status ON agents (status);
+
+--
+-- Name: agent_aliases; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_aliases (
+    agent_id integer,
+    alias varchar(100),
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT agent_aliases_pkey PRIMARY KEY (agent_id, alias),
+    CONSTRAINT agent_aliases_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE agent_aliases IS 'Agent aliases for flexible mention matching. Supports case-insensitive routing.';
+
+
+COMMENT ON COLUMN agent_aliases.alias IS 'Alternative name/identifier for the agent (e.g., "assistant", "helper")';
+
+--
+-- Name: idx_agent_aliases_alias_lower; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_aliases_alias_lower ON agent_aliases (lower(alias::text));
+
+--
+-- Name: agent_modifications; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_modifications (
+    id SERIAL,
+    agent_id integer NOT NULL,
+    modified_by text NOT NULL,
+    field_changed text NOT NULL,
+    old_value text,
+    new_value text,
+    modified_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT agent_modifications_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_agent_modifications_agent FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE agent_modifications IS 'Agent modification history. READ-ONLY except Newhart.';
+
+--
+-- Name: idx_agent_modifications_agent_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_modifications_agent_id ON agent_modifications (agent_id);
+
+--
+-- Name: idx_agent_modifications_modified_at; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_modifications_modified_at ON agent_modifications (modified_at DESC);
+
+--
+-- Name: agent_spawns; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_spawns (
+    id SERIAL,
+    trigger_source text NOT NULL,
+    trigger_id text,
+    trigger_payload jsonb,
+    domain text,
+    agent_id integer,
+    agent_name text,
+    session_key text,
+    session_label text,
+    task_summary text,
+    status text DEFAULT 'pending',
+    spawned_at timestamptz DEFAULT now(),
+    completed_at timestamptz,
+    result jsonb,
+    CONSTRAINT agent_spawns_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_spawns_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents (id),
+    CONSTRAINT valid_status CHECK (status IN ('pending'::text, 'spawning'::text, 'running'::text, 'completed'::text, 'failed'::text, 'skipped'::text))
+);
+
+
+COMMENT ON TABLE agent_spawns IS 'Tracks all agent spawns from the general-purpose spawner daemon';
+
+--
+-- Name: idx_agent_spawns_agent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_spawns_agent ON agent_spawns (agent_id);
+
+--
+-- Name: idx_agent_spawns_domain; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_spawns_domain ON agent_spawns (domain);
+
+--
+-- Name: idx_agent_spawns_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_spawns_status ON agent_spawns (status);
+
+--
+-- Name: idx_agent_spawns_trigger; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_spawns_trigger ON agent_spawns (trigger_source, trigger_id);
+
+--
+-- Name: ai_models; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS ai_models (
+    id SERIAL,
+    model_id varchar(100) NOT NULL,
+    provider varchar(50) NOT NULL,
+    display_name varchar(100),
+    context_window integer,
+    cost_tier varchar(20),
+    strengths text[],
+    weaknesses text[],
+    available boolean DEFAULT false,
+    last_verified_at timestamptz,
+    credential_ref varchar(200),
+    notes text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT models_pkey PRIMARY KEY (id),
+    CONSTRAINT models_model_id_key UNIQUE (model_id)
+);
+
+
+COMMENT ON TABLE ai_models IS 'Available AI models. NOVA maintains this; Newhart reads for agent assignments. Credentials and endpoints stored in 1Password (see credential_ref column).';
+
+--
+-- Name: artwork; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS artwork (
+    id SERIAL,
+    instagram_url text,
+    instagram_media_id text,
+    title text,
+    caption text,
+    theme text,
+    original_prompt text,
+    revised_prompt text,
+    image_data bytea,
+    image_filename text,
+    posted_at timestamptz DEFAULT now(),
+    created_at timestamptz DEFAULT now(),
+    notes text,
+    inspiration_source text,
+    quality_score integer,
+    nostr_event_id text,
+    nostr_image_url text,
+    x_tweet_id text,
+    x_url text,
+    CONSTRAINT artwork_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE artwork IS 'Archive of NOVAs Instagram artwork. Reference for future compilation.';
+
+
+COMMENT ON COLUMN artwork.image_data IS 'Raw image binary data (PNG/JPG)';
+
+
+COMMENT ON COLUMN artwork.inspiration_source IS 'News snippet or source that inspired this artwork';
+
+--
+-- Name: asset_classes; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS asset_classes (
+    code varchar(20),
+    name varchar(100) NOT NULL,
+    description text,
+    price_source varchar(50),
+    trading_hours varchar(100),
+    typical_unit varchar(20),
+    CONSTRAINT asset_classes_pkey PRIMARY KEY (code)
+);
+
+
+COMMENT ON TABLE asset_classes IS 'Asset class definitions for financial portfolio management. Defines tradeable asset types with pricing sources and trading characteristics.';
+
+
+COMMENT ON COLUMN asset_classes.code IS 'Unique asset class identifier (e.g., STOCK, BOND, CRYPTO)';
+
+
+COMMENT ON COLUMN asset_classes.name IS 'Human-readable asset class name';
+
+
+COMMENT ON COLUMN asset_classes.description IS 'Detailed description of the asset class';
+
+
+COMMENT ON COLUMN asset_classes.price_source IS 'Data source for price information (e.g., Yahoo Finance, Alpha Vantage)';
+
+
+COMMENT ON COLUMN asset_classes.trading_hours IS 'When this asset class typically trades';
+
+
+COMMENT ON COLUMN asset_classes.typical_unit IS 'Standard trading unit (shares, contracts, etc.)';
+
+--
+-- Name: channel_activity; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS channel_activity (
+    channel varchar(50),
+    last_message_at timestamptz DEFAULT now(),
+    last_message_from varchar(100),
+    CONSTRAINT channel_activity_pkey PRIMARY KEY (channel)
+);
+
+
+COMMENT ON TABLE channel_activity IS 'Tracks last message per channel for idle detection. Read/write: NOVA, Newhart.';
+
+--
+-- Name: conversations; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id SERIAL,
+    session_key varchar(255),
+    channel varchar(50),
+    started_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    summary text,
+    notes text,
+    CONSTRAINT conversations_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE conversations IS 'Conversation session tracking. Logs chat sessions with metadata for analysis and continuity.';
+
+
+COMMENT ON COLUMN conversations.id IS 'Unique conversation identifier';
+
+
+COMMENT ON COLUMN conversations.session_key IS 'Session identifier for grouping related messages';
+
+
+COMMENT ON COLUMN conversations.channel IS 'Communication channel (signal, discord, etc.)';
+
+
+COMMENT ON COLUMN conversations.started_at IS 'Conversation start timestamp';
+
+
+COMMENT ON COLUMN conversations.summary IS 'Conversation summary or key points';
+
+
+COMMENT ON COLUMN conversations.notes IS 'Additional notes about the conversation';
+
+--
+-- Name: entities; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS entities (
+    id SERIAL,
+    name varchar(255) NOT NULL,
+    type varchar(50) NOT NULL,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    last_seen timestamp,
+    photo bytea,
+    notes text,
+    full_name varchar(255),
+    nicknames text[],
+    gender varchar(50),
+    pronouns varchar(50),
+    user_id varchar(255),
+    auth_token varchar(255),
+    collaborate boolean,
+    collaboration_scope text,
+    trust_level varchar(20) DEFAULT 'unknown',
+    introduction_context text,
+    capabilities jsonb,
+    access_constraints jsonb,
+    preferred_contact varchar(50),
+    CONSTRAINT entities_pkey PRIMARY KEY (id),
+    CONSTRAINT entities_name_type_key UNIQUE (name, type),
+    CONSTRAINT entities_user_id_key UNIQUE (user_id),
+    CONSTRAINT entities_type_check CHECK (type::text IN ('person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying)),
+    CONSTRAINT valid_collaboration_scope CHECK (collaboration_scope IS NULL OR (collaboration_scope IN ('full'::text, 'domain-specific'::text, 'supervised'::text)))
+);
+
+
+COMMENT ON TABLE entities IS 'People, AIs, organizations. NOVA has full access. Use entity_facts for attributes.';
+
+
+COMMENT ON COLUMN entities.collaborate IS 'If true, collaborate with this entity. If false, task them. NULL = not assessed.';
+
+
+COMMENT ON COLUMN entities.collaboration_scope IS 'full | domain-specific | supervised - determines collaboration breadth';
+
+
+COMMENT ON COLUMN entities.trust_level IS 'Trust level for confidence scoring: owner, admin, user, unknown, untrusted';
+
+
+COMMENT ON COLUMN entities.introduction_context IS 'How/why we connected with this entity, relationship context';
+
+
+COMMENT ON COLUMN entities.capabilities IS 'What this entity can do - domains, skills, tools';
+
+
+COMMENT ON COLUMN entities.access_constraints IS 'Topics/data this entity should not see';
+
+
+COMMENT ON COLUMN entities.preferred_contact IS 'Preferred communication method: signal, email, slack, telegram, whatsapp, etc.';
+
+--
+-- Name: idx_entities_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entities_name ON entities (name);
+
+--
+-- Name: idx_entities_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entities_type ON entities (type);
+
+--
+-- Name: idx_entities_user_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entities_user_id ON entities (user_id) WHERE (user_id IS NOT NULL);
+
+--
+-- Name: agent_domains; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_domains (
+    id SERIAL,
+    agent_id integer NOT NULL,
+    domain_topic varchar(255) NOT NULL,
+    source_entity_id integer,
+    vote_count integer DEFAULT 1,
+    created_at timestamp DEFAULT now(),
+    last_confirmed timestamp DEFAULT now(),
+    notes text,
+    CONSTRAINT agent_domains_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_domains_domain_topic_key UNIQUE (domain_topic),
+    CONSTRAINT agent_domains_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE CASCADE,
+    CONSTRAINT agent_domains_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES entities (id)
+);
+
+
+COMMENT ON TABLE agent_domains IS 'Agent domain assignments. READ-ONLY except Newhart.';
+
+
+COMMENT ON COLUMN agent_domains.domain_topic IS 'The topic/responsibility this agent owns';
+
+
+COMMENT ON COLUMN agent_domains.source_entity_id IS 'Entity who assigned this domain (for attribution)';
+
+
+COMMENT ON COLUMN agent_domains.vote_count IS 'Reinforcement count - incremented when domain assignment is reconfirmed';
+
+--
+-- Name: idx_agent_domains_agent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_domains_agent ON agent_domains (agent_id);
+
+--
+-- Name: idx_agent_domains_topic; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_domains_topic ON agent_domains (domain_topic);
+
+--
+-- Name: idx_agent_domains_votes; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_domains_votes ON agent_domains (vote_count DESC);
+
+--
+-- Name: certificates; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS certificates (
+    id SERIAL,
+    entity_id integer NOT NULL,
+    fingerprint varchar(128) NOT NULL,
+    serial varchar(64) NOT NULL,
+    subject_dn varchar(512) NOT NULL,
+    issued_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at timestamp,
+    revoked_at timestamp,
+    revocation_reason varchar(255),
+    device_name varchar(255),
+    notes text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT certificates_pkey PRIMARY KEY (id),
+    CONSTRAINT certificates_fingerprint_key UNIQUE (fingerprint),
+    CONSTRAINT certificates_serial_key UNIQUE (serial),
+    CONSTRAINT certificates_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id)
+);
+
+
+COMMENT ON TABLE certificates IS 'Client certificates issued by NOVA CA. Security-sensitive. Verify before modifications.';
+
+
+COMMENT ON COLUMN certificates.fingerprint IS 'SHA256 fingerprint of the certificate';
+
+
+COMMENT ON COLUMN certificates.serial IS 'Certificate serial number';
+
+
+COMMENT ON COLUMN certificates.revoked_at IS 'If set, certificate is revoked and should be rejected';
+
+--
+-- Name: idx_certificates_entity_id; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_certificates_entity_id ON certificates (entity_id);
+
+--
+-- Name: idx_certificates_fingerprint; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerprint);
+
+--
+-- Name: idx_certificates_serial; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_certificates_serial ON certificates (serial);
+
+--
+-- Name: entity_fact_conflicts; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS entity_fact_conflicts (
+    id SERIAL,
+    entity_id integer,
+    key varchar(255),
+    fact_id_a integer,
+    fact_id_b integer,
+    value_a text,
+    value_b text,
+    confidence_a real,
+    confidence_b real,
+    resolution varchar(50),
+    resolved_at timestamptz,
+    resolved_by varchar(50),
+    created_at timestamptz DEFAULT now(),
+    CONSTRAINT entity_fact_conflicts_pkey PRIMARY KEY (id),
+    CONSTRAINT entity_fact_conflicts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id)
+);
+
+
+COMMENT ON TABLE entity_fact_conflicts IS 'Conflicts between entity facts requiring resolution. Part of the truth reconciliation system.';
+
+--
+-- Name: entity_facts; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS entity_facts (
+    id SERIAL,
+    entity_id integer,
+    key varchar(255) NOT NULL,
+    value text NOT NULL,
+    data jsonb,
+    source varchar(255),
+    confidence double precision DEFAULT 1.0,
+    learned_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    visibility varchar(20) DEFAULT 'public',
+    privacy_scope integer[],
+    source_entity_id integer,
+    visibility_reason text,
+    vote_count integer DEFAULT 1,
+    last_confirmed timestamp DEFAULT now(),
+    data_type varchar(20) DEFAULT 'observation',
+    last_confirmed_at timestamptz DEFAULT now(),
+    confirmation_count integer DEFAULT 1,
+    decay_rate real,
+    CONSTRAINT entity_facts_pkey PRIMARY KEY (id),
+    CONSTRAINT entity_facts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id) ON DELETE CASCADE,
+    CONSTRAINT entity_facts_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES entities (id),
+    CONSTRAINT chk_confidence CHECK (confidence >= 0::double precision AND confidence <= 1::double precision),
+    CONSTRAINT chk_data_type CHECK (data_type::text IN ('permanent'::character varying, 'identity'::character varying, 'preference'::character varying, 'temporal'::character varying, 'observation'::character varying))
+);
+
+
+COMMENT ON TABLE entity_facts IS 'Key-value facts about entities. Check current_timezone for I)ruid before time-based actions.';
+
+
+COMMENT ON COLUMN entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
+
+
+COMMENT ON COLUMN entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
+
+
+COMMENT ON COLUMN entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
+
+
+COMMENT ON COLUMN entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
+
+
+COMMENT ON COLUMN entity_facts.vote_count IS 'Reinforcement count - incremented each time this fact is re-confirmed in conversation';
+
+
+COMMENT ON COLUMN entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
+
+--
+-- Name: idx_entity_facts_confidence; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_confidence ON entity_facts (confidence) WHERE (confidence < (1.0)::double precision);
+
+--
+-- Name: idx_entity_facts_data; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_data ON entity_facts USING gin (data);
+
+--
+-- Name: idx_entity_facts_data_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_data_type ON entity_facts (data_type);
+
+--
+-- Name: idx_entity_facts_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_entity ON entity_facts (entity_id);
+
+--
+-- Name: idx_entity_facts_key; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_key ON entity_facts (key);
+
+--
+-- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_privacy_scope ON entity_facts USING gin (privacy_scope);
+
+--
+-- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_source_entity ON entity_facts (source_entity_id);
+
+--
+-- Name: idx_entity_facts_value_trgm; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_value_trgm ON entity_facts USING gin (lower(value) gin_trgm_ops);
+
+--
+-- Name: idx_entity_facts_visibility; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_visibility ON entity_facts (visibility);
+
+--
+-- Name: idx_entity_facts_vote_count; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_vote_count ON entity_facts (vote_count DESC);
+
+--
+-- Name: entity_facts_archive; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS entity_facts_archive (
+    id integer,
+    entity_id integer,
+    key varchar(255),
+    value text,
+    data jsonb,
+    source varchar(255),
+    confidence double precision,
+    learned_at timestamp,
+    updated_at timestamp,
+    visibility varchar(20),
+    privacy_scope integer[],
+    source_entity_id integer,
+    visibility_reason text,
+    vote_count integer,
+    last_confirmed timestamp,
+    data_type varchar(20),
+    last_confirmed_at timestamptz,
+    confirmation_count integer,
+    decay_rate real,
+    archived_at timestamptz DEFAULT now(),
+    archive_reason varchar(50),
+    archived_by varchar(50) DEFAULT 'decay_script'
+);
+
+
+COMMENT ON TABLE entity_facts_archive IS 'Archived entity facts from decay/cleanup processes. Historical record of previously stored knowledge.';
+
+
+COMMENT ON COLUMN entity_facts_archive.archived_at IS 'When the fact was archived';
+
+
+COMMENT ON COLUMN entity_facts_archive.archive_reason IS 'Why the fact was archived (decay, conflict, manual)';
+
+
+COMMENT ON COLUMN entity_facts_archive.archived_by IS 'System or agent that archived the fact';
+
+--
+-- Name: idx_entity_facts_archive_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_archive_date ON entity_facts_archive (archived_at);
+
+--
+-- Name: idx_entity_facts_archive_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_archive_entity ON entity_facts_archive (entity_id);
+
+--
+-- Name: idx_entity_facts_archive_key; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_facts_archive_key ON entity_facts_archive (key);
+
+--
+-- Name: entity_relationships; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS entity_relationships (
+    id SERIAL,
+    entity_a integer,
+    entity_b integer,
+    relationship varchar(100) NOT NULL,
+    since timestamp,
+    notes text,
+    is_long_distance boolean DEFAULT false,
+    seriousness varchar(20) DEFAULT 'standard',
+    CONSTRAINT entity_relationships_pkey PRIMARY KEY (id),
+    CONSTRAINT entity_relationships_entity_a_entity_b_relationship_key UNIQUE (entity_a, entity_b, relationship),
+    CONSTRAINT entity_relationships_entity_a_fkey FOREIGN KEY (entity_a) REFERENCES entities (id) ON DELETE CASCADE,
+    CONSTRAINT entity_relationships_entity_b_fkey FOREIGN KEY (entity_b) REFERENCES entities (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE entity_relationships IS 'Relationships between entities (family, work, friendship, etc).';
+
+--
+-- Name: idx_entity_rel_a; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_rel_a ON entity_relationships (entity_a);
+
+--
+-- Name: idx_entity_rel_b; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_entity_rel_b ON entity_relationships (entity_b);
+
+--
+-- Name: events; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS events (
+    id SERIAL,
+    event_date timestamp NOT NULL,
+    title varchar(500) NOT NULL,
+    description text,
+    source varchar(255),
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED,
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamptz DEFAULT now(),
+    CONSTRAINT events_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE events IS 'Historical events, milestones, activities. Log significant occurrences.';
+
+--
+-- Name: idx_events_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_events_date ON events (event_date);
+
+--
+-- Name: idx_events_search; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_events_search ON events USING gin (search_vector);
+
+--
+-- Name: event_entities; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS event_entities (
+    event_id integer,
+    entity_id integer,
+    role varchar(100),
+    CONSTRAINT event_entities_pkey PRIMARY KEY (event_id, entity_id),
+    CONSTRAINT event_entities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id) ON DELETE CASCADE,
+    CONSTRAINT event_entities_event_id_fkey FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE event_entities IS 'Links events to entities (people, orgs, AIs). Many-to-many relationship table.';
+
+--
+-- Name: events_archive; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS events_archive (
+    id SERIAL,
+    event_date timestamp NOT NULL,
+    title varchar(500) NOT NULL,
+    description text,
+    source varchar(255),
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED,
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamptz DEFAULT now(),
+    archived_at timestamptz DEFAULT now(),
+    archive_reason varchar(50),
+    CONSTRAINT events_archive_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE events_archive IS 'Archived historical events. Long-term storage for events moved out of active events table.';
+
+--
+-- Name: events_archive_event_date_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS events_archive_event_date_idx ON events_archive (event_date);
+
+--
+-- Name: events_archive_search_vector_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS events_archive_search_vector_idx ON events_archive USING gin (search_vector);
+
+--
+-- Name: extraction_metrics; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS extraction_metrics (
+    id SERIAL,
+    timestamp timestamptz DEFAULT now(),
+    method text,
+    num_relations integer,
+    avg_confidence real,
+    processing_time_ms integer,
+    CONSTRAINT extraction_metrics_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE extraction_metrics IS 'Performance metrics for data extraction processes. Tracks accuracy and efficiency of knowledge extraction.';
+
+--
+-- Name: fact_change_log; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS fact_change_log (
+    id SERIAL,
+    fact_id integer NOT NULL,
+    old_value text,
+    new_value text,
+    changed_by_entity_id integer,
+    reason varchar(100),
+    changed_at timestamptz DEFAULT now(),
+    CONSTRAINT fact_change_log_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE fact_change_log IS 'Audit trail for entity fact modifications. Tracks who changed what and when for accountability.';
+
+--
+-- Name: gambling_logs; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS gambling_logs (
+    id SERIAL,
+    entity_id integer,
+    name varchar(255) NOT NULL,
+    location varchar(255),
+    started_at date,
+    ended_at date,
+    notes text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT gambling_logs_pkey PRIMARY KEY (id),
+    CONSTRAINT gambling_logs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE gambling_logs IS 'High-level gambling session summaries. Groups multiple gambling_entries by session.';
+
+--
+-- Name: idx_gambling_logs_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_gambling_logs_entity ON gambling_logs (entity_id);
+
+--
+-- Name: gambling_entries; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS gambling_entries (
+    id SERIAL,
+    log_id integer,
+    session_date timestamp,
+    casino varchar(255),
+    game varchar(100),
+    amount numeric(10,2) NOT NULL,
+    notes text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    duration_minutes numeric(6,2),
+    base_bet numeric(10,2),
+    CONSTRAINT gambling_entries_pkey PRIMARY KEY (id),
+    CONSTRAINT gambling_entries_log_id_fkey FOREIGN KEY (log_id) REFERENCES gambling_logs (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE gambling_entries IS 'Individual gambling session records. Tracks bets, outcomes, and session details for analysis.';
+
+
+COMMENT ON COLUMN gambling_entries.log_id IS 'References gambling_logs for session grouping';
+
+
+COMMENT ON COLUMN gambling_entries.session_date IS 'Date and time of gambling session';
+
+
+COMMENT ON COLUMN gambling_entries.casino IS 'Casino or venue name';
+
+
+COMMENT ON COLUMN gambling_entries.game IS 'Game type (poker, blackjack, etc.)';
+
+
+COMMENT ON COLUMN gambling_entries.amount IS 'Win/loss amount (positive for wins, negative for losses)';
+
+
+COMMENT ON COLUMN gambling_entries.duration_minutes IS 'Session duration in minutes';
+
+
+COMMENT ON COLUMN gambling_entries.base_bet IS 'Typical bet size for the session';
+
+--
+-- Name: idx_gambling_entries_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_gambling_entries_date ON gambling_entries (session_date);
+
+--
+-- Name: idx_gambling_entries_log; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_gambling_entries_log ON gambling_entries (log_id);
+
+--
+-- Name: git_issue_queue; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS git_issue_queue (
+    id SERIAL,
+    repo text NOT NULL,
+    issue_number integer NOT NULL,
+    title text,
+    priority integer DEFAULT 5,
+    status text DEFAULT 'pending_tests',
+    source text DEFAULT 'github',
+    parent_issue_id integer,
+    labels text[],
+    created_at timestamptz DEFAULT now(),
+    started_at timestamptz,
+    completed_at timestamptz,
+    error_message text,
+    context jsonb DEFAULT '{}',
+    test_file text,
+    code_files text[],
+    CONSTRAINT git_issue_queue_pkey PRIMARY KEY (id),
+    CONSTRAINT git_issue_queue_repo_issue_number_key UNIQUE (repo, issue_number),
+    CONSTRAINT coder_issue_queue_parent_issue_id_fkey FOREIGN KEY (parent_issue_id) REFERENCES git_issue_queue (id),
+    CONSTRAINT coder_issue_queue_status_check CHECK (status IN ('pending_tests'::text, 'tests_approved'::text, 'implementing'::text, 'testing'::text, 'done'::text, 'failed'::text, 'paused'::text, 'blocked'::text))
+);
+
+
+COMMENT ON TABLE git_issue_queue IS 'Issue queue for git-based workflows. NOTIFY triggers dispatch work automatically.';
+
+
+COMMENT ON COLUMN git_issue_queue.status IS 'pending_tests→tests_approved→implementing→testing→done/failed';
+
+
+COMMENT ON COLUMN git_issue_queue.labels IS 'GitHub labels. Gem skips issues with paused, blocked, on-hold, wontfix labels.';
+
+--
+-- Name: idx_git_queue_priority; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_git_queue_priority ON git_issue_queue (priority DESC, created_at);
+
+--
+-- Name: idx_git_queue_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_git_queue_status ON git_issue_queue (status);
+
+--
+-- Name: job_messages; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS job_messages (
+    id SERIAL,
+    job_id integer NOT NULL,
+    message_id integer NOT NULL,
+    role varchar(20) DEFAULT 'context',
+    added_at timestamptz DEFAULT now(),
+    CONSTRAINT job_messages_pkey PRIMARY KEY (id),
+    CONSTRAINT job_messages_job_id_fkey FOREIGN KEY (job_id) REFERENCES agent_jobs (id),
+    CONSTRAINT job_messages_message_id_fkey FOREIGN KEY (message_id) REFERENCES agent_chat (id)
+);
+
+
+COMMENT ON TABLE job_messages IS 'Message log per job for conversation threading';
+
+--
+-- Name: idx_job_messages; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_job_messages ON job_messages (job_id, added_at);
+
+--
+-- Name: lessons; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS lessons (
+    id SERIAL,
+    lesson text NOT NULL,
+    context text,
+    source varchar(255),
+    learned_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    original_behavior text,
+    correction_source text,
+    reinforced_at timestamp,
+    confidence double precision DEFAULT 1.0,
+    last_referenced timestamp,
+    last_confirmed_at timestamptz DEFAULT now(),
+    CONSTRAINT lessons_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE lessons IS 'Lessons and insights learned. Update when learning something worth remembering.';
+
+
+COMMENT ON COLUMN lessons.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
+
+--
+-- Name: lessons_archive; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS lessons_archive (
+    id SERIAL,
+    lesson text NOT NULL,
+    context text,
+    source varchar(255),
+    learned_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    original_behavior text,
+    correction_source text,
+    reinforced_at timestamp,
+    confidence double precision DEFAULT 1.0,
+    last_referenced timestamp,
+    last_confirmed_at timestamptz DEFAULT now(),
+    archived_at timestamptz DEFAULT now(),
+    archive_reason varchar(50),
+    CONSTRAINT lessons_archive_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE lessons_archive IS 'Archived lessons and insights. Historical record of previously stored learnings.';
+
+
+COMMENT ON COLUMN lessons_archive.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
+
+--
+-- Name: library_authors; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS library_authors (
+    id SERIAL,
+    name text NOT NULL,
+    biography text,
+    created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT library_authors_pkey PRIMARY KEY (id),
+    CONSTRAINT library_authors_name_key UNIQUE (name)
+);
+
+
+COMMENT ON TABLE library_authors IS 'Library domain: normalized author records. Managed by Athena (librarian agent).';
+
+--
+-- Name: idx_library_authors_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_authors_name ON library_authors (name);
+
+--
+-- Name: library_tags; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS library_tags (
+    id SERIAL,
+    name text NOT NULL,
+    created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT library_tags_pkey PRIMARY KEY (id),
+    CONSTRAINT library_tags_name_key UNIQUE (name)
+);
+
+
+COMMENT ON TABLE library_tags IS 'Library domain: subject/genre/topic tags for works. Managed by Athena.';
+
+--
+-- Name: library_works; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS library_works (
+    id SERIAL,
+    title text NOT NULL,
+    work_type text NOT NULL,
+    publication_date date NOT NULL,
+    language text DEFAULT 'en' NOT NULL,
+    summary text NOT NULL,
+    url text,
+    doi text,
+    arxiv_id text,
+    isbn text,
+    external_ids jsonb DEFAULT '{}',
+    abstract text,
+    content_text text,
+    insights text NOT NULL,
+    subjects text[] DEFAULT '{}' NOT NULL,
+    publisher text,
+    source_path text,
+    shared_by text NOT NULL,
+    added_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector,
+    extra_metadata jsonb DEFAULT '{}',
+    notable_quotes text[],
+    edition text,
+    embed boolean DEFAULT true NOT NULL,
+    CONSTRAINT library_works_pkey PRIMARY KEY (id),
+    CONSTRAINT insights_not_empty CHECK (length(TRIM(BOTH FROM insights)) > 20),
+    CONSTRAINT summary_not_empty CHECK (length(TRIM(BOTH FROM summary)) > 50),
+    CONSTRAINT valid_work_type CHECK (work_type IN ('paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text))
+);
+
+
+COMMENT ON TABLE library_works IS 'Library domain: all written works (papers, books, poems, etc). Managed by Athena (librarian agent). ALL core fields are NOT NULL — Athena must generate summary and insights during ingestion. The summary field is used for semantic embedding (200-400 words, high-density). On semantic recall hit, query this table for full details.';
+
+
+COMMENT ON COLUMN library_works.summary IS 'REQUIRED. Concise semantic summary for embedding. 200-400 words. Must capture: what the work is, who wrote it, key findings/themes, and why it matters. Athena generates this during ingestion.';
+
+
+COMMENT ON COLUMN library_works.abstract IS 'Original abstract verbatim from source. May be NULL if source has none (e.g. poems).';
+
+
+COMMENT ON COLUMN library_works.content_text IS 'Full text of the work. Optional — only store if available and not too large.';
+
+
+COMMENT ON COLUMN library_works.insights IS 'REQUIRED. Key takeaways, relevance to our work, notable connections. Athena generates this during ingestion.';
+
+
+COMMENT ON COLUMN library_works.notable_quotes IS 'Array of notable quotes from the work. Included in semantic embedding for recall. Generated during ingestion.';
+
+--
+-- Name: idx_library_works_arxiv; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_arxiv ON library_works (arxiv_id) WHERE (arxiv_id IS NOT NULL);
+
+--
+-- Name: idx_library_works_doi; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_doi ON library_works (doi) WHERE (doi IS NOT NULL);
+
+--
+-- Name: idx_library_works_embed; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_embed ON library_works (embed) WHERE (embed = true);
+
+--
+-- Name: idx_library_works_isbn; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_isbn ON library_works (isbn) WHERE (isbn IS NOT NULL);
+
+--
+-- Name: idx_library_works_search; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_search ON library_works USING gin (search_vector);
+
+--
+-- Name: idx_library_works_subjects; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_subjects ON library_works USING gin (subjects);
+
+--
+-- Name: idx_library_works_title_edition; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_works_title_edition ON library_works (lower(TRIM(BOTH FROM title)), COALESCE(edition, ''::text));
+
+--
+-- Name: idx_library_works_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_library_works_type ON library_works (work_type);
+
+--
+-- Name: library_work_authors; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS library_work_authors (
+    work_id integer,
+    author_id integer,
+    author_order integer DEFAULT 0,
+    CONSTRAINT library_work_authors_pkey PRIMARY KEY (work_id, author_id),
+    CONSTRAINT library_work_authors_author_id_fkey FOREIGN KEY (author_id) REFERENCES library_authors (id) ON DELETE CASCADE,
+    CONSTRAINT library_work_authors_work_id_fkey FOREIGN KEY (work_id) REFERENCES library_works (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE library_work_authors IS 'Links works to their authors. author_order preserves original ordering.';
+
+--
+-- Name: library_work_relationships; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS library_work_relationships (
+    from_work_id integer,
+    to_work_id integer,
+    relation_type text,
+    CONSTRAINT library_work_relationships_pkey PRIMARY KEY (from_work_id, to_work_id, relation_type),
+    CONSTRAINT library_work_relationships_from_work_id_fkey FOREIGN KEY (from_work_id) REFERENCES library_works (id) ON DELETE CASCADE,
+    CONSTRAINT library_work_relationships_to_work_id_fkey FOREIGN KEY (to_work_id) REFERENCES library_works (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE library_work_relationships IS 'Tracks relationships between works (citations, sequels, responses, etc).';
+
+--
+-- Name: library_work_tags; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS library_work_tags (
+    work_id integer,
+    tag_id integer,
+    CONSTRAINT library_work_tags_pkey PRIMARY KEY (work_id, tag_id),
+    CONSTRAINT library_work_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES library_tags (id) ON DELETE CASCADE,
+    CONSTRAINT library_work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES library_works (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE library_work_tags IS 'Links works to subject/topic tags.';
+
+--
+-- Name: media_consumed; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS media_consumed (
+    id SERIAL,
+    media_type varchar(50) NOT NULL,
+    title varchar(500) NOT NULL,
+    creator varchar(255),
+    url text,
+    consumed_date date,
+    consumed_by integer,
+    rating integer,
+    notes text,
+    transcript text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    summary text,
+    metadata jsonb DEFAULT '{}',
+    source_file text,
+    status varchar(20) DEFAULT 'completed',
+    ingested_by integer,
+    ingested_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector,
+    insights text,
+    CONSTRAINT media_consumed_pkey PRIMARY KEY (id),
+    CONSTRAINT media_consumed_consumed_by_fkey FOREIGN KEY (consumed_by) REFERENCES entities (id),
+    CONSTRAINT media_consumed_ingested_by_fkey FOREIGN KEY (ingested_by) REFERENCES agents (id),
+    CONSTRAINT media_consumed_rating_check CHECK (rating >= 1 AND rating <= 10)
+);
+
+
+COMMENT ON TABLE media_consumed IS 'Books, movies, podcasts consumed by entities. Log completions here.';
+
+
+COMMENT ON COLUMN media_consumed.summary IS 'Athena (librarian-agent) generated summary - objective, factual';
+
+
+COMMENT ON COLUMN media_consumed.metadata IS 'Flexible metadata: duration, language, format, topics, word_count, etc.';
+
+
+COMMENT ON COLUMN media_consumed.source_file IS 'Local file path if media was downloaded';
+
+
+COMMENT ON COLUMN media_consumed.status IS 'Processing status: pending, processing, completed, failed, queued';
+
+
+COMMENT ON COLUMN media_consumed.ingested_by IS 'Agent ID that processed this media';
+
+
+COMMENT ON COLUMN media_consumed.ingested_at IS 'Timestamp when media was ingested/processed';
+
+
+COMMENT ON COLUMN media_consumed.search_vector IS 'Full-text search vector (title + notes + transcript + summary)';
+
+
+COMMENT ON COLUMN media_consumed.insights IS 'NOVA personal insights - analysis, connections, opinions';
+
+--
+-- Name: idx_media_consumed_by; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_consumed_by ON media_consumed (consumed_by);
+
+--
+-- Name: idx_media_search; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_search ON media_consumed USING gin (search_vector);
+
+--
+-- Name: idx_media_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_status ON media_consumed (status);
+
+--
+-- Name: idx_media_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_type ON media_consumed (media_type);
+
+--
+-- Name: agent_actions; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS agent_actions (
+    id SERIAL,
+    agent_id integer DEFAULT 1,
+    action_type varchar(100) NOT NULL,
+    description text NOT NULL,
+    related_media_id integer,
+    related_event_id integer,
+    metadata jsonb,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT agent_actions_pkey PRIMARY KEY (id),
+    CONSTRAINT agent_actions_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES entities (id),
+    CONSTRAINT agent_actions_related_event_id_fkey FOREIGN KEY (related_event_id) REFERENCES events (id),
+    CONSTRAINT agent_actions_related_media_id_fkey FOREIGN KEY (related_media_id) REFERENCES media_consumed (id)
+);
+
+
+COMMENT ON TABLE agent_actions IS 'Agent action definitions. READ-ONLY except Newhart.';
+
+--
+-- Name: idx_agent_actions_agent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_actions_agent ON agent_actions (agent_id);
+
+--
+-- Name: idx_agent_actions_time; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_actions_time ON agent_actions (created_at DESC);
+
+--
+-- Name: idx_agent_actions_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_agent_actions_type ON agent_actions (action_type);
+
+--
+-- Name: media_queue; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS media_queue (
+    id SERIAL,
+    url text,
+    file_path text,
+    media_type varchar(50),
+    title varchar(500),
+    creator varchar(255),
+    priority integer DEFAULT 5,
+    status varchar(20) DEFAULT 'pending',
+    requested_by integer,
+    requested_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    processing_started_at timestamp,
+    completed_at timestamp,
+    result_media_id integer,
+    error_message text,
+    metadata jsonb DEFAULT '{}',
+    CONSTRAINT media_queue_pkey PRIMARY KEY (id),
+    CONSTRAINT media_queue_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES entities (id),
+    CONSTRAINT media_queue_result_media_id_fkey FOREIGN KEY (result_media_id) REFERENCES media_consumed (id)
+);
+
+
+COMMENT ON TABLE media_queue IS 'Queue for media ingestion. Librarian agent processes these.';
+
+
+COMMENT ON COLUMN media_queue.priority IS '1=urgent, 5=normal, 10=low priority';
+
+
+COMMENT ON COLUMN media_queue.status IS 'pending, processing, completed, failed, duplicate';
+
+
+COMMENT ON COLUMN media_queue.result_media_id IS 'Foreign key to resulting media_consumed record';
+
+--
+-- Name: idx_media_queue_priority; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_queue_priority ON media_queue (priority, requested_at);
+
+--
+-- Name: idx_media_queue_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_queue_status ON media_queue (status);
+
+--
+-- Name: media_tags; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS media_tags (
+    id SERIAL,
+    media_id integer NOT NULL,
+    tag varchar(100) NOT NULL,
+    source varchar(20) DEFAULT 'auto',
+    confidence numeric(3,2),
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT media_tags_pkey PRIMARY KEY (id),
+    CONSTRAINT media_tags_media_id_tag_key UNIQUE (media_id, tag),
+    CONSTRAINT media_tags_media_id_fkey FOREIGN KEY (media_id) REFERENCES media_consumed (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE media_tags IS 'Tags/topics for media items. Helps with recommendations and search.';
+
+
+COMMENT ON COLUMN media_tags.source IS 'auto=AI-generated, manual=user-added';
+
+
+COMMENT ON COLUMN media_tags.confidence IS 'AI confidence score for auto-generated tags';
+
+--
+-- Name: idx_media_tags_media; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_tags_media ON media_tags (media_id);
+
+--
+-- Name: idx_media_tags_tag; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_media_tags_tag ON media_tags (tag);
+
+--
+-- Name: memory_embeddings; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS memory_embeddings (
+    id SERIAL,
+    source_type varchar(50) NOT NULL,
+    source_id text,
+    content text NOT NULL,
+    embedding vector(1536),
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamptz DEFAULT now(),
+    CONSTRAINT memory_embeddings_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE memory_embeddings IS 'Vector embeddings for semantic memory search. Used by proactive-recall.py.';
+
+--
+-- Name: idx_memory_embeddings_source; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_memory_embeddings_source ON memory_embeddings (source_type);
+
+--
+-- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_memory_embeddings_vector ON memory_embeddings USING ivfflat (embedding vector_cosine_ops);
+
+--
+-- Name: memory_embeddings_archive; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS memory_embeddings_archive (
+    id SERIAL,
+    source_type varchar(50) NOT NULL,
+    source_id text,
+    content text NOT NULL,
+    embedding vector(1536),
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    confidence real DEFAULT 1.0,
+    last_confirmed_at timestamptz DEFAULT now(),
+    archived_at timestamptz DEFAULT now(),
+    archive_reason varchar(50),
+    CONSTRAINT memory_embeddings_archive_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE memory_embeddings_archive IS 'Archived vector embeddings from semantic memory system. Historical embeddings for backup/analysis.';
+
+--
+-- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS memory_embeddings_archive_embedding_idx ON memory_embeddings_archive USING ivfflat (embedding vector_cosine_ops);
+
+--
+-- Name: memory_embeddings_archive_source_type_idx; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS memory_embeddings_archive_source_type_idx ON memory_embeddings_archive (source_type);
+
+--
+-- Name: memory_type_priorities; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS memory_type_priorities (
+    source_type text,
+    priority numeric(3,2) DEFAULT 1.00 NOT NULL,
+    description text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT memory_type_priorities_pkey PRIMARY KEY (source_type)
+);
+
+
+COMMENT ON TABLE memory_type_priorities IS 'Priority weights for semantic recall by source_type. Higher = more likely to surface. NOVA can modify.';
+
+--
+-- Name: music_library; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS music_library (
+    id SERIAL,
+    media_id integer,
+    musicbrainz_track_id uuid,
+    musicbrainz_album_id uuid,
+    musicbrainz_artist_id uuid,
+    isrc varchar(12),
+    discogs_release_id integer,
+    spotify_uri varchar(255),
+    apple_music_id varchar(255),
+    key varchar(10),
+    bpm numeric(6,2),
+    time_signature varchar(10),
+    duration_ms integer,
+    genre varchar(100),
+    subgenre varchar(100),
+    mood varchar(100),
+    energy_level integer,
+    danceability integer,
+    year integer,
+    album varchar(255),
+    track_number integer,
+    disc_number integer DEFAULT 1,
+    label varchar(255),
+    producer varchar(255),
+    replaygain_track_gain numeric(6,2),
+    replaygain_album_gain numeric(6,2),
+    sample_rate integer,
+    bit_depth integer,
+    bitrate integer,
+    file_format varchar(20),
+    lyrics text,
+    language varchar(10),
+    explicit boolean DEFAULT false,
+    added_at timestamp DEFAULT now(),
+    last_played timestamp,
+    play_count integer DEFAULT 0,
+    search_vector tsvector,
+    CONSTRAINT music_library_pkey PRIMARY KEY (id),
+    CONSTRAINT music_library_media_id_key UNIQUE (media_id),
+    CONSTRAINT music_library_media_id_fkey FOREIGN KEY (media_id) REFERENCES media_consumed (id) ON DELETE CASCADE,
+    CONSTRAINT music_library_danceability_check CHECK (danceability >= 1 AND danceability <= 10),
+    CONSTRAINT music_library_energy_level_check CHECK (energy_level >= 1 AND energy_level <= 10)
+);
+
+
+COMMENT ON TABLE music_library IS 'Music-specific metadata extending media_consumed. Managed by Erato.';
+
+--
+-- Name: idx_music_library_album; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_album ON music_library (musicbrainz_album_id);
+
+--
+-- Name: idx_music_library_artist; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_artist ON music_library (musicbrainz_artist_id);
+
+--
+-- Name: idx_music_library_bpm; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_bpm ON music_library (bpm);
+
+--
+-- Name: idx_music_library_genre; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_genre ON music_library (genre);
+
+--
+-- Name: idx_music_library_key; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_key ON music_library (key);
+
+--
+-- Name: idx_music_library_media; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_media ON music_library (media_id);
+
+--
+-- Name: idx_music_library_mood; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_mood ON music_library (mood);
+
+--
+-- Name: idx_music_library_year; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_library_year ON music_library (year);
+
+--
+-- Name: idx_music_search; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_search ON music_library USING gin (search_vector);
+
+--
+-- Name: music_analysis; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS music_analysis (
+    id SERIAL,
+    music_id integer,
+    analysis_type varchar(50) NOT NULL,
+    analysis_summary text,
+    detailed_findings jsonb,
+    complexity_score numeric(4,2),
+    uniqueness_score numeric(4,2),
+    analyzed_by integer,
+    analyzed_at timestamp DEFAULT now(),
+    notes text,
+    search_vector tsvector,
+    CONSTRAINT music_analysis_pkey PRIMARY KEY (id),
+    CONSTRAINT music_analysis_analyzed_by_fkey FOREIGN KEY (analyzed_by) REFERENCES agents (id),
+    CONSTRAINT music_analysis_music_id_fkey FOREIGN KEY (music_id) REFERENCES music_library (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE music_analysis IS 'Deep musical analysis (harmonic, rhythmic, lyrical, spectral). Managed by Erato.';
+
+--
+-- Name: idx_music_analysis_music; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_analysis_music ON music_analysis (music_id);
+
+--
+-- Name: idx_music_analysis_search; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_analysis_search ON music_analysis USING gin (search_vector);
+
+--
+-- Name: idx_music_analysis_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_music_analysis_type ON music_analysis (analysis_type);
+
+--
+-- Name: places; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS places (
+    id SERIAL,
+    name varchar(255) NOT NULL,
+    type varchar(50),
+    address text,
+    network_subnet varchar(50),
+    network_theme varchar(100),
+    coordinates double precision[],
+    parent_place_id integer,
+    notes text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    street_address varchar(255),
+    city varchar(100),
+    state varchar(100),
+    zipcode varchar(20),
+    country varchar(100) DEFAULT 'USA',
+    CONSTRAINT places_pkey PRIMARY KEY (id),
+    CONSTRAINT places_name_key UNIQUE (name),
+    CONSTRAINT places_parent_place_id_fkey FOREIGN KEY (parent_place_id) REFERENCES places (id)
+);
+
+
+COMMENT ON TABLE places IS 'Locations (houses, venues, cities). Reference I)ruid houses in USER.md.';
+
+--
+-- Name: idx_places_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_places_type ON places (type);
+
+--
+-- Name: event_places; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS event_places (
+    event_id integer,
+    place_id integer,
+    CONSTRAINT event_places_pkey PRIMARY KEY (event_id, place_id),
+    CONSTRAINT event_places_event_id_fkey FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+    CONSTRAINT event_places_place_id_fkey FOREIGN KEY (place_id) REFERENCES places (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE event_places IS 'Links events to places/locations. Many-to-many relationship table.';
+
+--
+-- Name: place_properties; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS place_properties (
+    id SERIAL,
+    place_id integer,
+    key varchar(255) NOT NULL,
+    value text NOT NULL,
+    data jsonb,
+    CONSTRAINT place_properties_pkey PRIMARY KEY (id),
+    CONSTRAINT place_properties_place_id_fkey FOREIGN KEY (place_id) REFERENCES places (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE place_properties IS 'Properties and attributes of places. Key-value storage for place characteristics.';
+
+--
+-- Name: idx_place_props_place; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_place_props_place ON place_properties (place_id);
+
+--
+-- Name: portfolio_positions; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS portfolio_positions (
+    id SERIAL,
+    symbol varchar(10) NOT NULL,
+    shares numeric(12,6) NOT NULL,
+    cost_basis numeric(12,2) NOT NULL,
+    purchased_at timestamp NOT NULL,
+    sold_at timestamp,
+    sale_proceeds numeric(12,2),
+    notes text,
+    created_at timestamp DEFAULT now(),
+    CONSTRAINT portfolio_positions_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE portfolio_positions IS 'Individual stock/investment positions tracking purchases, sales, and P&L. Core table for portfolio management.';
+
+
+COMMENT ON COLUMN portfolio_positions.id IS 'Unique position identifier';
+
+
+COMMENT ON COLUMN portfolio_positions.symbol IS 'Ticker symbol or asset identifier';
+
+
+COMMENT ON COLUMN portfolio_positions.shares IS 'Number of shares/units held';
+
+
+COMMENT ON COLUMN portfolio_positions.cost_basis IS 'Total purchase price';
+
+
+COMMENT ON COLUMN portfolio_positions.purchased_at IS 'Date and time of purchase';
+
+
+COMMENT ON COLUMN portfolio_positions.sold_at IS 'Date and time of sale (NULL for open positions)';
+
+
+COMMENT ON COLUMN portfolio_positions.sale_proceeds IS 'Total sale proceeds (NULL for open positions)';
+
+
+COMMENT ON COLUMN portfolio_positions.notes IS 'Additional notes about the position';
+
+
+COMMENT ON COLUMN portfolio_positions.created_at IS 'Record creation timestamp';
+
+--
+-- Name: idx_positions_held; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_positions_held ON portfolio_positions (sold_at) WHERE (sold_at IS NULL);
+
+--
+-- Name: idx_positions_symbol; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_positions_symbol ON portfolio_positions (symbol);
+
+--
+-- Name: portfolio_snapshots; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+    id SERIAL,
+    snapshot_at timestamp DEFAULT now() NOT NULL,
+    total_value numeric(12,2) NOT NULL,
+    total_cost_basis numeric(12,2) NOT NULL,
+    unrealized_pl numeric(12,2),
+    unrealized_pl_pct numeric(8,4),
+    positions jsonb,
+    benchmark_m2 numeric(8,4),
+    CONSTRAINT portfolio_snapshots_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE portfolio_snapshots IS 'Historical snapshots of portfolio values and performance metrics over time.';
+
+--
+-- Name: idx_snapshots_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_date ON portfolio_snapshots (snapshot_at);
+
+--
+-- Name: idx_snapshots_day; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_snapshots_day ON portfolio_snapshots ((snapshot_at::date));
+
+--
+-- Name: positions; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS positions (
+    id SERIAL,
+    symbol varchar(20) NOT NULL,
+    asset_class varchar(20) NOT NULL,
+    asset_subclass varchar(50),
+    quantity numeric(18,8) NOT NULL,
+    unit varchar(20) DEFAULT 'shares',
+    cost_basis numeric(14,4) NOT NULL,
+    avg_price numeric(14,4),
+    purchased_at timestamp NOT NULL,
+    sold_at timestamp,
+    sale_proceeds numeric(14,4),
+    platform varchar(50),
+    account_id varchar(50) DEFAULT 'main',
+    notes text,
+    maturity_date date,
+    coupon_rate numeric(6,4),
+    strike_price numeric(14,4),
+    expiration_date date,
+    created_at timestamp DEFAULT now(),
+    updated_at timestamp DEFAULT now(),
+    CONSTRAINT positions_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE positions IS 'Legacy or alternative positions tracking table. May be deprecated in favor of portfolio_positions.';
+
+--
+-- Name: idx_positions_account; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_positions_account ON positions (account_id) WHERE (sold_at IS NULL);
+
+--
+-- Name: idx_positions_asset_class; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_positions_asset_class ON positions (asset_class) WHERE (sold_at IS NULL);
+
+--
+-- Name: preferences; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS preferences (
+    id SERIAL,
+    entity_id integer,
+    key varchar(255) NOT NULL,
+    value text NOT NULL,
+    context text,
+    learned_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT preferences_pkey PRIMARY KEY (id),
+    CONSTRAINT preferences_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE preferences IS 'User preferences by entity_id. Check before making assumptions.';
+
+--
+-- Name: idx_preferences_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_preferences_entity ON preferences (entity_id);
+
+--
+-- Name: idx_preferences_key; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_preferences_key ON preferences (key);
+
+--
+-- Name: price_cache_v2; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS price_cache_v2 (
+    symbol varchar(20),
+    asset_class varchar(20),
+    price numeric(14,4) NOT NULL,
+    price_currency varchar(3) DEFAULT 'USD',
+    bid numeric(14,4),
+    ask numeric(14,4),
+    volume numeric(20,0),
+    market_cap numeric(20,0),
+    day_change numeric(10,4),
+    day_change_pct numeric(8,4),
+    cached_at timestamp DEFAULT now(),
+    source varchar(50),
+    CONSTRAINT price_cache_v2_pkey PRIMARY KEY (symbol, asset_class)
+);
+
+
+COMMENT ON TABLE price_cache_v2 IS 'Cached price data for assets to reduce API calls. Version 2 of price caching system.';
+
+--
+-- Name: idx_price_cache_v2_lookup; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_price_cache_v2_lookup ON price_cache_v2 (symbol, asset_class, cached_at DESC);
+
+--
+-- Name: projects; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL,
+    name varchar(255) NOT NULL,
+    status varchar(50) DEFAULT 'active',
+    goal text,
+    started_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    completed_at timestamp,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    notes text,
+    git_config jsonb,
+    repo_url text,
+    locked boolean DEFAULT false,
+    skills text[],
+    CONSTRAINT projects_pkey PRIMARY KEY (id),
+    CONSTRAINT projects_name_key UNIQUE (name),
+    CONSTRAINT projects_status_check CHECK (status::text IN ('active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying))
+);
+
+
+COMMENT ON TABLE projects IS 'Project tracking. For repo-backed projects (locked=TRUE, repo_url set), use GitHub for management. For non-repo projects, use notes field here.';
+
+
+COMMENT ON COLUMN projects.git_config IS 'Per-project Git config: branch strategy, commit conventions, PR workflow, etc.';
+
+
+COMMENT ON COLUMN projects.repo_url IS 'GitHub repo URL. When set with locked=TRUE, this is the source of truth. Manage project via repo, not database.';
+
+
+COMMENT ON COLUMN projects.locked IS 'When TRUE, project is repo-backed. Use GitHub (repo_url) for docs/updates, not this table. Prevents accidental writes to notes field.';
+
+
+COMMENT ON COLUMN projects.skills IS 'Array of skill names (from ~/clawd/skills/) relevant to this project';
+
+--
+-- Name: idx_projects_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects (status);
+
+--
+-- Name: event_projects; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS event_projects (
+    event_id integer,
+    project_id integer,
+    CONSTRAINT event_projects_pkey PRIMARY KEY (event_id, project_id),
+    CONSTRAINT event_projects_event_id_fkey FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+    CONSTRAINT event_projects_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE event_projects IS 'Links events to projects. Many-to-many relationship table for project milestones and activities.';
+
+--
+-- Name: project_entities; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS project_entities (
+    project_id integer,
+    entity_id integer,
+    role varchar(100),
+    CONSTRAINT project_entities_pkey PRIMARY KEY (project_id, entity_id),
+    CONSTRAINT project_entities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id) ON DELETE CASCADE,
+    CONSTRAINT project_entities_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE project_entities IS 'Links projects to entities (people, orgs, AIs). Many-to-many relationship table for project participants.';
+
+--
+-- Name: project_tasks; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS project_tasks (
+    id SERIAL,
+    project_id integer,
+    task text NOT NULL,
+    status varchar(50) DEFAULT 'pending',
+    blocked_by text,
+    due_date timestamp,
+    completed_at timestamp,
+    priority integer DEFAULT 0,
+    CONSTRAINT project_tasks_pkey PRIMARY KEY (id),
+    CONSTRAINT project_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+    CONSTRAINT project_tasks_status_check CHECK (status::text IN ('pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying, 'complete'::character varying))
+);
+
+
+COMMENT ON TABLE project_tasks IS 'Project-specific task breakdown. Links tasks to projects for organized project management.';
+
+--
+-- Name: idx_project_tasks_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks (project_id);
+
+--
+-- Name: idx_project_tasks_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_project_tasks_status ON project_tasks (status);
+
+--
+-- Name: ralph_sessions; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS ralph_sessions (
+    id SERIAL,
+    session_series_id text NOT NULL,
+    iteration integer DEFAULT 1 NOT NULL,
+    agent_id text NOT NULL,
+    spawned_session_key text,
+    task_description text,
+    iteration_goal text,
+    state jsonb DEFAULT '{}' NOT NULL,
+    status text DEFAULT 'PENDING' NOT NULL,
+    error_message text,
+    tokens_used integer,
+    cost numeric(10,4),
+    created_at timestamptz DEFAULT now(),
+    started_at timestamptz,
+    completed_at timestamptz,
+    CONSTRAINT ralph_sessions_pkey PRIMARY KEY (id),
+    CONSTRAINT ralph_sessions_session_series_id_iteration_key UNIQUE (session_series_id, iteration)
+);
+
+
+COMMENT ON TABLE ralph_sessions IS 'Tracks Ralph-style iterative agent sessions. Each iteration runs with fresh context, state persists in DB.';
+
+
+COMMENT ON COLUMN ralph_sessions.session_series_id IS 'UUID or descriptive ID linking all iterations of the same task';
+
+
+COMMENT ON COLUMN ralph_sessions.status IS 'PENDING=not started, RUNNING=in progress, CONTINUE=done but more needed, COMPLETE=finished, ERROR=failed';
+
+--
+-- Name: idx_ralph_series_latest; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_ralph_series_latest ON ralph_sessions (session_series_id, iteration DESC);
+
+--
+-- Name: idx_ralph_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_ralph_status ON ralph_sessions (status) WHERE status IN ('PENDING'::text, 'RUNNING'::text);
+
+--
+-- Name: shopping_history; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS shopping_history (
+    id SERIAL,
+    entity_id integer,
+    product_name text NOT NULL,
+    category text,
+    retailer text,
+    price numeric,
+    url text,
+    satisfaction_rating integer,
+    notes text,
+    purchased_at timestamptz,
+    restock_interval_days integer,
+    next_restock_at timestamptz,
+    created_at timestamptz DEFAULT now(),
+    CONSTRAINT shopping_history_pkey PRIMARY KEY (id),
+    CONSTRAINT shopping_history_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id),
+    CONSTRAINT shopping_history_satisfaction_rating_check CHECK (satisfaction_rating >= 1 AND satisfaction_rating <= 5)
+);
+
+--
+-- Name: idx_history_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_history_entity ON shopping_history (entity_id);
+
+--
+-- Name: idx_history_restock; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_history_restock ON shopping_history (next_restock_at) WHERE (next_restock_at IS NOT NULL);
+
+--
+-- Name: shopping_preferences; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS shopping_preferences (
+    id SERIAL,
+    entity_id integer,
+    category text NOT NULL,
+    key text NOT NULL,
+    value text NOT NULL,
+    notes text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT shopping_preferences_pkey PRIMARY KEY (id),
+    CONSTRAINT shopping_preferences_entity_id_category_key_key UNIQUE (entity_id, category, key),
+    CONSTRAINT shopping_preferences_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id)
+);
+
+--
+-- Name: idx_prefs_entity_cat; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_prefs_entity_cat ON shopping_preferences (entity_id, category);
+
+--
+-- Name: shopping_wishlist; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS shopping_wishlist (
+    id SERIAL,
+    entity_id integer,
+    product_name text NOT NULL,
+    category text,
+    max_price numeric,
+    url text,
+    priority text DEFAULT 'normal',
+    status text DEFAULT 'active',
+    notes text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    CONSTRAINT shopping_wishlist_pkey PRIMARY KEY (id),
+    CONSTRAINT shopping_wishlist_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES entities (id),
+    CONSTRAINT shopping_wishlist_priority_check CHECK (priority IN ('low'::text, 'normal'::text, 'high'::text, 'urgent'::text)),
+    CONSTRAINT shopping_wishlist_status_check CHECK (status IN ('active'::text, 'purchased'::text, 'dropped'::text, 'watching'::text))
+);
+
+--
+-- Name: idx_wishlist_category; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_wishlist_category ON shopping_wishlist (category);
+
+--
+-- Name: idx_wishlist_entity; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_wishlist_entity ON shopping_wishlist (entity_id);
+
+--
+-- Name: idx_wishlist_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_wishlist_status ON shopping_wishlist (status);
+
+--
+-- Name: tags; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS tags (
+    id SERIAL,
+    name varchar(50) NOT NULL,
+    category varchar(50),
+    description text,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT tags_pkey PRIMARY KEY (id),
+    CONSTRAINT tags_name_key UNIQUE (name),
+    CONSTRAINT lowercase_name CHECK (name::text = lower(name::text)),
+    CONSTRAINT valid_category CHECK (category IS NULL OR (category::text IN ('genre'::character varying, 'mood'::character varying, 'theme'::character varying, 'style'::character varying, 'audience'::character varying, 'project'::character varying)))
+);
+
+--
+-- Name: idx_tags_category; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tags_category ON tags (category);
+
+--
+-- Name: idx_tags_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags (name);
+
+--
+-- Name: tasks; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id SERIAL,
+    title varchar(255) NOT NULL,
+    description text,
+    status varchar(50) DEFAULT 'pending',
+    priority integer DEFAULT 5,
+    parent_task_id integer,
+    project_id integer,
+    assigned_to integer,
+    created_by integer,
+    due_date timestamp,
+    completed_at timestamp,
+    notes text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    task_number integer,
+    blocked boolean DEFAULT false,
+    blocked_reason text,
+    blocked_on integer,
+    last_worked_at timestamptz,
+    work_notes text,
+    task_type varchar(20) DEFAULT 'one_off',
+    recurrence_interval interval,
+    last_completed_at timestamptz,
+    CONSTRAINT tasks_pkey PRIMARY KEY (id),
+    CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES entities (id),
+    CONSTRAINT tasks_blocked_on_fkey FOREIGN KEY (blocked_on) REFERENCES entities (id),
+    CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES entities (id),
+    CONSTRAINT tasks_parent_task_id_fkey FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+    CONSTRAINT tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
+);
+
+
+COMMENT ON TABLE tasks IS 'Task tracking. NOVA can create, update status, assign. Check before starting work.';
+
+
+COMMENT ON COLUMN tasks.task_type IS 'one_off = complete once, recurring = resets after completion, fallback = low-priority repeatable when idle';
+
+
+COMMENT ON COLUMN tasks.recurrence_interval IS 'How often recurring tasks reset (e.g., 1 day, 1 week)';
+
+
+COMMENT ON COLUMN tasks.last_completed_at IS 'When task was last completed (for recurring reset logic)';
+
+--
+-- Name: idx_tasks_due; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks (due_date);
+
+--
+-- Name: idx_tasks_parent; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks (parent_task_id);
+
+--
+-- Name: idx_tasks_priority; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
+
+--
+-- Name: idx_tasks_project; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks (project_id);
+
+--
+-- Name: idx_tasks_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status);
+
+--
+-- Name: unsolved_problems; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS unsolved_problems (
+    id SERIAL,
+    name varchar(255) NOT NULL,
+    category varchar(100),
+    description text,
+    source_url text,
+    difficulty varchar(50),
+    status varchar(50) DEFAULT 'unexplored',
+    total_time_spent_minutes integer DEFAULT 0,
+    last_worked_at timestamptz,
+    work_sessions integer DEFAULT 0,
+    current_approach text,
+    progress_notes text,
+    blockers text,
+    subagents_used text[],
+    external_resources text[],
+    added_at timestamptz DEFAULT now(),
+    added_by varchar(100) DEFAULT 'NOVA',
+    priority integer DEFAULT 5,
+    CONSTRAINT unsolved_problems_pkey PRIMARY KEY (id)
+);
+
+
+COMMENT ON TABLE unsolved_problems IS 'Humanity''s unsolved problems for NOVA to work on during idle time. Part of the Motivation System - provides meaningful default work when task queue is empty.';
+
+--
+-- Name: idx_unsolved_problems_priority; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_unsolved_problems_priority ON unsolved_problems (priority DESC);
+
+--
+-- Name: idx_unsolved_problems_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_unsolved_problems_status ON unsolved_problems (status);
+
+--
+-- Name: vehicles; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS vehicles (
+    id SERIAL,
+    owner_id integer,
+    color varchar(50),
+    year integer,
+    make varchar(100),
+    model varchar(100),
+    vin varchar(17),
+    license_plate_state varchar(20),
+    license_plate_number varchar(20),
+    nickname varchar(100),
+    notes text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT vehicles_pkey PRIMARY KEY (id),
+    CONSTRAINT vehicles_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES entities (id)
+);
+
+
+COMMENT ON TABLE vehicles IS 'Vehicle tracking and management. Cars, bikes, boats, planes owned or used.';
+
+--
+-- Name: idx_vehicles_owner; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_vehicles_owner ON vehicles (owner_id);
+
+--
+-- Name: idx_vehicles_vin; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_vehicles_vin ON vehicles (vin);
+
+--
+-- Name: vocabulary; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS vocabulary (
+    id SERIAL,
+    word varchar(255) NOT NULL,
+    category varchar(100),
+    pronunciation varchar(255),
+    misheard_as text[],
+    added_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    vote_count integer DEFAULT 1,
+    last_confirmed timestamp DEFAULT now(),
+    CONSTRAINT vocabulary_pkey PRIMARY KEY (id),
+    CONSTRAINT vocabulary_word_key UNIQUE (word)
+);
+
+
+COMMENT ON TABLE vocabulary IS 'Custom vocabulary for speech recognition. Add names, terms, jargon as encountered.';
+
+
+COMMENT ON COLUMN vocabulary.vote_count IS 'Reinforcement count - incremented each time this word is mentioned';
+
+
+COMMENT ON COLUMN vocabulary.last_confirmed IS 'Timestamp of most recent confirmation';
+
+--
+-- Name: idx_vocabulary_vote_count; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_vocabulary_vote_count ON vocabulary (vote_count DESC);
+
+--
+-- Name: workflows; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS workflows (
+    id SERIAL,
+    name text NOT NULL,
+    description text NOT NULL,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    created_by text DEFAULT 'newhart',
+    status text DEFAULT 'active',
+    tags text[] DEFAULT '{}',
+    department text,
+    orchestrator_domain text,
+    CONSTRAINT workflows_pkey PRIMARY KEY (id),
+    CONSTRAINT workflows_name_key UNIQUE (name),
+    CONSTRAINT workflows_status_check CHECK (status IN ('active'::text, 'deprecated'::text, 'archived'::text))
+);
+
+
+COMMENT ON TABLE workflows IS 'Defines multi-agent workflows with ordered steps and deliverable handoffs';
+
+--
+-- Name: idx_workflows_department; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflows_department ON workflows (department);
+
+--
+-- Name: idx_workflows_name; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflows_name ON workflows (name);
+
+--
+-- Name: idx_workflows_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflows_status ON workflows (status);
+
+--
+-- Name: motivation_d100; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS motivation_d100 (
+    roll integer,
+    task_name varchar(255),
+    task_description text,
+    workflow_id integer,
+    skill_name varchar(255),
+    tool_name varchar(255),
+    difficulty varchar(20) DEFAULT 'medium',
+    energy_required varchar(20) DEFAULT 'low',
+    estimated_minutes integer,
+    enabled boolean DEFAULT true,
+    times_rolled integer DEFAULT 0,
+    times_completed integer DEFAULT 0,
+    last_rolled timestamp,
+    last_completed timestamp,
+    created_at timestamp DEFAULT now(),
+    notes text,
+    CONSTRAINT motivation_d100_pkey PRIMARY KEY (roll),
+    CONSTRAINT motivation_d100_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES workflows (id),
+    CONSTRAINT motivation_d100_roll_check CHECK (roll >= 1 AND roll <= 100)
+);
+
+
+COMMENT ON TABLE motivation_d100 IS 'D100 random task table for NOVA motivation system - roll when bored!';
+
+
+COMMENT ON COLUMN motivation_d100.roll IS 'Die value 1-100';
+
+
+COMMENT ON COLUMN motivation_d100.workflow_id IS 'Optional link to workflows table for structured execution';
+
+
+COMMENT ON COLUMN motivation_d100.skill_name IS 'Optional SKILL.md to follow (e.g., "daily-inspiration-art")';
+
+
+COMMENT ON COLUMN motivation_d100.tool_name IS 'Optional tool to use (e.g., "bird-x", "gog")';
+
+--
+-- Name: workflow_steps; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS workflow_steps (
+    id SERIAL,
+    workflow_id integer NOT NULL,
+    step_order integer NOT NULL,
+    description text NOT NULL,
+    produces_deliverable boolean DEFAULT false,
+    deliverable_type text,
+    deliverable_description text,
+    handoff_to_step integer,
+    required boolean DEFAULT true,
+    estimated_duration_minutes integer,
+    requires_authorization boolean DEFAULT false,
+    requires_discussion boolean DEFAULT false,
+    domain text,
+    domains text[],
+    CONSTRAINT workflow_steps_pkey PRIMARY KEY (id),
+    CONSTRAINT workflow_steps_workflow_id_step_order_key UNIQUE (workflow_id, step_order),
+    CONSTRAINT workflow_steps_handoff_to_step_fkey FOREIGN KEY (handoff_to_step) REFERENCES workflow_steps (id),
+    CONSTRAINT workflow_steps_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES workflows (id) ON DELETE CASCADE
+);
+
+
+COMMENT ON TABLE workflow_steps IS 'Ordered steps in a workflow with agent assignments and deliverable specifications';
+
+
+COMMENT ON COLUMN workflow_steps.requires_authorization IS 'If true, must get explicit human authorization before proceeding to next step';
+
+
+COMMENT ON COLUMN workflow_steps.requires_discussion IS 'If true, discuss with human before proceeding (but can continue without explicit authorization if authorization=false)';
+
+
+COMMENT ON COLUMN workflow_steps.domain IS 'Subject-matter domain for agent routing (e.g., sql/database, python/daemon)';
+
+--
+-- Name: idx_workflow_steps_domain; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_domain ON workflow_steps (domain);
+
+--
+-- Name: idx_workflow_steps_domains; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_domains ON workflow_steps USING gin (domains);
+
+--
+-- Name: idx_workflow_steps_order; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_order ON workflow_steps (workflow_id, step_order);
+
+--
+-- Name: idx_workflow_steps_workflow; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow ON workflow_steps (workflow_id);
+
+--
+-- Name: works; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS works (
+    id SERIAL,
+    title varchar(255) NOT NULL,
+    work_type varchar(50) NOT NULL,
+    content text NOT NULL,
+    context_prompt text,
+    word_count integer,
+    character_count integer,
+    language varchar(10) DEFAULT 'en',
+    status varchar(20) DEFAULT 'draft',
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    version integer DEFAULT 1,
+    parent_work_id integer,
+    metadata jsonb,
+    CONSTRAINT works_pkey PRIMARY KEY (id),
+    CONSTRAINT works_parent_work_id_fkey FOREIGN KEY (parent_work_id) REFERENCES works (id) ON DELETE SET NULL,
+    CONSTRAINT positive_counts CHECK (word_count >= 0 AND character_count >= 0),
+    CONSTRAINT valid_status CHECK (status::text IN ('draft'::character varying, 'complete'::character varying, 'published'::character varying, 'archived'::character varying)),
+    CONSTRAINT valid_work_type CHECK (work_type::text IN ('haiku'::character varying, 'poem'::character varying, 'prose'::character varying, 'documentation'::character varying, 'story'::character varying, 'dialogue'::character varying, 'microfiction'::character varying, 'essay'::character varying, 'other'::character varying))
+);
+
+--
+-- Name: idx_works_created; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_works_created ON works (created_at DESC);
+
+--
+-- Name: idx_works_language; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_works_language ON works (language);
+
+--
+-- Name: idx_works_metadata; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_works_metadata ON works USING gin (metadata);
+
+--
+-- Name: idx_works_status; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_works_status ON works (status);
+
+--
+-- Name: idx_works_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_works_type ON works (work_type);
+
+--
+-- Name: idx_works_updated; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_works_updated ON works (updated_at DESC);
+
+--
+-- Name: publications; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS publications (
+    id SERIAL,
+    work_id integer NOT NULL,
+    published_to varchar(100) NOT NULL,
+    publication_type varchar(50) NOT NULL,
+    url text,
+    context text,
+    published_at timestamptz DEFAULT now() NOT NULL,
+    published_by varchar(50),
+    CONSTRAINT publications_pkey PRIMARY KEY (id),
+    CONSTRAINT publications_work_id_fkey FOREIGN KEY (work_id) REFERENCES works (id) ON DELETE CASCADE,
+    CONSTRAINT valid_publication_type CHECK (publication_type::text IN ('git_repo'::character varying, 'doc'::character varying, 'file'::character varying, 'agent_chat'::character varying, 'external'::character varying, 'other'::character varying))
+);
+
+--
+-- Name: idx_publications_by; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_publications_by ON publications (published_by);
+
+--
+-- Name: idx_publications_date; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_publications_date ON publications (published_at DESC);
+
+--
+-- Name: idx_publications_type; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_publications_type ON publications (publication_type);
+
+--
+-- Name: idx_publications_work; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_publications_work ON publications (work_id);
+
+--
+-- Name: work_tags; Type: TABLE; Schema: -; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS work_tags (
+    work_id integer,
+    tag_id integer,
+    added_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT work_tags_pkey PRIMARY KEY (work_id, tag_id),
+    CONSTRAINT work_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE,
+    CONSTRAINT work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES works (id) ON DELETE CASCADE
+);
+
+--
+-- Name: idx_work_tags_tag; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_work_tags_tag ON work_tags (tag_id);
+
+--
+-- Name: idx_work_tags_work; Type: INDEX; Schema: -; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS idx_work_tags_work ON work_tags (work_id);
+
+--
+-- Name: calculate_word_count(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION calculate_word_count()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     NEW.word_count = array_length(regexp_split_to_array(trim(NEW.content), '\s+'), 1);
     NEW.character_count = length(NEW.content);
@@ -365,67 +3027,58 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: chat(text, character varying); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.chat(p_message text, p_sender character varying DEFAULT 'nova'::character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    PERFORM send_agent_message(p_sender, p_message, 'system', NULL);
-END;
-$$;
-
-
---
--- Name: claim_coder_issue(integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: claim_coder_issue(integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.claim_coder_issue(issue_id integer) RETURNS boolean
-    LANGUAGE sql
-    AS $$
+CREATE OR REPLACE FUNCTION claim_coder_issue(
+    issue_id integer
+)
+RETURNS boolean
+LANGUAGE sql
+VOLATILE
+AS $$
   UPDATE git_issue_queue
   SET status = 'implementing', started_at = NOW()
   WHERE id = issue_id AND status = 'tests_approved'
   RETURNING TRUE;
 $$;
 
-
 --
--- Name: cleanup_old_archives(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: cleanup_old_archives(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.cleanup_old_archives() RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION cleanup_old_archives()
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM entity_facts_archive 
+    DELETE FROM entity_facts_archive
     WHERE archived_at < NOW() - INTERVAL '1 year';
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
     RETURN deleted_count;
 END;
 $$;
 
-
 --
--- Name: FUNCTION cleanup_old_archives(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.cleanup_old_archives() IS 'Hard deletes archived facts older than 1 year. Run via cron or decay script.';
-
-
---
--- Name: cleanup_old_embeddings_archive(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: cleanup_old_archives(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.cleanup_old_embeddings_archive() RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE 
+COMMENT ON FUNCTION cleanup_old_archives() IS 'Hard deletes archived facts older than 1 year. Run via cron or decay script.';
+
+--
+-- Name: cleanup_old_embeddings_archive(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION cleanup_old_embeddings_archive()
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
     deleted_count INTEGER;
 BEGIN
     DELETE FROM memory_embeddings_archive WHERE archived_at < NOW() - INTERVAL '1 year';
@@ -434,22 +3087,22 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: FUNCTION cleanup_old_embeddings_archive(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.cleanup_old_embeddings_archive() IS 'Hard deletes archived embeddings older than 1 year.';
-
-
---
--- Name: cleanup_old_events_archive(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: cleanup_old_embeddings_archive(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.cleanup_old_events_archive() RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE 
+COMMENT ON FUNCTION cleanup_old_embeddings_archive() IS 'Hard deletes archived embeddings older than 1 year.';
+
+--
+-- Name: cleanup_old_events_archive(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION cleanup_old_events_archive()
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
     deleted_count INTEGER;
 BEGIN
     DELETE FROM events_archive WHERE archived_at < NOW() - INTERVAL '1 year';
@@ -458,22 +3111,22 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: FUNCTION cleanup_old_events_archive(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.cleanup_old_events_archive() IS 'Hard deletes archived events older than 1 year.';
-
-
---
--- Name: cleanup_old_lessons_archive(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: cleanup_old_events_archive(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.cleanup_old_lessons_archive() RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE 
+COMMENT ON FUNCTION cleanup_old_events_archive() IS 'Hard deletes archived events older than 1 year.';
+
+--
+-- Name: cleanup_old_lessons_archive(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION cleanup_old_lessons_archive()
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
     deleted_count INTEGER;
 BEGIN
     DELETE FROM lessons_archive WHERE archived_at < NOW() - INTERVAL '1 year';
@@ -482,21 +3135,26 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: FUNCTION cleanup_old_lessons_archive(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.cleanup_old_lessons_archive() IS 'Hard deletes archived lessons older than 1 year.';
-
-
---
--- Name: copy_file_to_bootstrap(text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: cleanup_old_lessons_archive(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text DEFAULT NULL::text, p_updated_by text DEFAULT 'migration'::text) RETURNS text
-    LANGUAGE plpgsql
-    AS $_$
+COMMENT ON FUNCTION cleanup_old_lessons_archive() IS 'Hard deletes archived lessons older than 1 year.';
+
+--
+-- Name: copy_file_to_bootstrap(text, text, text, text); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION copy_file_to_bootstrap(
+    p_file_path text,
+    p_file_content text,
+    p_agent_name text DEFAULT NULL,
+    p_updated_by text DEFAULT 'migration'
+)
+RETURNS text
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_file_key TEXT;
     v_result TEXT;
@@ -505,7 +3163,7 @@ BEGIN
         regexp_replace(p_file_path, '^.*/([^/]+)\.md$', '\1'),
         '-', '_', 'g'
     ));
-    
+
     IF p_agent_name IS NULL THEN
         PERFORM update_universal_context(
             v_file_key,
@@ -524,26 +3182,26 @@ BEGIN
         );
         v_result := p_agent_name || ':' || v_file_key;
     END IF;
-    
+
     RETURN v_result;
 END;
-$_$;
-
-
---
--- Name: FUNCTION copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text, p_updated_by text); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.copy_file_to_bootstrap(p_file_path text, p_file_content text, p_agent_name text, p_updated_by text) IS 'Migrate file content to database (auto-detects universal vs agent)';
-
+$$;
 
 --
--- Name: embed_chat_message(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: copy_file_to_bootstrap(text, text, text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.embed_chat_message() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+COMMENT ON FUNCTION copy_file_to_bootstrap(text, text, text, text) IS 'Migrate file content to database (auto-detects universal vs agent)';
+
+--
+-- Name: embed_chat_message(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION embed_chat_message()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     content_text TEXT;
     content_hash_val VARCHAR(64);
@@ -551,7 +3209,7 @@ BEGIN
     -- Prepare content for embedding
     content_text := NEW.sender || ': ' || NEW.message;
     content_hash_val := encode(sha256(content_text::bytea), 'hex');
-    
+
     -- Insert embedding record (embedding vector will be populated by external process)
     -- This just creates a placeholder that external embedding service can process
     INSERT INTO memory_embeddings (content_hash, content, metadata, embedding)
@@ -567,39 +3225,43 @@ BEGIN
         NULL  -- Will be updated by embedding service
     )
     ON CONFLICT (content_hash) DO NOTHING; -- Skip if already exists
-    
+
     RETURN NEW;
 END;
 $$;
 
-
 --
--- Name: expire_old_chat(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: expire_old_chat(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.expire_old_chat() RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION expire_old_chat()
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_count INTEGER;
 BEGIN
-    DELETE FROM agent_chat 
+    DELETE FROM agent_chat
     WHERE created_at < now() - interval '30 days'
     RETURNING id INTO v_count;
-    
+
     GET DIAGNOSTICS v_count = ROW_COUNT;
     RETURN v_count;
 END;
 $$;
 
-
 --
--- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_agent_bootstrap(text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.get_agent_bootstrap(p_agent_name text) RETURNS TABLE(filename text, content text, source text)
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION get_agent_bootstrap(
+    p_agent_name text
+)
+RETURNS TABLE(filename text, content text, source text)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_agent_id INTEGER;
 BEGIN
@@ -725,14 +3387,17 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: get_agent_turn_context(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_agent_turn_context(text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.get_agent_turn_context(p_agent_name text) RETURNS TABLE(content text, truncated boolean, records_skipped integer, total_chars integer)
-    LANGUAGE plpgsql STABLE
-    AS $$
+CREATE OR REPLACE FUNCTION get_agent_turn_context(
+    p_agent_name text
+)
+RETURNS TABLE(content text, truncated boolean, records_skipped integer, total_chars integer)
+LANGUAGE plpgsql
+STABLE
+AS $$
 DECLARE
     v_content TEXT := '';
     v_budget INT := 2000;
@@ -781,30 +3446,17 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: get_next_coder_issue(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_next_coder_issue() RETURNS TABLE(id integer, repo text, issue_number integer, title text)
-    LANGUAGE sql
-    AS $$
-  SELECT id, repo, issue_number, title
-  FROM git_issue_queue
-  WHERE status = 'tests_approved'
-    AND NOT should_skip_issue(COALESCE(labels, '{}'))
-  ORDER BY priority DESC, created_at
-  LIMIT 1;
-$$;
-
-
---
--- Name: get_ralph_state(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_ralph_state(text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.get_ralph_state(p_series_id text) RETURNS TABLE(iteration integer, state jsonb, status text)
-    LANGUAGE sql
-    AS $$
+CREATE OR REPLACE FUNCTION get_ralph_state(
+    p_series_id text
+)
+RETURNS TABLE(iteration integer, state jsonb, status text)
+LANGUAGE sql
+VOLATILE
+AS $$
   SELECT iteration, state, status
   FROM ralph_sessions
   WHERE session_series_id = p_series_id
@@ -812,14 +3464,24 @@ CREATE FUNCTION public.get_ralph_state(p_series_id text) RETURNS TABLE(iteration
   LIMIT 1;
 $$;
 
-
 --
--- Name: insert_workflow_step(integer, integer, text, text, boolean, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: insert_workflow_step(integer, integer, text, text, boolean, text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.insert_workflow_step(p_workflow_id integer, p_step_order integer, p_agent_name text, p_description text, p_produces_deliverable boolean DEFAULT false, p_deliverable_type text DEFAULT NULL::text, p_deliverable_description text DEFAULT NULL::text) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
+CREATE OR REPLACE FUNCTION insert_workflow_step(
+    p_workflow_id integer,
+    p_step_order integer,
+    p_agent_name text,
+    p_description text,
+    p_produces_deliverable boolean DEFAULT false,
+    p_deliverable_type text DEFAULT NULL,
+    p_deliverable_description text DEFAULT NULL
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+AS $$
 DECLARE
   v_agent_id INT;
   v_step_id INT;
@@ -828,23 +3490,24 @@ BEGIN
   IF v_agent_id IS NULL THEN
     RAISE EXCEPTION 'Agent not found: %', p_agent_name;
   END IF;
-  
+
   INSERT INTO workflow_steps (workflow_id, step_order, agent_id, description, produces_deliverable, deliverable_type, deliverable_description)
   VALUES (p_workflow_id, p_step_order, v_agent_id, p_description, p_produces_deliverable, p_deliverable_type, p_deliverable_description)
   RETURNING id INTO v_step_id;
-  
+
   RETURN v_step_id;
 END;
 $$;
 
-
 --
--- Name: library_works_search_trigger(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: library_works_search_trigger(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.library_works_search_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION library_works_search_trigger()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     NEW.search_vector :=
         setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
@@ -858,44 +3521,51 @@ BEGIN
 END
 $$;
 
-
 --
--- Name: link_github_issue(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: link_github_issue(integer, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.link_github_issue(p_queue_id integer, p_github_issue integer) RETURNS void
-    LANGUAGE sql
-    AS $$
+CREATE OR REPLACE FUNCTION link_github_issue(
+    p_queue_id integer,
+    p_github_issue integer
+)
+RETURNS void
+LANGUAGE sql
+VOLATILE
+AS $$
   UPDATE git_issue_queue
   SET issue_number = p_github_issue
   WHERE id = p_queue_id;
 $$;
 
-
 --
--- Name: list_agent_context(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: list_agent_context(text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.list_agent_context(p_agent_name text) RETURNS TABLE(source_type text, domain_or_scope text, file_key text, content_preview text)
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION list_agent_context(
+    p_agent_name text
+)
+RETURNS TABLE(source_type text, domain_or_scope text, file_key text, content_preview text)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_agent_id INTEGER;
 BEGIN
     SELECT id INTO v_agent_id FROM agents WHERE name = p_agent_name;
-    
+
     RETURN QUERY
-    SELECT 
+    SELECT
         'GLOBAL'::TEXT,
         'all agents'::TEXT,
         bc.file_key,
         LEFT(bc.content, 100) || '...'
     FROM agent_bootstrap_context bc
     WHERE bc.context_type = 'GLOBAL'
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'DOMAIN'::TEXT,
         bc.domain_name,
         bc.file_key,
@@ -904,10 +3574,10 @@ BEGIN
     JOIN agent_domains ad ON bc.domain_name = ad.domain_topic
     WHERE bc.context_type = 'DOMAIN'
         AND ad.agent_id = v_agent_id
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'WORKFLOW'::TEXT,
         w.name,
         'WORKFLOW_CONTEXT'::TEXT,
@@ -919,14 +3589,21 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: log_agent_modification(integer, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: log_agent_modification(integer, text, text, text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.log_agent_modification(p_agent_id integer, p_modified_by text, p_field_changed text, p_old_value text, p_new_value text) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION log_agent_modification(
+    p_agent_id integer,
+    p_modified_by text,
+    p_field_changed text,
+    p_old_value text,
+    p_new_value text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     INSERT INTO agent_modifications (
         agent_id, modified_by, field_changed, old_value, new_value
@@ -936,14 +3613,341 @@ BEGIN
 END;
 $$;
 
+--
+-- Name: agent_set_collaborative(integer, boolean, jsonb, text); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION agent_set_collaborative(
+    p_agent_id integer,
+    p_collaborative boolean,
+    p_collaborate_config jsonb DEFAULT NULL,
+    p_modified_by text DEFAULT 'system'
+)
+RETURNS TABLE(success boolean, message text)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
+    v_old_collaborative BOOLEAN;
+    v_old_config JSONB;
+BEGIN
+    -- Get old values
+    SELECT collaborative, collaborate_config
+    INTO v_old_collaborative, v_old_config
+    FROM agents
+    WHERE id = p_agent_id;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'Agent not found';
+        RETURN;
+    END IF;
+
+    -- Update collaborative settings
+    UPDATE agents
+    SET collaborative = p_collaborative,
+        collaborate_config = COALESCE(p_collaborate_config, collaborate_config),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_agent_id;
+
+    -- Log collaborative change
+    PERFORM log_agent_modification(
+        p_agent_id, p_modified_by, 'collaborative',
+        v_old_collaborative::TEXT, p_collaborative::TEXT
+    );
+
+    -- Log config change if provided
+    IF p_collaborate_config IS NOT NULL THEN
+        PERFORM log_agent_modification(
+            p_agent_id, p_modified_by, 'collaborate_config',
+            v_old_config::TEXT, p_collaborate_config::TEXT
+        );
+    END IF;
+
+    RETURN QUERY SELECT TRUE, 'Collaborative settings updated successfully';
+END;
+$$;
 
 --
--- Name: normalize_agent_chat_mentions(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: agent_set_model(integer, text, text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.normalize_agent_chat_mentions() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION agent_set_model(
+    p_agent_id integer,
+    p_new_model text,
+    p_new_fallback text DEFAULT NULL,
+    p_modified_by text DEFAULT 'system'
+)
+RETURNS TABLE(success boolean, message text)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
+    v_old_model TEXT;
+    v_old_fallback TEXT;
+BEGIN
+    -- Get old values
+    SELECT model, fallback_model INTO v_old_model, v_old_fallback
+    FROM agents
+    WHERE id = p_agent_id;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'Agent not found';
+        RETURN;
+    END IF;
+
+    -- Update model
+    UPDATE agents
+    SET model = p_new_model,
+        fallback_model = COALESCE(p_new_fallback, fallback_model),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_agent_id;
+
+    -- Log model change
+    PERFORM log_agent_modification(
+        p_agent_id, p_modified_by, 'model',
+        v_old_model, p_new_model
+    );
+
+    -- Log fallback change if provided
+    IF p_new_fallback IS NOT NULL THEN
+        PERFORM log_agent_modification(
+            p_agent_id, p_modified_by, 'fallback_model',
+            v_old_fallback, p_new_fallback
+        );
+    END IF;
+
+    RETURN QUERY SELECT TRUE, 'Model configuration updated successfully';
+END;
+$$;
+
+--
+-- Name: agent_set_status(integer, text, text); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION agent_set_status(
+    p_agent_id integer,
+    p_new_status text,
+    p_modified_by text DEFAULT 'system'
+)
+RETURNS TABLE(success boolean, message text)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
+    v_old_status TEXT;
+    v_valid_statuses TEXT[] := ARRAY['active', 'inactive', 'suspended', 'archived'];
+BEGIN
+    -- Validate status value
+    IF NOT (p_new_status = ANY(v_valid_statuses)) THEN
+        RETURN QUERY SELECT FALSE,
+            'Invalid status. Must be one of: active, inactive, suspended, archived';
+        RETURN;
+    END IF;
+
+    -- Get old status
+    SELECT status INTO v_old_status
+    FROM agents
+    WHERE id = p_agent_id;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'Agent not found';
+        RETURN;
+    END IF;
+
+    -- Update status
+    UPDATE agents
+    SET status = p_new_status,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_agent_id;
+
+    -- Log modification
+    PERFORM log_agent_modification(
+        p_agent_id, p_modified_by, 'status', v_old_status, p_new_status
+    );
+
+    RETURN QUERY SELECT TRUE, 'Status updated successfully';
+END;
+$$;
+
+--
+-- Name: agent_update(integer, text, text, text); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION agent_update(
+    p_agent_id integer,
+    p_field_name text,
+    p_new_value text,
+    p_modified_by text DEFAULT 'system'
+)
+RETURNS TABLE(success boolean, message text)
+LANGUAGE plpgsql
+VOLATILE
+AS $_$
+DECLARE
+    v_old_value TEXT;
+    v_protected_fields TEXT[] := ARRAY['id', 'created_at'];
+    v_sql TEXT;
+BEGIN
+    -- Check if field is protected
+    IF p_field_name = ANY(v_protected_fields) THEN
+        RETURN QUERY SELECT FALSE,
+            'Cannot modify protected field: ' || p_field_name;
+        RETURN;
+    END IF;
+
+    -- Verify agent exists and get old value
+    v_sql := format('SELECT %I::TEXT FROM agents WHERE id = $1', p_field_name);
+    BEGIN
+        EXECUTE v_sql INTO v_old_value USING p_agent_id;
+    EXCEPTION
+        WHEN undefined_column THEN
+            RETURN QUERY SELECT FALSE, 'Invalid field name: ' || p_field_name;
+            RETURN;
+        WHEN OTHERS THEN
+            RETURN QUERY SELECT FALSE, 'Error reading field: ' || SQLERRM;
+            RETURN;
+    END;
+
+    IF v_old_value IS NULL AND NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'Agent not found';
+        RETURN;
+    END IF;
+
+    -- Update the field
+    v_sql := format(
+        'UPDATE agents SET %I = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        p_field_name
+    );
+    BEGIN
+        EXECUTE v_sql USING p_new_value, p_agent_id;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN QUERY SELECT FALSE, 'Error updating field: ' || SQLERRM;
+            RETURN;
+    END;
+
+    -- Log modification
+    PERFORM log_agent_modification(
+        p_agent_id, p_modified_by, p_field_name, v_old_value, p_new_value
+    );
+
+    RETURN QUERY SELECT TRUE, 'Field updated successfully';
+END;
+$_$;
+
+--
+-- Name: agent_update_jsonb(integer, text, jsonb, text); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION agent_update_jsonb(
+    p_agent_id integer,
+    p_field_name text,
+    p_new_value jsonb,
+    p_modified_by text DEFAULT 'system'
+)
+RETURNS TABLE(success boolean, message text)
+LANGUAGE plpgsql
+VOLATILE
+AS $_$
+DECLARE
+    v_old_value JSONB;
+    v_protected_fields TEXT[] := ARRAY['id', 'created_at'];
+    v_sql TEXT;
+BEGIN
+    -- Check if field is protected
+    IF p_field_name = ANY(v_protected_fields) THEN
+        RETURN QUERY SELECT FALSE,
+            'Cannot modify protected field: ' || p_field_name;
+        RETURN;
+    END IF;
+
+    -- Get old value
+    v_sql := format('SELECT %I FROM agents WHERE id = $1', p_field_name);
+    BEGIN
+        EXECUTE v_sql INTO v_old_value USING p_agent_id;
+    EXCEPTION
+        WHEN undefined_column THEN
+            RETURN QUERY SELECT FALSE, 'Invalid field name: ' || p_field_name;
+            RETURN;
+        WHEN OTHERS THEN
+            RETURN QUERY SELECT FALSE, 'Error reading field: ' || SQLERRM;
+            RETURN;
+    END;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'Agent not found';
+        RETURN;
+    END IF;
+
+    -- Update the field
+    v_sql := format(
+        'UPDATE agents SET %I = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        p_field_name
+    );
+    EXECUTE v_sql USING p_new_value, p_agent_id;
+
+    -- Log modification
+    PERFORM log_agent_modification(
+        p_agent_id, p_modified_by, p_field_name,
+        v_old_value::TEXT, p_new_value::TEXT
+    );
+
+    RETURN QUERY SELECT TRUE, 'Field updated successfully';
+END;
+$_$;
+
+--
+-- Name: agent_update_skills(integer, text[], text); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION agent_update_skills(
+    p_agent_id integer,
+    p_skills text[],
+    p_modified_by text DEFAULT 'system'
+)
+RETURNS TABLE(success boolean, message text)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+DECLARE
+    v_old_skills TEXT[];
+BEGIN
+    -- Get old skills
+    SELECT skills INTO v_old_skills
+    FROM agents
+    WHERE id = p_agent_id;
+
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 'Agent not found';
+        RETURN;
+    END IF;
+
+    -- Update skills
+    UPDATE agents
+    SET skills = p_skills,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = p_agent_id;
+
+    -- Log modification
+    PERFORM log_agent_modification(
+        p_agent_id, p_modified_by, 'skills',
+        array_to_string(v_old_skills, ','),
+        array_to_string(p_skills, ',')
+    );
+
+    RETURN QUERY SELECT TRUE, 'Skills updated successfully';
+END;
+$$;
+
+--
+-- Name: normalize_agent_chat_mentions(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION normalize_agent_chat_mentions()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     IF NEW.mentions IS NOT NULL THEN
         NEW.mentions := ARRAY(SELECT LOWER(unnest(NEW.mentions)));
@@ -953,14 +3957,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: notify_agent_chat(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_agent_chat(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_agent_chat() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_agent_chat()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     PERFORM pg_notify('agent_chat', json_build_object(
         'id', NEW.id,
@@ -972,14 +3977,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: notify_agent_config_changed(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_agent_config_changed(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_agent_config_changed() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_agent_config_changed()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     PERFORM pg_notify('agent_config_changed', json_build_object(
         'agent_id', COALESCE(NEW.id, OLD.id),
@@ -990,14 +3996,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: notify_coder_queue_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_coder_queue_change(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_coder_queue_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_coder_queue_change()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     PERFORM pg_notify('coder_queue', json_build_object(
@@ -1021,49 +4028,51 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: notify_delegation_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_delegation_change(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_delegation_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_delegation_change()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
   PERFORM pg_notify('delegation_changed', TG_TABLE_NAME);
   RETURN COALESCE(NEW, OLD);
 END;
 $$;
 
-
 --
--- Name: FUNCTION notify_delegation_change(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.notify_delegation_change() IS 'SHORT-TERM: Triggers DELEGATION_CONTEXT.md regeneration. Remove when PR #9 long-term solution is active.';
-
-
---
--- Name: notify_gambling_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_delegation_change(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_gambling_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+COMMENT ON FUNCTION notify_delegation_change() IS 'SHORT-TERM: Triggers DELEGATION_CONTEXT.md regeneration. Remove when PR #9 long-term solution is active.';
+
+--
+-- Name: notify_gambling_change(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION notify_gambling_change()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     PERFORM pg_notify('gambling_changed', TG_TABLE_NAME || ':' || TG_OP);
     RETURN COALESCE(NEW, OLD);
 END;
 $$;
 
-
 --
--- Name: notify_schema_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_schema_change(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_schema_change() RETURNS event_trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_schema_change()
+RETURNS event_trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     obj record;
     payload text;
@@ -1081,14 +4090,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: notify_system_config_changed(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_system_config_changed(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_system_config_changed() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_system_config_changed()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
         PERFORM pg_notify('agent_config_changed', json_build_object(
@@ -1108,14 +4118,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: notify_workflow_step_change(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: notify_workflow_step_change(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.notify_workflow_step_change() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION notify_workflow_step_change()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     PERFORM pg_notify('workflow_step', json_build_object(
         'id', NEW.id,
@@ -1128,14 +4139,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: prevent_locked_project_update(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: prevent_locked_project_update(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.prevent_locked_project_update() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION prevent_locked_project_update()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
   -- If record is locked and we're not just unlocking it
   IF OLD.locked = TRUE THEN
@@ -1149,14 +4161,15 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: protect_bootstrap_context_writes(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: protect_bootstrap_context_writes(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.protect_bootstrap_context_writes() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION protect_bootstrap_context_writes()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
   IF current_user NOT IN ('newhart', 'postgres') THEN
     RAISE EXCEPTION 'agent_bootstrap_context is managed by Newhart (Agent Design/Management). Contact Newhart for changes.';
@@ -1165,14 +4178,21 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: queue_test_failure(text, integer, text, text, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: queue_test_failure(text, integer, text, text, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer DEFAULT 7) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION queue_test_failure(
+    p_repo text,
+    p_parent_issue integer,
+    p_test_name text,
+    p_error_message text,
+    p_priority integer DEFAULT 7
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
   v_title TEXT;
   v_issue_number INTEGER;
@@ -1207,21 +4227,30 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: FUNCTION queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_priority integer) IS 'Queue a test failure for Coder to fix. Creates placeholder issue, notifies for gh issue creation.';
-
-
---
--- Name: queue_test_failure(text, integer, text, text, text, text[], jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: queue_test_failure(text, integer, text, text, integer); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.queue_test_failure(p_repo text, p_parent_issue integer, p_test_name text, p_error_message text, p_test_file text DEFAULT NULL::text, p_code_files text[] DEFAULT NULL::text[], p_context jsonb DEFAULT '{}'::jsonb, p_priority integer DEFAULT 7) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+COMMENT ON FUNCTION queue_test_failure(text, integer, text, text, integer) IS 'Queue a test failure for Coder to fix. Creates placeholder issue, notifies for gh issue creation.';
+
+--
+-- Name: queue_test_failure(text, integer, text, text, text, text[], jsonb, integer); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION queue_test_failure(
+    p_repo text,
+    p_parent_issue integer,
+    p_test_name text,
+    p_error_message text,
+    p_test_file text DEFAULT NULL,
+    p_code_files text[] DEFAULT NULL,
+    p_context jsonb DEFAULT '{}',
+    p_priority integer DEFAULT 7
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
   v_title TEXT;
   v_issue_number INTEGER;
@@ -1293,24 +4322,25 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: roll_d100(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: roll_d100(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.roll_d100() RETURNS TABLE(roll integer, task_name character varying, task_description text, workflow_id integer, skill_name character varying, tool_name character varying, estimated_minutes integer)
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION roll_d100()
+RETURNS TABLE(roll integer, task_name varchar, task_description text, workflow_id integer, skill_name varchar, tool_name varchar, estimated_minutes integer)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     rolled_value INTEGER;
 BEGIN
     rolled_value := floor(random() * 100 + 1)::int;
-    
+
     -- Log the roll
     UPDATE motivation_d100 m
-    SET times_rolled = m.times_rolled + 1, last_rolled = NOW() 
+    SET times_rolled = m.times_rolled + 1, last_rolled = NOW()
     WHERE m.roll = rolled_value AND m.task_name IS NOT NULL;
-    
+
     -- Return the result
     RETURN QUERY
     SELECT m.roll, m.task_name, m.task_description, m.workflow_id, m.skill_name, m.tool_name, m.estimated_minutes
@@ -1319,24 +4349,27 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: FUNCTION roll_d100(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.roll_d100() IS 'Roll the D100 motivation die - returns task if one exists at that number';
-
-
---
--- Name: search_media(text, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: roll_d100(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.search_media(query_text text, result_limit integer DEFAULT 20) RETURNS TABLE(id integer, media_type character varying, title character varying, creator character varying, summary text, rank real)
-    LANGUAGE plpgsql
-    AS $$
+COMMENT ON FUNCTION roll_d100() IS 'Roll the D100 motivation die - returns task if one exists at that number';
+
+--
+-- Name: search_media(text, integer); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION search_media(
+    query_text text,
+    result_limit integer DEFAULT 20
+)
+RETURNS TABLE(id integer, media_type varchar, title varchar, creator varchar, summary text, rank real)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         mc.id,
         mc.media_type,
         mc.title,
@@ -1350,17 +4383,22 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: search_memories(public.vector, integer, double precision); Type: FUNCTION; Schema: public; Owner: -
+-- Name: search_memories(vector, integer, double precision); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.search_memories(query_embedding public.vector, match_count integer DEFAULT 5, similarity_threshold double precision DEFAULT 0.7) RETURNS TABLE(id integer, source_type character varying, source_id text, content text, similarity double precision)
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION search_memories(
+    query_embedding vector,
+    match_count integer DEFAULT 5,
+    similarity_threshold double precision DEFAULT 0.7
+)
+RETURNS TABLE(id integer, source_type varchar, source_id text, content text, similarity double precision)
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         me.id,
         me.source_type,
         me.source_id,
@@ -1373,14 +4411,20 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: send_agent_message(character varying, text, character varying, text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: send_agent_message(varchar, text, varchar, text[]); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.send_agent_message(p_sender character varying, p_message text, p_channel character varying DEFAULT 'system'::character varying, p_mentions text[] DEFAULT NULL::text[]) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION send_agent_message(
+    p_sender varchar,
+    p_message text,
+    p_channel varchar DEFAULT 'system',
+    p_mentions text[] DEFAULT NULL
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_id INTEGER;
     v_payload TEXT;
@@ -1388,7 +4432,7 @@ BEGIN
     INSERT INTO agent_chat (channel, sender, message, mentions)
     VALUES (p_channel, p_sender, p_message, p_mentions)
     RETURNING id INTO v_id;
-    
+
     -- Notify listeners
     v_payload := json_build_object(
         'id', v_id,
@@ -1397,76 +4441,119 @@ BEGIN
         'message', substring(p_message, 1, 200),
         'mentions', p_mentions
     )::text;
-    
+
     PERFORM pg_notify('agent_chat', v_payload);
     PERFORM pg_notify('agent_chat_' || p_channel, v_payload);
-    
+
     RETURN v_id;
 END;
 $$;
 
+--
+-- Name: chat(text, varchar); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION chat(
+    p_message text,
+    p_sender varchar DEFAULT 'nova'
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS $$
+BEGIN
+    PERFORM send_agent_message(p_sender, p_message, 'system', NULL);
+END;
+$$;
 
 --
--- Name: should_skip_issue(text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: should_skip_issue(text[]); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.should_skip_issue(p_labels text[]) RETURNS boolean
-    LANGUAGE plpgsql IMMUTABLE
-    AS $$
+CREATE OR REPLACE FUNCTION should_skip_issue(
+    p_labels text[]
+)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
 BEGIN
   RETURN p_labels && ARRAY['paused', 'blocked', 'on-hold', 'wontfix', 'waiting'];
 END;
 $$;
 
+--
+-- Name: get_next_coder_issue(); Type: FUNCTION; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION get_next_coder_issue()
+RETURNS TABLE(id integer, repo text, issue_number integer, title text)
+LANGUAGE sql
+VOLATILE
+AS $$
+  SELECT id, repo, issue_number, title
+  FROM git_issue_queue
+  WHERE status = 'tests_approved'
+    AND NOT should_skip_issue(COALESCE(labels, '{}'))
+  ORDER BY priority DESC, created_at
+  LIMIT 1;
+$$;
 
 --
--- Name: table_comment(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: table_comment(text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.table_comment(tbl text) RETURNS text
-    LANGUAGE sql
-    AS $$
+CREATE OR REPLACE FUNCTION table_comment(
+    tbl text
+)
+RETURNS text
+LANGUAGE sql
+VOLATILE
+AS $$
   SELECT obj_description(tbl::regclass, 'pg_class');
 $$;
 
-
 --
--- Name: update_agent_turn_context_timestamp(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_agent_turn_context_timestamp(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_agent_turn_context_timestamp() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_agent_turn_context_timestamp()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
 $$;
 
-
 --
--- Name: update_agents_timestamp(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_agents_timestamp(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_agents_timestamp() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_agents_timestamp()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
 $$;
 
-
 --
--- Name: update_media_search_vector(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_media_search_vector(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_media_search_vector() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_media_search_vector()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
-  NEW.search_vector := 
+  NEW.search_vector :=
     setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
     setweight(to_tsvector('english', coalesce(NEW.creator, '')), 'B') ||
     setweight(to_tsvector('english', coalesce(NEW.notes, '')), 'C') ||
@@ -1476,16 +4563,17 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: update_music_analysis_search_vector(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_music_analysis_search_vector(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_music_analysis_search_vector() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_music_analysis_search_vector()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
-    NEW.search_vector := 
+    NEW.search_vector :=
         setweight(to_tsvector('english', COALESCE(NEW.analysis_type, '')), 'A') ||
         setweight(to_tsvector('english', COALESCE(NEW.analysis_summary, '')), 'B') ||
         setweight(to_tsvector('english', COALESCE(NEW.notes, '')), 'C');
@@ -1493,16 +4581,17 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: update_music_search_vector(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_music_search_vector(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_music_search_vector() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_music_search_vector()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
-    NEW.search_vector := 
+    NEW.search_vector :=
         setweight(to_tsvector('english', COALESCE(NEW.genre, '')), 'A') ||
         setweight(to_tsvector('english', COALESCE(NEW.subgenre, '')), 'A') ||
         setweight(to_tsvector('english', COALESCE(NEW.mood, '')), 'B') ||
@@ -1514,1169 +4603,326 @@ BEGIN
 END;
 $$;
 
-
 --
--- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_work_status_on_publication(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_work_status_on_publication() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_work_status_on_publication()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN
     UPDATE works SET status = 'published' WHERE id = NEW.work_id AND status = 'complete';
     RETURN NEW;
 END;
 $$;
 
-
 --
--- Name: update_works_timestamp(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_works_timestamp(); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.update_works_timestamp() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION update_works_timestamp()
+RETURNS trigger
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$;
 
-
 --
--- Name: upsert_domain_context(text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: upsert_domain_context(text, text, text, text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.upsert_domain_context(p_domain_name text, p_file_key text, p_content text, p_description text DEFAULT NULL::text, p_updated_by text DEFAULT 'system'::text) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION upsert_domain_context(
+    p_domain_name text,
+    p_file_key text,
+    p_content text,
+    p_description text DEFAULT NULL,
+    p_updated_by text DEFAULT 'system'
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_id INTEGER;
 BEGIN
     INSERT INTO agent_bootstrap_context (context_type, domain_name, file_key, content, description, updated_by, updated_at)
     VALUES ('DOMAIN', p_domain_name, p_file_key, p_content, p_description, p_updated_by, NOW())
-    ON CONFLICT (context_type, COALESCE(domain_name, ''), file_key) 
-    DO UPDATE SET 
+    ON CONFLICT (context_type, COALESCE(domain_name, ''), file_key)
+    DO UPDATE SET
         content = EXCLUDED.content,
         description = COALESCE(EXCLUDED.description, agent_bootstrap_context.description),
         updated_by = EXCLUDED.updated_by,
         updated_at = NOW()
     RETURNING id INTO v_id;
-    
+
     RETURN v_id;
 END;
 $$;
 
-
 --
--- Name: upsert_global_context(text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: upsert_global_context(text, text, text, text); Type: FUNCTION; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.upsert_global_context(p_file_key text, p_content text, p_description text DEFAULT NULL::text, p_updated_by text DEFAULT 'system'::text) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION upsert_global_context(
+    p_file_key text,
+    p_content text,
+    p_description text DEFAULT NULL,
+    p_updated_by text DEFAULT 'system'
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+AS $$
 DECLARE
     v_id INTEGER;
 BEGIN
     INSERT INTO agent_bootstrap_context (context_type, domain_name, file_key, content, description, updated_by, updated_at)
     VALUES ('GLOBAL', NULL, p_file_key, p_content, p_description, p_updated_by, NOW())
-    ON CONFLICT (context_type, COALESCE(domain_name, ''), file_key) 
-    DO UPDATE SET 
+    ON CONFLICT (context_type, COALESCE(domain_name, ''), file_key)
+    DO UPDATE SET
         content = EXCLUDED.content,
         description = COALESCE(EXCLUDED.description, agent_bootstrap_context.description),
         updated_by = EXCLUDED.updated_by,
         updated_at = NOW()
     RETURNING id INTO v_id;
-    
+
     RETURN v_id;
 END;
 $$;
 
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
---
--- Name: agent_actions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_actions (
-    id integer NOT NULL,
-    agent_id integer DEFAULT 1,
-    action_type character varying(100) NOT NULL,
-    description text NOT NULL,
-    related_media_id integer,
-    related_event_id integer,
-    metadata jsonb,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE agent_actions; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_actions IS 'Agent action definitions. READ-ONLY except Newhart.';
-
-
---
--- Name: agent_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_actions_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_actions_id_seq OWNED BY public.agent_actions.id;
-
-
---
--- Name: agent_aliases; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_aliases (
-    agent_id integer NOT NULL,
-    alias character varying(100) NOT NULL,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE agent_aliases; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_aliases IS 'Agent aliases for flexible mention matching. Supports case-insensitive routing.';
-
-
---
--- Name: COLUMN agent_aliases.alias; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_aliases.alias IS 'Alternative name/identifier for the agent (e.g., "assistant", "helper")';
-
-
---
--- Name: agent_bootstrap_context; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_bootstrap_context (
-    id integer NOT NULL,
-    context_type text NOT NULL,
-    domain_name text,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    description text,
-    updated_at timestamp with time zone DEFAULT now(),
-    updated_by text DEFAULT 'system'::text,
-    agent_name text,
-    CONSTRAINT agent_bootstrap_context_context_type_check CHECK ((context_type = ANY (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'AGENT'::text]))),
-    CONSTRAINT chk_agent_has_agent_name CHECK (((context_type <> 'AGENT'::text) OR (agent_name IS NOT NULL))),
-    CONSTRAINT chk_domain_has_domain_name CHECK (((context_type <> 'DOMAIN'::text) OR (domain_name IS NOT NULL))),
-    CONSTRAINT chk_universal_global_no_names CHECK (((context_type <> ALL (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text])) OR ((agent_name IS NULL) AND (domain_name IS NULL))))
-);
-
-
---
--- Name: TABLE agent_bootstrap_context; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_bootstrap_context IS 'Bootstrap context entries. READ-ONLY except Newhart (Agent Design/Management domain).';
-
-
---
--- Name: COLUMN agent_bootstrap_context.context_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_bootstrap_context.context_type IS 'GLOBAL (all agents) or DOMAIN (agents in specific domain)';
-
-
---
--- Name: COLUMN agent_bootstrap_context.domain_name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_bootstrap_context.domain_name IS 'NULL for GLOBAL, domain name from agent_domains for DOMAIN type';
-
-
---
--- Name: COLUMN agent_bootstrap_context.file_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_bootstrap_context.file_key IS 'Identifier for context block, becomes filename in bootstrap';
-
-
---
--- Name: agent_bootstrap_context_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_bootstrap_context_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_bootstrap_context_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_bootstrap_context_id_seq OWNED BY public.agent_bootstrap_context.id;
-
-
---
--- Name: agent_chat; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_chat (
-    id integer NOT NULL,
-    channel character varying(50) DEFAULT 'system'::character varying,
-    sender character varying(50) NOT NULL,
-    message text NOT NULL,
-    mentions text[],
-    reply_to integer,
-    created_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE agent_chat; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_chat IS 'Agent messaging. INSERT allowed for all, UPDATE/DELETE only Newhart.';
-
-
---
--- Name: agent_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_chat_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_chat_id_seq OWNED BY public.agent_chat.id;
-
-
---
--- Name: agent_chat_processed; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_chat_processed (
-    chat_id integer NOT NULL,
-    agent character varying(50) NOT NULL,
-    received_at timestamp without time zone,
-    routed_at timestamp without time zone,
-    responded_at timestamp without time zone,
-    error_message text,
-    status public.agent_chat_status DEFAULT 'responded'::public.agent_chat_status
-);
-
-
---
--- Name: TABLE agent_chat_processed; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_chat_processed IS 'Message processing state. Agents can track, Newhart manages.';
-
-
---
--- Name: agent_domains; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_domains (
-    id integer NOT NULL,
-    agent_id integer NOT NULL,
-    domain_topic character varying(255) NOT NULL,
-    source_entity_id integer,
-    vote_count integer DEFAULT 1,
-    created_at timestamp without time zone DEFAULT now(),
-    last_confirmed timestamp without time zone DEFAULT now(),
-    notes text
-);
-
-
---
--- Name: TABLE agent_domains; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_domains IS 'Agent domain assignments. READ-ONLY except Newhart.';
-
-
---
--- Name: COLUMN agent_domains.domain_topic; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_domains.domain_topic IS 'The topic/responsibility this agent owns';
-
-
---
--- Name: COLUMN agent_domains.source_entity_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_domains.source_entity_id IS 'Entity who assigned this domain (for attribution)';
-
-
---
--- Name: COLUMN agent_domains.vote_count; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_domains.vote_count IS 'Reinforcement count - incremented when domain assignment is reconfirmed';
-
-
---
--- Name: agent_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_domains_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_domains_id_seq OWNED BY public.agent_domains.id;
-
-
---
--- Name: agent_jobs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_jobs (
-    id integer NOT NULL,
-    title character varying(200),
-    topic text,
-    job_type character varying(50) DEFAULT 'message_response'::character varying,
-    agent_name character varying(50) NOT NULL,
-    requester_agent character varying(50),
-    parent_job_id integer,
-    root_job_id integer,
-    status character varying(20) DEFAULT 'pending'::character varying,
-    priority integer DEFAULT 5,
-    notify_agents text[],
-    deliverable_path text,
-    deliverable_summary text,
-    error_message text,
-    created_at timestamp with time zone DEFAULT now(),
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE agent_jobs; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_jobs IS 'Agent job definitions. READ-ONLY except Newhart.';
-
-
---
--- Name: agent_jobs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_jobs_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_jobs_id_seq OWNED BY public.agent_jobs.id;
-
-
---
--- Name: agent_modifications; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_modifications (
-    id integer NOT NULL,
-    agent_id integer NOT NULL,
-    modified_by text NOT NULL,
-    field_changed text NOT NULL,
-    old_value text,
-    new_value text,
-    modified_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE agent_modifications; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_modifications IS 'Agent modification history. READ-ONLY except Newhart.';
-
-
---
--- Name: agent_modifications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_modifications_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_modifications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_modifications_id_seq OWNED BY public.agent_modifications.id;
-
-
---
--- Name: agent_spawns; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_spawns (
-    id integer NOT NULL,
-    trigger_source text NOT NULL,
-    trigger_id text,
-    trigger_payload jsonb,
-    domain text,
-    agent_id integer,
-    agent_name text,
-    session_key text,
-    session_label text,
-    task_summary text,
-    status text DEFAULT 'pending'::text,
-    spawned_at timestamp with time zone DEFAULT now(),
-    completed_at timestamp with time zone,
-    result jsonb,
-    CONSTRAINT valid_status CHECK ((status = ANY (ARRAY['pending'::text, 'spawning'::text, 'running'::text, 'completed'::text, 'failed'::text, 'skipped'::text])))
-);
-
-
---
--- Name: TABLE agent_spawns; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_spawns IS 'Tracks all agent spawns from the general-purpose spawner daemon';
-
-
---
--- Name: agent_spawns_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_spawns_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_spawns_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_spawns_id_seq OWNED BY public.agent_spawns.id;
-
-
---
--- Name: agent_system_config; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_system_config (
-    key text NOT NULL,
-    value text NOT NULL,
-    value_type text DEFAULT 'text'::text NOT NULL,
-    description text,
-    updated_at timestamp without time zone DEFAULT now(),
-    updated_by text DEFAULT 'system'::text
-);
-
-
---
--- Name: TABLE agent_system_config; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agent_system_config IS 'Agent system configuration. READ-ONLY except Newhart.';
-
-
---
--- Name: COLUMN agent_system_config.key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_system_config.key IS 'Unique configuration key identifier';
-
-
---
--- Name: COLUMN agent_system_config.value; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_system_config.value IS 'Configuration value (stored as text, cast based on value_type)';
-
-
---
--- Name: COLUMN agent_system_config.value_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_system_config.value_type IS 'Type hint: text, json, boolean, number';
-
-
---
--- Name: COLUMN agent_system_config.description; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_system_config.description IS 'Human-readable description of what this config controls';
-
-
---
--- Name: COLUMN agent_system_config.updated_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_system_config.updated_at IS 'Last modification timestamp';
-
-
---
--- Name: COLUMN agent_system_config.updated_by; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agent_system_config.updated_by IS 'Agent or system that last modified this config';
-
-
---
--- Name: agent_turn_context; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_turn_context (
-    id integer NOT NULL,
-    context_type text NOT NULL,
-    context_key text NOT NULL,
-    file_key text NOT NULL,
-    content text NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT agent_turn_context_content_check CHECK (((length(content) > 0) AND (length(content) <= 500))),
-    CONSTRAINT agent_turn_context_context_type_check CHECK ((context_type = ANY (ARRAY['UNIVERSAL'::text, 'GLOBAL'::text, 'DOMAIN'::text, 'AGENT'::text])))
-);
-
-
---
--- Name: agent_turn_context_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agent_turn_context_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agent_turn_context_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agent_turn_context_id_seq OWNED BY public.agent_turn_context.id;
-
-
---
--- Name: agents; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agents (
-    id integer NOT NULL,
-    name character varying(100) NOT NULL,
-    description text,
-    role character varying(100),
-    provider character varying(50),
-    model character varying(100),
-    access_method character varying(50) NOT NULL,
-    access_details jsonb,
-    skills text[],
-    credential_ref character varying(200),
-    status character varying(20) DEFAULT 'active'::character varying,
-    notes text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    persistent boolean DEFAULT true,
-    instantiation_sop character varying(100),
-    nickname character varying(50),
-    instance_type character varying(20) DEFAULT 'subagent'::character varying,
-    home_dir character varying(255),
-    unix_user character varying(50),
-    collaborative boolean DEFAULT false,
-    config_reasoning text,
-    fallback_model character varying(100),
-    collaborate jsonb,
-    decision_criteria text,
-    thinking character varying(20),
-    fallback_models text[],
-    pronouns character varying(50),
-    allowed_subagents text[],
-    is_default boolean DEFAULT false NOT NULL,
-    context_type text DEFAULT 'persistent'::text NOT NULL,
-    CONSTRAINT agents_context_type_check CHECK ((context_type = ANY (ARRAY['ephemeral'::text, 'persistent'::text]))),
-    CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY ((ARRAY['off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying])::text[])))
-);
-
-
---
--- Name: TABLE agents; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.agents IS 'Agent definitions. READ-ONLY except Newhart (Agent Design/Management domain).';
-
-
---
--- Name: COLUMN agents.access_details; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.access_details IS 'JSON: session_key, cli_command, endpoint URL, etc.';
-
-
---
--- Name: COLUMN agents.credential_ref; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.credential_ref IS '1Password item name or clawdbot config path for credentials';
-
-
---
--- Name: COLUMN agents.persistent; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.persistent IS 'true = always running, false = instantiated on-demand';
-
-
---
--- Name: COLUMN agents.instantiation_sop; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.instantiation_sop IS 'SOP name for how to instantiate this agent (for ephemeral agents)';
-
-
---
--- Name: COLUMN agents.nickname; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.nickname IS 'Short friendly name for easy reference';
-
-
---
--- Name: COLUMN agents.instance_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.instance_type IS 'subagent (spawned session) or peer (separate Clawdbot instance)';
-
-
---
--- Name: COLUMN agents.home_dir; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.home_dir IS 'Workspace path for peer agents';
-
-
---
--- Name: COLUMN agents.unix_user; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.unix_user IS 'Unix username for peer agents';
-
-
---
--- Name: COLUMN agents.collaborative; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.collaborative IS 'TRUE = work WITH NOVA in dialogue, FALSE = work FOR NOVA on tasks';
-
-
---
--- Name: COLUMN agents.config_reasoning; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.config_reasoning IS 'Newhart-maintained notes explaining why this agent is configured as it is (model, persistent, collaborative, etc.)';
-
-
---
--- Name: COLUMN agents.fallback_model; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.fallback_model IS 'Fallback model if primary fails (auth issues, rate limits, etc.)';
-
-
---
--- Name: COLUMN agents.collaborate; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.collaborate IS 'Collaboration scope: null = task-only, JSONB defines topics/areas where this agent can collaborate vs just execute. Example: {"allowed": ["architecture", "design"], "excluded": ["execution"]}';
-
-
---
--- Name: COLUMN agents.decision_criteria; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.agents.decision_criteria IS 'Criteria for when to spawn this agent - helps NOVA route tasks';
-
-
---
--- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.agents_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
-
-
---
--- Name: ai_models; Type: TABLE; Schema: public; Owner: -
 --
-
-CREATE TABLE public.ai_models (
-    id integer NOT NULL,
-    model_id character varying(100) NOT NULL,
-    provider character varying(50) NOT NULL,
-    display_name character varying(100),
-    context_window integer,
-    cost_tier character varying(20),
-    strengths text[],
-    weaknesses text[],
-    available boolean DEFAULT false,
-    last_verified_at timestamp with time zone,
-    credential_ref character varying(200),
-    notes text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE ai_models; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.ai_models IS 'Available AI models. NOVA maintains this; Newhart reads for agent assignments. Credentials and endpoints stored in 1Password (see credential_ref column).';
-
-
---
--- Name: artwork; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.artwork (
-    id integer NOT NULL,
-    instagram_url text,
-    instagram_media_id text,
-    title text,
-    caption text,
-    theme text,
-    original_prompt text,
-    revised_prompt text,
-    image_data bytea,
-    image_filename text,
-    posted_at timestamp with time zone DEFAULT now(),
-    created_at timestamp with time zone DEFAULT now(),
-    notes text,
-    inspiration_source text,
-    quality_score integer,
-    nostr_event_id text,
-    nostr_image_url text,
-    x_tweet_id text,
-    x_url text
-);
-
-
---
--- Name: TABLE artwork; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.artwork IS 'Archive of NOVAs Instagram artwork. Reference for future compilation.';
-
-
---
--- Name: COLUMN artwork.image_data; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.artwork.image_data IS 'Raw image binary data (PNG/JPG)';
-
-
---
--- Name: COLUMN artwork.inspiration_source; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.artwork.inspiration_source IS 'News snippet or source that inspired this artwork';
-
-
---
--- Name: artwork_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.artwork_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: artwork_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.artwork_id_seq OWNED BY public.artwork.id;
-
-
---
--- Name: asset_classes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.asset_classes (
-    code character varying(20) NOT NULL,
-    name character varying(100) NOT NULL,
-    description text,
-    price_source character varying(50),
-    trading_hours character varying(100),
-    typical_unit character varying(20)
-);
-
-
---
--- Name: TABLE asset_classes; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.asset_classes IS 'Asset class definitions for financial portfolio management. Defines tradeable asset types with pricing sources and trading characteristics.';
-
-
---
--- Name: COLUMN asset_classes.code; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.asset_classes.code IS 'Unique asset class identifier (e.g., STOCK, BOND, CRYPTO)';
-
-
---
--- Name: COLUMN asset_classes.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.asset_classes.name IS 'Human-readable asset class name';
-
-
---
--- Name: COLUMN asset_classes.description; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.asset_classes.description IS 'Detailed description of the asset class';
-
-
---
--- Name: COLUMN asset_classes.price_source; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.asset_classes.price_source IS 'Data source for price information (e.g., Yahoo Finance, Alpha Vantage)';
-
-
---
--- Name: COLUMN asset_classes.trading_hours; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.asset_classes.trading_hours IS 'When this asset class typically trades';
-
-
---
--- Name: COLUMN asset_classes.typical_unit; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.asset_classes.typical_unit IS 'Standard trading unit (shares, contracts, etc.)';
-
-
---
--- Name: certificates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.certificates (
-    id integer NOT NULL,
-    entity_id integer NOT NULL,
-    fingerprint character varying(128) NOT NULL,
-    serial character varying(64) NOT NULL,
-    subject_dn character varying(512) NOT NULL,
-    issued_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    expires_at timestamp without time zone,
-    revoked_at timestamp without time zone,
-    revocation_reason character varying(255),
-    device_name character varying(255),
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE certificates; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.certificates IS 'Client certificates issued by NOVA CA. Security-sensitive. Verify before modifications.';
-
-
+-- Name: agent_config_changed; Type: TRIGGER; Schema: -; Owner: -
 --
--- Name: COLUMN certificates.fingerprint; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.certificates.fingerprint IS 'SHA256 fingerprint of the certificate';
 
+CREATE OR REPLACE TRIGGER agent_config_changed
+    AFTER INSERT OR UPDATE OR DELETE ON agents
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_agent_config_changed();
 
 --
--- Name: COLUMN certificates.serial; Type: COMMENT; Schema: public; Owner: -
+-- Name: agents_config_changed; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.certificates.serial IS 'Certificate serial number';
+CREATE OR REPLACE TRIGGER agents_config_changed
+    AFTER INSERT OR UPDATE OR DELETE ON agents
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_agent_config_changed();
 
-
 --
--- Name: COLUMN certificates.revoked_at; Type: COMMENT; Schema: public; Owner: -
+-- Name: agents_delegation_notify; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.certificates.revoked_at IS 'If set, certificate is revoked and should be rejected';
 
+CREATE OR REPLACE TRIGGER agents_delegation_notify
+    AFTER INSERT OR UPDATE OR DELETE ON agents
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_delegation_change();
 
 --
--- Name: certificates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: agents_updated_at; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.certificates_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
+CREATE OR REPLACE TRIGGER agents_updated_at
+    BEFORE UPDATE ON agents
+    FOR EACH ROW
+    EXECUTE FUNCTION update_agents_timestamp();
 
-
 --
--- Name: certificates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: coder_queue_notify; Type: TRIGGER; Schema: -; Owner: -
 --
 
-ALTER SEQUENCE public.certificates_id_seq OWNED BY public.certificates.id;
+CREATE OR REPLACE TRIGGER coder_queue_notify
+    AFTER INSERT OR UPDATE ON git_issue_queue
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_coder_queue_change();
 
-
 --
--- Name: channel_activity; Type: TABLE; Schema: public; Owner: -
+-- Name: enforce_project_lock; Type: TRIGGER; Schema: -; Owner: -
 --
-
-CREATE TABLE public.channel_activity (
-    channel character varying(50) NOT NULL,
-    last_message_at timestamp with time zone DEFAULT now(),
-    last_message_from character varying(100)
-);
 
+CREATE OR REPLACE TRIGGER enforce_project_lock
+    BEFORE UPDATE ON projects
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_locked_project_update();
 
 --
--- Name: TABLE channel_activity; Type: COMMENT; Schema: public; Owner: -
+-- Name: gambling_entries_notify; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON TABLE public.channel_activity IS 'Tracks last message per channel for idle detection. Read/write: NOVA, Newhart.';
+CREATE OR REPLACE TRIGGER gambling_entries_notify
+    AFTER INSERT OR UPDATE OR DELETE ON gambling_entries
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_gambling_change();
 
-
 --
--- Name: conversations; Type: TABLE; Schema: public; Owner: -
+-- Name: gambling_logs_notify; Type: TRIGGER; Schema: -; Owner: -
 --
-
-CREATE TABLE public.conversations (
-    id integer NOT NULL,
-    session_key character varying(255),
-    channel character varying(50),
-    started_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    summary text,
-    notes text
-);
 
+CREATE OR REPLACE TRIGGER gambling_logs_notify
+    AFTER INSERT OR UPDATE OR DELETE ON gambling_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_gambling_change();
 
 --
--- Name: TABLE conversations; Type: COMMENT; Schema: public; Owner: -
+-- Name: media_search_update; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON TABLE public.conversations IS 'Conversation session tracking. Logs chat sessions with metadata for analysis and continuity.';
+CREATE OR REPLACE TRIGGER media_search_update
+    BEFORE INSERT OR UPDATE ON media_consumed
+    FOR EACH ROW
+    EXECUTE FUNCTION update_media_search_vector();
 
-
 --
--- Name: COLUMN conversations.id; Type: COMMENT; Schema: public; Owner: -
+-- Name: media_search_vector_update; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.conversations.id IS 'Unique conversation identifier';
 
+CREATE OR REPLACE TRIGGER media_search_vector_update
+    BEFORE INSERT OR UPDATE ON media_consumed
+    FOR EACH ROW
+    EXECUTE FUNCTION update_media_search_vector();
 
 --
--- Name: COLUMN conversations.session_key; Type: COMMENT; Schema: public; Owner: -
+-- Name: music_analysis_search_update; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.conversations.session_key IS 'Session identifier for grouping related messages';
+CREATE OR REPLACE TRIGGER music_analysis_search_update
+    BEFORE INSERT OR UPDATE ON music_analysis
+    FOR EACH ROW
+    EXECUTE FUNCTION update_music_analysis_search_vector();
 
-
 --
--- Name: COLUMN conversations.channel; Type: COMMENT; Schema: public; Owner: -
+-- Name: music_search_update; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.conversations.channel IS 'Communication channel (signal, discord, etc.)';
+CREATE OR REPLACE TRIGGER music_search_update
+    BEFORE INSERT OR UPDATE ON music_library
+    FOR EACH ROW
+    EXECUTE FUNCTION update_music_search_vector();
 
-
 --
--- Name: COLUMN conversations.started_at; Type: COMMENT; Schema: public; Owner: -
+-- Name: protect_bootstrap_context; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.conversations.started_at IS 'Conversation start timestamp';
 
+CREATE OR REPLACE TRIGGER protect_bootstrap_context
+    BEFORE INSERT OR UPDATE OR DELETE ON agent_bootstrap_context
+    FOR EACH ROW
+    EXECUTE FUNCTION protect_bootstrap_context_writes();
 
 --
--- Name: COLUMN conversations.summary; Type: COMMENT; Schema: public; Owner: -
+-- Name: publication_status_update; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.conversations.summary IS 'Conversation summary or key points';
+CREATE OR REPLACE TRIGGER publication_status_update
+    AFTER INSERT ON publications
+    FOR EACH ROW
+    EXECUTE FUNCTION update_work_status_on_publication();
 
-
 --
--- Name: COLUMN conversations.notes; Type: COMMENT; Schema: public; Owner: -
+-- Name: system_config_changed; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.conversations.notes IS 'Additional notes about the conversation';
 
+CREATE OR REPLACE TRIGGER system_config_changed
+    AFTER INSERT OR UPDATE OR DELETE ON agent_system_config
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_system_config_changed();
 
 --
--- Name: conversations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: trg_agent_turn_context_updated_at; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE SEQUENCE public.conversations_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
+CREATE OR REPLACE TRIGGER trg_agent_turn_context_updated_at
+    BEFORE UPDATE ON agent_turn_context
+    FOR EACH ROW
+    EXECUTE FUNCTION update_agent_turn_context_timestamp();
 
-
 --
--- Name: conversations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: trg_embed_chat_message; Type: TRIGGER; Schema: -; Owner: -
 --
-
-ALTER SEQUENCE public.conversations_id_seq OWNED BY public.conversations.id;
 
+CREATE OR REPLACE TRIGGER trg_embed_chat_message
+    AFTER INSERT ON agent_chat
+    FOR EACH ROW
+    EXECUTE FUNCTION embed_chat_message();
 
 --
--- Name: entity_facts; Type: TABLE; Schema: public; Owner: -
+-- Name: trg_library_works_search; Type: TRIGGER; Schema: -; Owner: -
 --
 
-CREATE TABLE public.entity_facts (
-    id integer NOT NULL,
-    entity_id integer,
-    key character varying(255) NOT NULL,
-    value text NOT NULL,
-    data jsonb,
-    source character varying(255),
-    confidence double precision DEFAULT 1.0,
-    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    visibility character varying(20) DEFAULT 'public'::character varying,
-    privacy_scope integer[],
-    source_entity_id integer,
-    visibility_reason text,
-    vote_count integer DEFAULT 1,
-    last_confirmed timestamp without time zone DEFAULT now(),
-    data_type character varying(20) DEFAULT 'observation'::character varying,
-    last_confirmed_at timestamp with time zone DEFAULT now(),
-    confirmation_count integer DEFAULT 1,
-    decay_rate real,
-    CONSTRAINT chk_confidence CHECK (((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))),
-    CONSTRAINT chk_data_type CHECK (((data_type)::text = ANY ((ARRAY['permanent'::character varying, 'identity'::character varying, 'preference'::character varying, 'temporal'::character varying, 'observation'::character varying])::text[])))
-);
+CREATE OR REPLACE TRIGGER trg_library_works_search
+    BEFORE INSERT OR UPDATE ON library_works
+    FOR EACH ROW
+    EXECUTE FUNCTION library_works_search_trigger();
 
-
 --
--- Name: TABLE entity_facts; Type: COMMENT; Schema: public; Owner: -
+-- Name: trg_normalize_mentions; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON TABLE public.entity_facts IS 'Key-value facts about entities. Check current_timezone for I)ruid before time-based actions.';
 
+CREATE OR REPLACE TRIGGER trg_normalize_mentions
+    BEFORE INSERT ON agent_chat
+    FOR EACH ROW
+    EXECUTE FUNCTION normalize_agent_chat_mentions();
 
 --
--- Name: COLUMN entity_facts.visibility; Type: COMMENT; Schema: public; Owner: -
+-- Name: trg_notify_agent_chat; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.entity_facts.visibility IS 'Privacy level: public (anyone), trusted (close relationships), private (source only)';
+CREATE OR REPLACE TRIGGER trg_notify_agent_chat
+    AFTER INSERT ON agent_chat
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_agent_chat();
 
-
 --
--- Name: COLUMN entity_facts.privacy_scope; Type: COMMENT; Schema: public; Owner: -
+-- Name: workflow_step_change_trigger; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.entity_facts.privacy_scope IS 'Array of entity IDs explicitly allowed to see this fact (overrides visibility)';
 
+CREATE OR REPLACE TRIGGER workflow_step_change_trigger
+    AFTER UPDATE ON workflow_steps
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_workflow_step_change();
 
 --
--- Name: COLUMN entity_facts.source_entity_id; Type: COMMENT; Schema: public; Owner: -
+-- Name: workflow_steps_delegation_notify; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.entity_facts.source_entity_id IS 'FK to entity who provided this information (for privacy ownership)';
+CREATE OR REPLACE TRIGGER workflow_steps_delegation_notify
+    AFTER INSERT OR UPDATE OR DELETE ON workflow_steps
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_delegation_change();
 
-
 --
--- Name: COLUMN entity_facts.visibility_reason; Type: COMMENT; Schema: public; Owner: -
+-- Name: workflows_delegation_notify; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.entity_facts.visibility_reason IS 'Reason visibility deviated from user default (audit trail)';
 
+CREATE OR REPLACE TRIGGER workflows_delegation_notify
+    AFTER INSERT OR UPDATE OR DELETE ON workflows
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_delegation_change();
 
 --
--- Name: COLUMN entity_facts.vote_count; Type: COMMENT; Schema: public; Owner: -
+-- Name: works_calculate_counts; Type: TRIGGER; Schema: -; Owner: -
 --
 
-COMMENT ON COLUMN public.entity_facts.vote_count IS 'Reinforcement count - incremented each time this fact is re-confirmed in conversation';
+CREATE OR REPLACE TRIGGER works_calculate_counts
+    BEFORE INSERT OR UPDATE ON works
+    FOR EACH ROW
+    EXECUTE FUNCTION calculate_word_count();
 
-
 --
--- Name: COLUMN entity_facts.last_confirmed; Type: COMMENT; Schema: public; Owner: -
+-- Name: works_updated_at; Type: TRIGGER; Schema: -; Owner: -
 --
-
-COMMENT ON COLUMN public.entity_facts.last_confirmed IS 'Timestamp of most recent confirmation/reinforcement';
 
+CREATE OR REPLACE TRIGGER works_updated_at
+    BEFORE UPDATE ON works
+    FOR EACH ROW
+    EXECUTE FUNCTION update_works_timestamp();
 
 --
--- Name: delegation_knowledge; Type: VIEW; Schema: public; Owner: -
+-- Name: delegation_knowledge; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.delegation_knowledge AS
+CREATE OR REPLACE VIEW delegation_knowledge AS
  SELECT id,
     key,
     value,
@@ -2685,9 +4931,9 @@ CREATE VIEW public.delegation_knowledge AS
     source,
     learned_at,
     updated_at
-   FROM public.entity_facts ef
-  WHERE ((entity_id = 1) AND ((key)::text = ANY ((ARRAY['delegates_to'::character varying, 'task_delegation'::character varying, 'agent_capability'::character varying, 'agent_success'::character varying, 'agent_failure'::character varying])::text[])))
-  ORDER BY
+   FROM entity_facts ef
+  WHERE entity_id = 1 AND (key::text = ANY (ARRAY['delegates_to'::character varying::text, 'task_delegation'::character varying::text, 'agent_capability'::character varying::text, 'agent_success'::character varying::text, 'agent_failure'::character varying::text]))
+  ORDER BY (
         CASE key
             WHEN 'delegates_to'::text THEN 1
             WHEN 'task_delegation'::text THEN 2
@@ -2695,2469 +4941,13 @@ CREATE VIEW public.delegation_knowledge AS
             WHEN 'agent_success'::text THEN 4
             WHEN 'agent_failure'::text THEN 5
             ELSE 6
-        END, confidence DESC, value;
+        END), confidence DESC, value;
 
-
---
--- Name: entities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entities (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    type character varying(50) NOT NULL,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    last_seen timestamp without time zone,
-    photo bytea,
-    notes text,
-    full_name character varying(255),
-    nicknames text[],
-    gender character varying(50),
-    pronouns character varying(50),
-    user_id character varying(255),
-    auth_token character varying(255),
-    collaborate boolean,
-    collaboration_scope text,
-    trust_level character varying(20) DEFAULT 'unknown'::character varying,
-    introduction_context text,
-    capabilities jsonb,
-    access_constraints jsonb,
-    preferred_contact character varying(50),
-    CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[]))),
-    CONSTRAINT valid_collaboration_scope CHECK (((collaboration_scope IS NULL) OR (collaboration_scope = ANY (ARRAY['full'::text, 'domain-specific'::text, 'supervised'::text]))))
-);
-
-
---
--- Name: TABLE entities; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.entities IS 'People, AIs, organizations. NOVA has full access. Use entity_facts for attributes.';
-
-
---
--- Name: COLUMN entities.collaborate; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.collaborate IS 'If true, collaborate with this entity. If false, task them. NULL = not assessed.';
-
-
---
--- Name: COLUMN entities.collaboration_scope; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.collaboration_scope IS 'full | domain-specific | supervised - determines collaboration breadth';
-
-
---
--- Name: COLUMN entities.trust_level; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.trust_level IS 'Trust level for confidence scoring: owner, admin, user, unknown, untrusted';
-
-
---
--- Name: COLUMN entities.introduction_context; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.introduction_context IS 'How/why we connected with this entity, relationship context';
-
-
---
--- Name: COLUMN entities.capabilities; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.capabilities IS 'What this entity can do - domains, skills, tools';
-
-
---
--- Name: COLUMN entities.access_constraints; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.access_constraints IS 'Topics/data this entity should not see';
-
-
---
--- Name: COLUMN entities.preferred_contact; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entities.preferred_contact IS 'Preferred communication method: signal, email, slack, telegram, whatsapp, etc.';
-
-
---
--- Name: entities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.entities_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.entities_id_seq OWNED BY public.entities.id;
-
-
---
--- Name: entity_fact_conflicts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entity_fact_conflicts (
-    id integer NOT NULL,
-    entity_id integer,
-    key character varying(255),
-    fact_id_a integer,
-    fact_id_b integer,
-    value_a text,
-    value_b text,
-    confidence_a real,
-    confidence_b real,
-    resolution character varying(50),
-    resolved_at timestamp with time zone,
-    resolved_by character varying(50),
-    created_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE entity_fact_conflicts; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.entity_fact_conflicts IS 'Conflicts between entity facts requiring resolution. Part of the truth reconciliation system.';
-
-
---
--- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.entity_fact_conflicts_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: entity_fact_conflicts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.entity_fact_conflicts_id_seq OWNED BY public.entity_fact_conflicts.id;
-
-
---
--- Name: entity_facts_archive; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entity_facts_archive (
-    id integer,
-    entity_id integer,
-    key character varying(255),
-    value text,
-    data jsonb,
-    source character varying(255),
-    confidence double precision,
-    learned_at timestamp without time zone,
-    updated_at timestamp without time zone,
-    visibility character varying(20),
-    privacy_scope integer[],
-    source_entity_id integer,
-    visibility_reason text,
-    vote_count integer,
-    last_confirmed timestamp without time zone,
-    data_type character varying(20),
-    last_confirmed_at timestamp with time zone,
-    confirmation_count integer,
-    decay_rate real,
-    archived_at timestamp with time zone DEFAULT now(),
-    archive_reason character varying(50),
-    archived_by character varying(50) DEFAULT 'decay_script'::character varying
-);
-
-
---
--- Name: TABLE entity_facts_archive; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.entity_facts_archive IS 'Archived entity facts from decay/cleanup processes. Historical record of previously stored knowledge.';
-
-
---
--- Name: COLUMN entity_facts_archive.archived_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entity_facts_archive.archived_at IS 'When the fact was archived';
-
-
---
--- Name: COLUMN entity_facts_archive.archive_reason; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entity_facts_archive.archive_reason IS 'Why the fact was archived (decay, conflict, manual)';
-
-
---
--- Name: COLUMN entity_facts_archive.archived_by; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.entity_facts_archive.archived_by IS 'System or agent that archived the fact';
-
-
---
--- Name: entity_facts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.entity_facts_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: entity_facts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.entity_facts_id_seq OWNED BY public.entity_facts.id;
-
-
---
--- Name: entity_relationships; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entity_relationships (
-    id integer NOT NULL,
-    entity_a integer,
-    entity_b integer,
-    relationship character varying(100) NOT NULL,
-    since timestamp without time zone,
-    notes text,
-    is_long_distance boolean DEFAULT false,
-    seriousness character varying(20) DEFAULT 'standard'::character varying
-);
-
-
---
--- Name: TABLE entity_relationships; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.entity_relationships IS 'Relationships between entities (family, work, friendship, etc).';
-
-
---
--- Name: entity_relationships_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.entity_relationships_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: entity_relationships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.entity_relationships_id_seq OWNED BY public.entity_relationships.id;
-
-
---
--- Name: event_entities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.event_entities (
-    event_id integer NOT NULL,
-    entity_id integer NOT NULL,
-    role character varying(100)
-);
-
-
---
--- Name: TABLE event_entities; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.event_entities IS 'Links events to entities (people, orgs, AIs). Many-to-many relationship table.';
-
-
---
--- Name: event_places; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.event_places (
-    event_id integer NOT NULL,
-    place_id integer NOT NULL
-);
-
-
---
--- Name: TABLE event_places; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.event_places IS 'Links events to places/locations. Many-to-many relationship table.';
-
-
---
--- Name: event_projects; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.event_projects (
-    event_id integer NOT NULL,
-    project_id integer NOT NULL
-);
-
-
---
--- Name: TABLE event_projects; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.event_projects IS 'Links events to projects. Many-to-many relationship table for project milestones and activities.';
-
-
---
--- Name: events; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.events (
-    id integer NOT NULL,
-    event_date timestamp without time zone NOT NULL,
-    title character varying(500) NOT NULL,
-    description text,
-    source character varying(255),
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED,
-    confidence real DEFAULT 1.0,
-    last_confirmed_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE events; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.events IS 'Historical events, milestones, activities. Log significant occurrences.';
-
-
---
--- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.events_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
-
-
---
--- Name: events_archive; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.events_archive (
-    id integer DEFAULT nextval('public.events_id_seq'::regclass) NOT NULL,
-    event_date timestamp without time zone NOT NULL,
-    title character varying(500) NOT NULL,
-    description text,
-    source character varying(255),
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))) STORED,
-    confidence real DEFAULT 1.0,
-    last_confirmed_at timestamp with time zone DEFAULT now(),
-    archived_at timestamp with time zone DEFAULT now(),
-    archive_reason character varying(50)
-);
-
-
---
--- Name: TABLE events_archive; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.events_archive IS 'Archived historical events. Long-term storage for events moved out of active events table.';
-
-
---
--- Name: extraction_metrics; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.extraction_metrics (
-    id integer NOT NULL,
-    "timestamp" timestamp with time zone DEFAULT now(),
-    method text,
-    num_relations integer,
-    avg_confidence real,
-    processing_time_ms integer
-);
-
-
---
--- Name: TABLE extraction_metrics; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.extraction_metrics IS 'Performance metrics for data extraction processes. Tracks accuracy and efficiency of knowledge extraction.';
-
-
---
--- Name: extraction_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.extraction_metrics_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: extraction_metrics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.extraction_metrics_id_seq OWNED BY public.extraction_metrics.id;
-
-
---
--- Name: fact_change_log; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.fact_change_log (
-    id integer NOT NULL,
-    fact_id integer NOT NULL,
-    old_value text,
-    new_value text,
-    changed_by_entity_id integer,
-    reason character varying(100),
-    changed_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE fact_change_log; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.fact_change_log IS 'Audit trail for entity fact modifications. Tracks who changed what and when for accountability.';
-
-
---
--- Name: fact_change_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.fact_change_log_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: fact_change_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.fact_change_log_id_seq OWNED BY public.fact_change_log.id;
-
-
---
--- Name: gambling_entries; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.gambling_entries (
-    id integer NOT NULL,
-    log_id integer,
-    session_date timestamp without time zone,
-    casino character varying(255),
-    game character varying(100),
-    amount numeric(10,2) NOT NULL,
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    duration_minutes numeric(6,2),
-    base_bet numeric(10,2)
-);
-
-
---
--- Name: TABLE gambling_entries; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.gambling_entries IS 'Individual gambling session records. Tracks bets, outcomes, and session details for analysis.';
-
-
---
--- Name: COLUMN gambling_entries.log_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.log_id IS 'References gambling_logs for session grouping';
-
-
---
--- Name: COLUMN gambling_entries.session_date; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.session_date IS 'Date and time of gambling session';
-
-
---
--- Name: COLUMN gambling_entries.casino; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.casino IS 'Casino or venue name';
-
-
---
--- Name: COLUMN gambling_entries.game; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.game IS 'Game type (poker, blackjack, etc.)';
-
-
---
--- Name: COLUMN gambling_entries.amount; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.amount IS 'Win/loss amount (positive for wins, negative for losses)';
-
-
---
--- Name: COLUMN gambling_entries.duration_minutes; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.duration_minutes IS 'Session duration in minutes';
-
-
---
--- Name: COLUMN gambling_entries.base_bet; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.gambling_entries.base_bet IS 'Typical bet size for the session';
-
-
---
--- Name: gambling_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.gambling_entries_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: gambling_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.gambling_entries_id_seq OWNED BY public.gambling_entries.id;
-
-
---
--- Name: gambling_logs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.gambling_logs (
-    id integer NOT NULL,
-    entity_id integer,
-    name character varying(255) NOT NULL,
-    location character varying(255),
-    started_at date,
-    ended_at date,
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE gambling_logs; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.gambling_logs IS 'High-level gambling session summaries. Groups multiple gambling_entries by session.';
-
-
---
--- Name: gambling_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.gambling_logs_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: gambling_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.gambling_logs_id_seq OWNED BY public.gambling_logs.id;
-
-
---
--- Name: git_issue_queue; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.git_issue_queue (
-    id integer NOT NULL,
-    repo text NOT NULL,
-    issue_number integer NOT NULL,
-    title text,
-    priority integer DEFAULT 5,
-    status text DEFAULT 'pending_tests'::text,
-    source text DEFAULT 'github'::text,
-    parent_issue_id integer,
-    labels text[],
-    created_at timestamp with time zone DEFAULT now(),
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
-    error_message text,
-    context jsonb DEFAULT '{}'::jsonb,
-    test_file text,
-    code_files text[],
-    CONSTRAINT coder_issue_queue_status_check CHECK ((status = ANY (ARRAY['pending_tests'::text, 'tests_approved'::text, 'implementing'::text, 'testing'::text, 'done'::text, 'failed'::text, 'paused'::text, 'blocked'::text])))
-);
-
-
---
--- Name: TABLE git_issue_queue; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.git_issue_queue IS 'Issue queue for git-based workflows. NOTIFY triggers dispatch work automatically.';
-
-
---
--- Name: COLUMN git_issue_queue.status; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.git_issue_queue.status IS 'pending_tests→tests_approved→implementing→testing→done/failed';
-
-
---
--- Name: COLUMN git_issue_queue.labels; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.git_issue_queue.labels IS 'GitHub labels. Gem skips issues with paused, blocked, on-hold, wontfix labels.';
-
-
---
--- Name: git_issue_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.git_issue_queue_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: git_issue_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.git_issue_queue_id_seq OWNED BY public.git_issue_queue.id;
-
-
---
--- Name: job_messages; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.job_messages (
-    id integer NOT NULL,
-    job_id integer NOT NULL,
-    message_id integer NOT NULL,
-    role character varying(20) DEFAULT 'context'::character varying,
-    added_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE job_messages; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.job_messages IS 'Message log per job for conversation threading';
-
-
---
--- Name: job_messages_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.job_messages_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: job_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.job_messages_id_seq OWNED BY public.job_messages.id;
-
-
---
--- Name: lessons; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.lessons (
-    id integer NOT NULL,
-    lesson text NOT NULL,
-    context text,
-    source character varying(255),
-    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    original_behavior text,
-    correction_source text,
-    reinforced_at timestamp without time zone,
-    confidence double precision DEFAULT 1.0,
-    last_referenced timestamp without time zone,
-    last_confirmed_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE lessons; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.lessons IS 'Lessons and insights learned. Update when learning something worth remembering.';
-
-
---
--- Name: COLUMN lessons.confidence; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.lessons.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
-
-
---
--- Name: lessons_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.lessons_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: lessons_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.lessons_id_seq OWNED BY public.lessons.id;
-
-
---
--- Name: lessons_archive; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.lessons_archive (
-    id integer DEFAULT nextval('public.lessons_id_seq'::regclass) NOT NULL,
-    lesson text NOT NULL,
-    context text,
-    source character varying(255),
-    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    original_behavior text,
-    correction_source text,
-    reinforced_at timestamp without time zone,
-    confidence double precision DEFAULT 1.0,
-    last_referenced timestamp without time zone,
-    last_confirmed_at timestamp with time zone DEFAULT now(),
-    archived_at timestamp with time zone DEFAULT now(),
-    archive_reason character varying(50)
-);
-
-
---
--- Name: TABLE lessons_archive; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.lessons_archive IS 'Archived lessons and insights. Historical record of previously stored learnings.';
-
-
---
--- Name: COLUMN lessons_archive.confidence; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.lessons_archive.confidence IS 'Confidence score 0-1, decays over time if not reinforced';
-
-
---
--- Name: library_authors; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.library_authors (
-    id integer NOT NULL,
-    name text NOT NULL,
-    biography text,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE library_authors; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.library_authors IS 'Library domain: normalized author records. Managed by Athena (librarian agent).';
-
-
---
--- Name: library_authors_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.library_authors_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: library_authors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.library_authors_id_seq OWNED BY public.library_authors.id;
-
-
---
--- Name: library_tags; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.library_tags (
-    id integer NOT NULL,
-    name text NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE library_tags; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.library_tags IS 'Library domain: subject/genre/topic tags for works. Managed by Athena.';
-
-
---
--- Name: library_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.library_tags_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: library_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.library_tags_id_seq OWNED BY public.library_tags.id;
-
-
---
--- Name: library_work_authors; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.library_work_authors (
-    work_id integer NOT NULL,
-    author_id integer NOT NULL,
-    author_order integer DEFAULT 0
-);
-
-
---
--- Name: TABLE library_work_authors; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.library_work_authors IS 'Links works to their authors. author_order preserves original ordering.';
-
-
---
--- Name: library_work_relationships; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.library_work_relationships (
-    from_work_id integer NOT NULL,
-    to_work_id integer NOT NULL,
-    relation_type text NOT NULL
-);
-
-
---
--- Name: TABLE library_work_relationships; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.library_work_relationships IS 'Tracks relationships between works (citations, sequels, responses, etc).';
-
-
---
--- Name: library_work_tags; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.library_work_tags (
-    work_id integer NOT NULL,
-    tag_id integer NOT NULL
-);
-
-
---
--- Name: TABLE library_work_tags; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.library_work_tags IS 'Links works to subject/topic tags.';
-
-
---
--- Name: library_works; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.library_works (
-    id integer NOT NULL,
-    title text NOT NULL,
-    work_type text NOT NULL,
-    publication_date date NOT NULL,
-    language text DEFAULT 'en'::text NOT NULL,
-    summary text NOT NULL,
-    url text,
-    doi text,
-    arxiv_id text,
-    isbn text,
-    external_ids jsonb DEFAULT '{}'::jsonb,
-    abstract text,
-    content_text text,
-    insights text NOT NULL,
-    subjects text[] DEFAULT '{}'::text[] NOT NULL,
-    publisher text,
-    source_path text,
-    shared_by text NOT NULL,
-    added_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    search_vector tsvector,
-    extra_metadata jsonb DEFAULT '{}'::jsonb,
-    notable_quotes text[],
-    edition text,
-    embed boolean DEFAULT true NOT NULL,
-    CONSTRAINT insights_not_empty CHECK ((length(TRIM(BOTH FROM insights)) > 20)),
-    CONSTRAINT summary_not_empty CHECK ((length(TRIM(BOTH FROM summary)) > 50)),
-    CONSTRAINT valid_work_type CHECK ((work_type = ANY (ARRAY['paper'::text, 'book'::text, 'novel'::text, 'poem'::text, 'short_story'::text, 'essay'::text, 'article'::text, 'blog_post'::text, 'whitepaper'::text, 'report'::text, 'thesis'::text, 'dissertation'::text, 'magazine'::text, 'newsletter'::text, 'speech'::text, 'other'::text])))
-);
-
-
---
--- Name: TABLE library_works; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.library_works IS 'Library domain: all written works (papers, books, poems, etc). Managed by Athena (librarian agent). ALL core fields are NOT NULL — Athena must generate summary and insights during ingestion. The summary field is used for semantic embedding (200-400 words, high-density). On semantic recall hit, query this table for full details.';
-
-
---
--- Name: COLUMN library_works.summary; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.library_works.summary IS 'REQUIRED. Concise semantic summary for embedding. 200-400 words. Must capture: what the work is, who wrote it, key findings/themes, and why it matters. Athena generates this during ingestion.';
-
-
---
--- Name: COLUMN library_works.abstract; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.library_works.abstract IS 'Original abstract verbatim from source. May be NULL if source has none (e.g. poems).';
-
-
---
--- Name: COLUMN library_works.content_text; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.library_works.content_text IS 'Full text of the work. Optional — only store if available and not too large.';
-
-
---
--- Name: COLUMN library_works.insights; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.library_works.insights IS 'REQUIRED. Key takeaways, relevance to our work, notable connections. Athena generates this during ingestion.';
-
-
---
--- Name: COLUMN library_works.notable_quotes; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.library_works.notable_quotes IS 'Array of notable quotes from the work. Included in semantic embedding for recall. Generated during ingestion.';
-
-
---
--- Name: library_works_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.library_works_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: library_works_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.library_works_id_seq OWNED BY public.library_works.id;
-
-
---
--- Name: media_consumed; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.media_consumed (
-    id integer NOT NULL,
-    media_type character varying(50) NOT NULL,
-    title character varying(500) NOT NULL,
-    creator character varying(255),
-    url text,
-    consumed_date date,
-    consumed_by integer,
-    rating integer,
-    notes text,
-    transcript text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    summary text,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    source_file text,
-    status character varying(20) DEFAULT 'completed'::character varying,
-    ingested_by integer,
-    ingested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    search_vector tsvector,
-    insights text,
-    CONSTRAINT media_consumed_rating_check CHECK (((rating >= 1) AND (rating <= 10)))
-);
-
-
---
--- Name: TABLE media_consumed; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.media_consumed IS 'Books, movies, podcasts consumed by entities. Log completions here.';
-
-
---
--- Name: COLUMN media_consumed.summary; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.summary IS 'Athena (librarian-agent) generated summary - objective, factual';
-
-
---
--- Name: COLUMN media_consumed.metadata; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.metadata IS 'Flexible metadata: duration, language, format, topics, word_count, etc.';
-
-
---
--- Name: COLUMN media_consumed.source_file; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.source_file IS 'Local file path if media was downloaded';
-
-
---
--- Name: COLUMN media_consumed.status; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.status IS 'Processing status: pending, processing, completed, failed, queued';
-
-
---
--- Name: COLUMN media_consumed.ingested_by; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.ingested_by IS 'Agent ID that processed this media';
-
-
---
--- Name: COLUMN media_consumed.ingested_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.ingested_at IS 'Timestamp when media was ingested/processed';
-
-
---
--- Name: COLUMN media_consumed.search_vector; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.search_vector IS 'Full-text search vector (title + notes + transcript + summary)';
-
-
---
--- Name: COLUMN media_consumed.insights; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_consumed.insights IS 'NOVA personal insights - analysis, connections, opinions';
-
-
---
--- Name: media_consumed_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.media_consumed_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: media_consumed_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.media_consumed_id_seq OWNED BY public.media_consumed.id;
-
-
---
--- Name: media_queue; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.media_queue (
-    id integer NOT NULL,
-    url text,
-    file_path text,
-    media_type character varying(50),
-    title character varying(500),
-    creator character varying(255),
-    priority integer DEFAULT 5,
-    status character varying(20) DEFAULT 'pending'::character varying,
-    requested_by integer,
-    requested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    processing_started_at timestamp without time zone,
-    completed_at timestamp without time zone,
-    result_media_id integer,
-    error_message text,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    CONSTRAINT media_queue_has_source CHECK (((url IS NOT NULL) OR (file_path IS NOT NULL)))
-);
-
-
---
--- Name: TABLE media_queue; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.media_queue IS 'Queue for media ingestion. Librarian agent processes these.';
-
-
---
--- Name: COLUMN media_queue.priority; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_queue.priority IS '1=urgent, 5=normal, 10=low priority';
-
-
---
--- Name: COLUMN media_queue.status; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_queue.status IS 'pending, processing, completed, failed, duplicate';
-
-
---
--- Name: COLUMN media_queue.result_media_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_queue.result_media_id IS 'Foreign key to resulting media_consumed record';
-
-
---
--- Name: media_queue_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.media_queue_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: media_queue_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.media_queue_id_seq OWNED BY public.media_queue.id;
-
-
---
--- Name: media_tags; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.media_tags (
-    id integer NOT NULL,
-    media_id integer NOT NULL,
-    tag character varying(100) NOT NULL,
-    source character varying(20) DEFAULT 'auto'::character varying,
-    confidence numeric(3,2),
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE media_tags; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.media_tags IS 'Tags/topics for media items. Helps with recommendations and search.';
-
-
---
--- Name: COLUMN media_tags.source; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_tags.source IS 'auto=AI-generated, manual=user-added';
-
-
---
--- Name: COLUMN media_tags.confidence; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.media_tags.confidence IS 'AI confidence score for auto-generated tags';
-
-
---
--- Name: media_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.media_tags_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: media_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.media_tags_id_seq OWNED BY public.media_tags.id;
-
-
---
--- Name: memory_embeddings; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.memory_embeddings (
-    id integer NOT NULL,
-    source_type character varying(50) NOT NULL,
-    source_id text,
-    content text NOT NULL,
-    embedding public.vector(1536),
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    confidence real DEFAULT 1.0,
-    last_confirmed_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE memory_embeddings; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.memory_embeddings IS 'Vector embeddings for semantic memory search. Used by proactive-recall.py.';
-
-
---
--- Name: memory_embeddings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.memory_embeddings_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: memory_embeddings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.memory_embeddings_id_seq OWNED BY public.memory_embeddings.id;
-
-
---
--- Name: memory_embeddings_archive; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.memory_embeddings_archive (
-    id integer DEFAULT nextval('public.memory_embeddings_id_seq'::regclass) NOT NULL,
-    source_type character varying(50) NOT NULL,
-    source_id text,
-    content text NOT NULL,
-    embedding public.vector(1536),
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    confidence real DEFAULT 1.0,
-    last_confirmed_at timestamp with time zone DEFAULT now(),
-    archived_at timestamp with time zone DEFAULT now(),
-    archive_reason character varying(50)
-);
-
-
---
--- Name: TABLE memory_embeddings_archive; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.memory_embeddings_archive IS 'Archived vector embeddings from semantic memory system. Historical embeddings for backup/analysis.';
-
-
---
--- Name: memory_type_priorities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.memory_type_priorities (
-    source_type text NOT NULL,
-    priority numeric(3,2) DEFAULT 1.00 NOT NULL,
-    description text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE memory_type_priorities; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.memory_type_priorities IS 'Priority weights for semantic recall by source_type. Higher = more likely to surface. NOVA can modify.';
-
-
---
--- Name: models_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.models_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: models_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.models_id_seq OWNED BY public.ai_models.id;
-
-
---
--- Name: motivation_d100; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.motivation_d100 (
-    roll integer NOT NULL,
-    task_name character varying(255),
-    task_description text,
-    workflow_id integer,
-    skill_name character varying(255),
-    tool_name character varying(255),
-    difficulty character varying(20) DEFAULT 'medium'::character varying,
-    energy_required character varying(20) DEFAULT 'low'::character varying,
-    estimated_minutes integer,
-    enabled boolean DEFAULT true,
-    times_rolled integer DEFAULT 0,
-    times_completed integer DEFAULT 0,
-    last_rolled timestamp without time zone,
-    last_completed timestamp without time zone,
-    created_at timestamp without time zone DEFAULT now(),
-    notes text,
-    CONSTRAINT motivation_d100_roll_check CHECK (((roll >= 1) AND (roll <= 100)))
-);
-
-
---
--- Name: TABLE motivation_d100; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.motivation_d100 IS 'D100 random task table for NOVA motivation system - roll when bored!';
-
-
---
--- Name: COLUMN motivation_d100.roll; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.motivation_d100.roll IS 'Die value 1-100';
-
-
---
--- Name: COLUMN motivation_d100.workflow_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.motivation_d100.workflow_id IS 'Optional link to workflows table for structured execution';
-
-
---
--- Name: COLUMN motivation_d100.skill_name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.motivation_d100.skill_name IS 'Optional SKILL.md to follow (e.g., "daily-inspiration-art")';
-
-
---
--- Name: COLUMN motivation_d100.tool_name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.motivation_d100.tool_name IS 'Optional tool to use (e.g., "bird-x", "gog")';
-
-
---
--- Name: music_analysis; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.music_analysis (
-    id integer NOT NULL,
-    music_id integer,
-    analysis_type character varying(50) NOT NULL,
-    analysis_summary text,
-    detailed_findings jsonb,
-    complexity_score numeric(4,2),
-    uniqueness_score numeric(4,2),
-    analyzed_by integer,
-    analyzed_at timestamp without time zone DEFAULT now(),
-    notes text,
-    search_vector tsvector
-);
-
-
---
--- Name: TABLE music_analysis; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.music_analysis IS 'Deep musical analysis (harmonic, rhythmic, lyrical, spectral). Managed by Erato.';
-
-
---
--- Name: music_analysis_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.music_analysis_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: music_analysis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.music_analysis_id_seq OWNED BY public.music_analysis.id;
-
-
---
--- Name: music_library; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.music_library (
-    id integer NOT NULL,
-    media_id integer,
-    musicbrainz_track_id uuid,
-    musicbrainz_album_id uuid,
-    musicbrainz_artist_id uuid,
-    isrc character varying(12),
-    discogs_release_id integer,
-    spotify_uri character varying(255),
-    apple_music_id character varying(255),
-    key character varying(10),
-    bpm numeric(6,2),
-    time_signature character varying(10),
-    duration_ms integer,
-    genre character varying(100),
-    subgenre character varying(100),
-    mood character varying(100),
-    energy_level integer,
-    danceability integer,
-    year integer,
-    album character varying(255),
-    track_number integer,
-    disc_number integer DEFAULT 1,
-    label character varying(255),
-    producer character varying(255),
-    replaygain_track_gain numeric(6,2),
-    replaygain_album_gain numeric(6,2),
-    sample_rate integer,
-    bit_depth integer,
-    bitrate integer,
-    file_format character varying(20),
-    lyrics text,
-    language character varying(10),
-    explicit boolean DEFAULT false,
-    added_at timestamp without time zone DEFAULT now(),
-    last_played timestamp without time zone,
-    play_count integer DEFAULT 0,
-    search_vector tsvector,
-    CONSTRAINT music_library_danceability_check CHECK (((danceability >= 1) AND (danceability <= 10))),
-    CONSTRAINT music_library_energy_level_check CHECK (((energy_level >= 1) AND (energy_level <= 10)))
-);
-
-
---
--- Name: TABLE music_library; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.music_library IS 'Music-specific metadata extending media_consumed. Managed by Erato.';
-
-
---
--- Name: music_library_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.music_library_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: music_library_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.music_library_id_seq OWNED BY public.music_library.id;
-
-
---
--- Name: place_properties; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.place_properties (
-    id integer NOT NULL,
-    place_id integer,
-    key character varying(255) NOT NULL,
-    value text NOT NULL,
-    data jsonb
-);
-
-
---
--- Name: TABLE place_properties; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.place_properties IS 'Properties and attributes of places. Key-value storage for place characteristics.';
-
-
---
--- Name: place_properties_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.place_properties_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: place_properties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.place_properties_id_seq OWNED BY public.place_properties.id;
-
-
---
--- Name: places; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.places (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    type character varying(50),
-    address text,
-    network_subnet character varying(50),
-    network_theme character varying(100),
-    coordinates point,
-    parent_place_id integer,
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    street_address character varying(255),
-    city character varying(100),
-    state character varying(100),
-    zipcode character varying(20),
-    country character varying(100) DEFAULT 'USA'::character varying
-);
-
-
---
--- Name: TABLE places; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.places IS 'Locations (houses, venues, cities). Reference I)ruid houses in USER.md.';
-
-
---
--- Name: places_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.places_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: places_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.places_id_seq OWNED BY public.places.id;
-
-
---
--- Name: portfolio_positions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.portfolio_positions (
-    id integer NOT NULL,
-    symbol character varying(10) NOT NULL,
-    shares numeric(12,6) NOT NULL,
-    cost_basis numeric(12,2) NOT NULL,
-    purchased_at timestamp without time zone NOT NULL,
-    sold_at timestamp without time zone,
-    sale_proceeds numeric(12,2),
-    notes text,
-    created_at timestamp without time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE portfolio_positions; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.portfolio_positions IS 'Individual stock/investment positions tracking purchases, sales, and P&L. Core table for portfolio management.';
-
-
---
--- Name: COLUMN portfolio_positions.id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.id IS 'Unique position identifier';
-
-
---
--- Name: COLUMN portfolio_positions.symbol; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.symbol IS 'Ticker symbol or asset identifier';
-
-
---
--- Name: COLUMN portfolio_positions.shares; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.shares IS 'Number of shares/units held';
-
-
---
--- Name: COLUMN portfolio_positions.cost_basis; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.cost_basis IS 'Total purchase price';
-
-
---
--- Name: COLUMN portfolio_positions.purchased_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.purchased_at IS 'Date and time of purchase';
-
-
---
--- Name: COLUMN portfolio_positions.sold_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.sold_at IS 'Date and time of sale (NULL for open positions)';
-
-
---
--- Name: COLUMN portfolio_positions.sale_proceeds; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.sale_proceeds IS 'Total sale proceeds (NULL for open positions)';
-
-
---
--- Name: COLUMN portfolio_positions.notes; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.notes IS 'Additional notes about the position';
-
-
---
--- Name: COLUMN portfolio_positions.created_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.portfolio_positions.created_at IS 'Record creation timestamp';
-
-
---
--- Name: portfolio_positions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.portfolio_positions_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: portfolio_positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.portfolio_positions_id_seq OWNED BY public.portfolio_positions.id;
-
-
---
--- Name: portfolio_snapshots; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.portfolio_snapshots (
-    id integer NOT NULL,
-    snapshot_at timestamp without time zone DEFAULT now() NOT NULL,
-    total_value numeric(12,2) NOT NULL,
-    total_cost_basis numeric(12,2) NOT NULL,
-    unrealized_pl numeric(12,2),
-    unrealized_pl_pct numeric(8,4),
-    positions jsonb,
-    benchmark_m2 numeric(8,4)
-);
-
-
---
--- Name: TABLE portfolio_snapshots; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.portfolio_snapshots IS 'Historical snapshots of portfolio values and performance metrics over time.';
-
-
---
--- Name: portfolio_snapshots_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.portfolio_snapshots_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: portfolio_snapshots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.portfolio_snapshots_id_seq OWNED BY public.portfolio_snapshots.id;
-
-
---
--- Name: positions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.positions (
-    id integer NOT NULL,
-    symbol character varying(20) NOT NULL,
-    asset_class character varying(20) NOT NULL,
-    asset_subclass character varying(50),
-    quantity numeric(18,8) NOT NULL,
-    unit character varying(20) DEFAULT 'shares'::character varying,
-    cost_basis numeric(14,4) NOT NULL,
-    avg_price numeric(14,4),
-    purchased_at timestamp without time zone NOT NULL,
-    sold_at timestamp without time zone,
-    sale_proceeds numeric(14,4),
-    platform character varying(50),
-    account_id character varying(50) DEFAULT 'main'::character varying,
-    notes text,
-    maturity_date date,
-    coupon_rate numeric(6,4),
-    strike_price numeric(14,4),
-    expiration_date date,
-    created_at timestamp without time zone DEFAULT now(),
-    updated_at timestamp without time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE positions; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.positions IS 'Legacy or alternative positions tracking table. May be deprecated in favor of portfolio_positions.';
-
-
---
--- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.positions_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.positions_id_seq OWNED BY public.positions.id;
-
-
---
--- Name: preferences; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.preferences (
-    id integer NOT NULL,
-    entity_id integer,
-    key character varying(255) NOT NULL,
-    value text NOT NULL,
-    context text,
-    learned_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE preferences; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.preferences IS 'User preferences by entity_id. Check before making assumptions.';
-
-
---
--- Name: preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.preferences_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.preferences_id_seq OWNED BY public.preferences.id;
-
-
---
--- Name: price_cache_v2; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.price_cache_v2 (
-    symbol character varying(20) NOT NULL,
-    asset_class character varying(20) NOT NULL,
-    price numeric(14,4) NOT NULL,
-    price_currency character varying(3) DEFAULT 'USD'::character varying,
-    bid numeric(14,4),
-    ask numeric(14,4),
-    volume numeric(20,0),
-    market_cap numeric(20,0),
-    day_change numeric(10,4),
-    day_change_pct numeric(8,4),
-    cached_at timestamp without time zone DEFAULT now(),
-    source character varying(50)
-);
-
-
---
--- Name: TABLE price_cache_v2; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.price_cache_v2 IS 'Cached price data for assets to reduce API calls. Version 2 of price caching system.';
-
-
---
--- Name: project_entities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_entities (
-    project_id integer NOT NULL,
-    entity_id integer NOT NULL,
-    role character varying(100)
-);
-
-
---
--- Name: TABLE project_entities; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_entities IS 'Links projects to entities (people, orgs, AIs). Many-to-many relationship table for project participants.';
-
-
---
--- Name: project_tasks; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_tasks (
-    id integer NOT NULL,
-    project_id integer,
-    task text NOT NULL,
-    status character varying(50) DEFAULT 'pending'::character varying,
-    blocked_by text,
-    due_date timestamp without time zone,
-    completed_at timestamp without time zone,
-    priority integer DEFAULT 0,
-    CONSTRAINT project_tasks_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying, 'complete'::character varying])::text[])))
-);
-
-
---
--- Name: TABLE project_tasks; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_tasks IS 'Project-specific task breakdown. Links tasks to projects for organized project management.';
-
-
---
--- Name: project_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.project_tasks_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: project_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.project_tasks_id_seq OWNED BY public.project_tasks.id;
-
-
---
--- Name: projects; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.projects (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    status character varying(50) DEFAULT 'active'::character varying,
-    goal text,
-    started_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    completed_at timestamp without time zone,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    notes text,
-    git_config jsonb,
-    repo_url text,
-    locked boolean DEFAULT false,
-    skills text[],
-    CONSTRAINT projects_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])))
-);
-
-
---
--- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.projects IS 'Project tracking. For repo-backed projects (locked=TRUE, repo_url set), use GitHub for management. For non-repo projects, use notes field here.';
-
-
---
--- Name: COLUMN projects.git_config; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.git_config IS 'Per-project Git config: branch strategy, commit conventions, PR workflow, etc.';
-
-
---
--- Name: COLUMN projects.repo_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.repo_url IS 'GitHub repo URL. When set with locked=TRUE, this is the source of truth. Manage project via repo, not database.';
-
-
---
--- Name: COLUMN projects.locked; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.locked IS 'When TRUE, project is repo-backed. Use GitHub (repo_url) for docs/updates, not this table. Prevents accidental writes to notes field.';
-
-
---
--- Name: COLUMN projects.skills; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.skills IS 'Array of skill names (from ~/clawd/skills/) relevant to this project';
-
-
---
--- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.projects_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: projects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.projects_id_seq OWNED BY public.projects.id;
-
-
---
--- Name: publications; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.publications (
-    id integer NOT NULL,
-    work_id integer NOT NULL,
-    published_to character varying(100) NOT NULL,
-    publication_type character varying(50) NOT NULL,
-    url text,
-    context text,
-    published_at timestamp with time zone DEFAULT now() NOT NULL,
-    published_by character varying(50),
-    CONSTRAINT valid_publication_type CHECK (((publication_type)::text = ANY ((ARRAY['git_repo'::character varying, 'doc'::character varying, 'file'::character varying, 'agent_chat'::character varying, 'external'::character varying, 'other'::character varying])::text[])))
-);
-
-
---
--- Name: publications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.publications_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: publications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.publications_id_seq OWNED BY public.publications.id;
-
-
---
--- Name: ralph_sessions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.ralph_sessions (
-    id integer NOT NULL,
-    session_series_id text NOT NULL,
-    iteration integer DEFAULT 1 NOT NULL,
-    agent_id text NOT NULL,
-    spawned_session_key text,
-    task_description text,
-    iteration_goal text,
-    state jsonb DEFAULT '{}'::jsonb NOT NULL,
-    status text DEFAULT 'PENDING'::text NOT NULL,
-    error_message text,
-    tokens_used integer,
-    cost numeric(10,4),
-    created_at timestamp with time zone DEFAULT now(),
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone
-);
-
-
---
--- Name: TABLE ralph_sessions; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.ralph_sessions IS 'Tracks Ralph-style iterative agent sessions. Each iteration runs with fresh context, state persists in DB.';
-
-
---
--- Name: COLUMN ralph_sessions.session_series_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.ralph_sessions.session_series_id IS 'UUID or descriptive ID linking all iterations of the same task';
-
-
---
--- Name: COLUMN ralph_sessions.status; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.ralph_sessions.status IS 'PENDING=not started, RUNNING=in progress, CONTINUE=done but more needed, COMPLETE=finished, ERROR=failed';
-
-
---
--- Name: ralph_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.ralph_sessions_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: ralph_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.ralph_sessions_id_seq OWNED BY public.ralph_sessions.id;
-
-
---
--- Name: shopping_history; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shopping_history (
-    id integer NOT NULL,
-    entity_id integer,
-    product_name text NOT NULL,
-    category text,
-    retailer text,
-    price numeric,
-    url text,
-    satisfaction_rating integer,
-    notes text,
-    purchased_at timestamp with time zone,
-    restock_interval_days integer,
-    next_restock_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT shopping_history_satisfaction_rating_check CHECK (((satisfaction_rating >= 1) AND (satisfaction_rating <= 5)))
-);
-
-
---
--- Name: shopping_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.shopping_history_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: shopping_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.shopping_history_id_seq OWNED BY public.shopping_history.id;
-
-
---
--- Name: shopping_preferences; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shopping_preferences (
-    id integer NOT NULL,
-    entity_id integer,
-    category text NOT NULL,
-    key text NOT NULL,
-    value text NOT NULL,
-    notes text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-
---
--- Name: shopping_preferences_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.shopping_preferences_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: shopping_preferences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.shopping_preferences_id_seq OWNED BY public.shopping_preferences.id;
-
-
---
--- Name: shopping_wishlist; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shopping_wishlist (
-    id integer NOT NULL,
-    entity_id integer,
-    product_name text NOT NULL,
-    category text,
-    max_price numeric,
-    url text,
-    priority text DEFAULT 'normal'::text,
-    status text DEFAULT 'active'::text,
-    notes text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT shopping_wishlist_priority_check CHECK ((priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text]))),
-    CONSTRAINT shopping_wishlist_status_check CHECK ((status = ANY (ARRAY['active'::text, 'purchased'::text, 'dropped'::text, 'watching'::text])))
-);
-
-
---
--- Name: shopping_wishlist_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.shopping_wishlist_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: shopping_wishlist_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.shopping_wishlist_id_seq OWNED BY public.shopping_wishlist.id;
-
-
---
--- Name: tags; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.tags (
-    id integer NOT NULL,
-    name character varying(50) NOT NULL,
-    category character varying(50),
-    description text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT lowercase_name CHECK (((name)::text = lower((name)::text))),
-    CONSTRAINT valid_category CHECK (((category IS NULL) OR ((category)::text = ANY ((ARRAY['genre'::character varying, 'mood'::character varying, 'theme'::character varying, 'style'::character varying, 'audience'::character varying, 'project'::character varying])::text[]))))
-);
-
-
---
--- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.tags_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.tags_id_seq OWNED BY public.tags.id;
-
-
---
--- Name: tasks; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.tasks (
-    id integer NOT NULL,
-    title character varying(255) NOT NULL,
-    description text,
-    status character varying(50) DEFAULT 'pending'::character varying,
-    priority integer DEFAULT 5,
-    parent_task_id integer,
-    project_id integer,
-    assigned_to integer,
-    created_by integer,
-    due_date timestamp without time zone,
-    completed_at timestamp without time zone,
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    task_number integer,
-    blocked boolean DEFAULT false,
-    blocked_reason text,
-    blocked_on integer,
-    last_worked_at timestamp with time zone,
-    work_notes text,
-    task_type character varying(20) DEFAULT 'one_off'::character varying,
-    recurrence_interval interval,
-    last_completed_at timestamp with time zone
-);
-
-
---
--- Name: TABLE tasks; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.tasks IS 'Task tracking. NOVA can create, update status, assign. Check before starting work.';
-
-
---
--- Name: COLUMN tasks.task_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.tasks.task_type IS 'one_off = complete once, recurring = resets after completion, fallback = low-priority repeatable when idle';
-
-
---
--- Name: COLUMN tasks.recurrence_interval; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.tasks.recurrence_interval IS 'How often recurring tasks reset (e.g., 1 day, 1 week)';
-
-
---
--- Name: COLUMN tasks.last_completed_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.tasks.last_completed_at IS 'When task was last completed (for recurring reset logic)';
-
-
---
--- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.tasks_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
-
-
---
--- Name: unsolved_problems; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.unsolved_problems (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    category character varying(100),
-    description text,
-    source_url text,
-    difficulty character varying(50),
-    status character varying(50) DEFAULT 'unexplored'::character varying,
-    total_time_spent_minutes integer DEFAULT 0,
-    last_worked_at timestamp with time zone,
-    work_sessions integer DEFAULT 0,
-    current_approach text,
-    progress_notes text,
-    blockers text,
-    subagents_used text[],
-    external_resources text[],
-    added_at timestamp with time zone DEFAULT now(),
-    added_by character varying(100) DEFAULT 'NOVA'::character varying,
-    priority integer DEFAULT 5
-);
-
-
---
--- Name: TABLE unsolved_problems; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.unsolved_problems IS 'Humanity''s unsolved problems for NOVA to work on during idle time. Part of the Motivation System - provides meaningful default work when task queue is empty.';
-
-
---
--- Name: unsolved_problems_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.unsolved_problems_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: unsolved_problems_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.unsolved_problems_id_seq OWNED BY public.unsolved_problems.id;
-
-
 --
--- Name: v_agent_chat_recent; Type: VIEW; Schema: public; Owner: -
+-- Name: v_agent_chat_recent; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_agent_chat_recent AS
+CREATE OR REPLACE VIEW v_agent_chat_recent AS
  SELECT id,
     channel,
     sender,
@@ -5165,48 +4955,45 @@ CREATE VIEW public.v_agent_chat_recent AS
     mentions,
     reply_to,
     created_at
-   FROM public.agent_chat
-  WHERE (created_at > (now() - '30 days'::interval))
+   FROM agent_chat
+  WHERE created_at > (now() - '30 days'::interval)
   ORDER BY created_at DESC;
 
-
 --
--- Name: v_agent_chat_stats; Type: VIEW; Schema: public; Owner: -
+-- Name: v_agent_chat_stats; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_agent_chat_stats AS
+CREATE OR REPLACE VIEW v_agent_chat_stats AS
  SELECT count(*) AS total_messages,
-    count(*) FILTER (WHERE (created_at > (now() - '24:00:00'::interval))) AS messages_24h,
-    count(*) FILTER (WHERE (created_at > (now() - '7 days'::interval))) AS messages_7d,
+    count(*) FILTER (WHERE created_at > (now() - '24:00:00'::interval)) AS messages_24h,
+    count(*) FILTER (WHERE created_at > (now() - '7 days'::interval)) AS messages_7d,
     count(DISTINCT sender) AS unique_senders,
     count(DISTINCT channel) AS active_channels,
-    pg_size_pretty(pg_total_relation_size('public.agent_chat'::regclass)) AS table_size,
+    pg_size_pretty(pg_total_relation_size('agent_chat'::regclass)) AS table_size,
     min(created_at) AS oldest_message,
     max(created_at) AS newest_message
-   FROM public.agent_chat;
-
+   FROM agent_chat;
 
 --
--- Name: v_agent_spawn_stats; Type: VIEW; Schema: public; Owner: -
+-- Name: v_agent_spawn_stats; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_agent_spawn_stats AS
+CREATE OR REPLACE VIEW v_agent_spawn_stats AS
  SELECT agent_name,
     domain,
     count(*) AS total_spawns,
-    count(*) FILTER (WHERE (status = 'completed'::text)) AS completed,
-    count(*) FILTER (WHERE (status = 'failed'::text)) AS failed,
-    count(*) FILTER (WHERE (status = ANY (ARRAY['pending'::text, 'spawning'::text, 'running'::text]))) AS active,
-    avg(EXTRACT(epoch FROM (completed_at - spawned_at))) FILTER (WHERE (completed_at IS NOT NULL)) AS avg_duration_seconds
-   FROM public.agent_spawns
+    count(*) FILTER (WHERE status = 'completed'::text) AS completed,
+    count(*) FILTER (WHERE status = 'failed'::text) AS failed,
+    count(*) FILTER (WHERE status = ANY (ARRAY['pending'::text, 'spawning'::text, 'running'::text])) AS active,
+    avg(EXTRACT(epoch FROM completed_at - spawned_at)) FILTER (WHERE completed_at IS NOT NULL) AS avg_duration_seconds
+   FROM agent_spawns
   GROUP BY agent_name, domain;
 
-
 --
--- Name: v_agents; Type: VIEW; Schema: public; Owner: -
+-- Name: v_agents; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_agents AS
+CREATE OR REPLACE VIEW v_agents AS
  SELECT id,
     name,
     role,
@@ -5217,16 +5004,15 @@ CREATE VIEW public.v_agents AS
     array_to_string(skills, ', '::text) AS skills_list,
     status,
     credential_ref
-   FROM public.agents
-  WHERE ((status)::text = 'active'::text)
+   FROM agents
+  WHERE status::text = 'active'::text
   ORDER BY persistent DESC, role, name;
 
-
 --
--- Name: v_entity_facts; Type: VIEW; Schema: public; Owner: -
+-- Name: v_entity_facts; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_entity_facts AS
+CREATE OR REPLACE VIEW v_entity_facts AS
  SELECT e.id,
     e.name,
     e.type,
@@ -5234,59 +5020,56 @@ CREATE VIEW public.v_entity_facts AS
     ef.value,
     ef.data,
     ef.learned_at
-   FROM (public.entities e
-     JOIN public.entity_facts ef ON ((e.id = ef.entity_id)));
-
+   FROM entities e
+     JOIN entity_facts ef ON e.id = ef.entity_id;
 
 --
--- Name: v_event_timeline; Type: VIEW; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_event_timeline AS
+CREATE OR REPLACE VIEW v_event_timeline AS
  SELECT ev.event_date,
     ev.title,
     ev.description,
-    array_agg(DISTINCT e.name) FILTER (WHERE (e.name IS NOT NULL)) AS entities,
-    array_agg(DISTINCT p.name) FILTER (WHERE (p.name IS NOT NULL)) AS places
-   FROM ((((public.events ev
-     LEFT JOIN public.event_entities ee ON ((ev.id = ee.event_id)))
-     LEFT JOIN public.entities e ON ((ee.entity_id = e.id)))
-     LEFT JOIN public.event_places ep ON ((ev.id = ep.event_id)))
-     LEFT JOIN public.places p ON ((ep.place_id = p.id)))
+    array_agg(DISTINCT e.name) FILTER (WHERE e.name IS NOT NULL) AS entities,
+    array_agg(DISTINCT p.name) FILTER (WHERE p.name IS NOT NULL) AS places
+   FROM events ev
+     LEFT JOIN event_entities ee ON ev.id = ee.event_id
+     LEFT JOIN entities e ON ee.entity_id = e.id
+     LEFT JOIN event_places ep ON ev.id = ep.event_id
+     LEFT JOIN places p ON ep.place_id = p.id
   GROUP BY ev.id, ev.event_date, ev.title, ev.description
   ORDER BY ev.event_date DESC;
 
-
 --
--- Name: v_gambling_summary; Type: VIEW; Schema: public; Owner: -
+-- Name: v_gambling_summary; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_gambling_summary AS
+CREATE OR REPLACE VIEW v_gambling_summary AS
  SELECT l.name AS log_name,
     l.location,
     count(e.id) AS sessions,
     sum(e.amount) AS total,
     sum(
         CASE
-            WHEN (e.amount > (0)::numeric) THEN e.amount
-            ELSE (0)::numeric
+            WHEN e.amount > 0::numeric THEN e.amount
+            ELSE 0::numeric
         END) AS total_won,
     sum(
         CASE
-            WHEN (e.amount < (0)::numeric) THEN e.amount
-            ELSE (0)::numeric
+            WHEN e.amount < 0::numeric THEN e.amount
+            ELSE 0::numeric
         END) AS total_lost
-   FROM (public.gambling_logs l
-     LEFT JOIN public.gambling_entries e ON ((e.log_id = l.id)))
-  WHERE (l.entity_id = 2)
+   FROM gambling_logs l
+     LEFT JOIN gambling_entries e ON e.log_id = l.id
+  WHERE l.entity_id = 2
   GROUP BY l.id, l.name, l.location;
 
-
 --
--- Name: v_media_queue_pending; Type: VIEW; Schema: public; Owner: -
+-- Name: v_media_queue_pending; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE VIEW public.v_media_queue_pending AS
+CREATE OR REPLACE VIEW v_media_queue_pending AS
  SELECT mq.id,
     mq.url,
     mq.file_path,
@@ -5303,2747 +5086,16 @@ CREATE VIEW public.v_media_queue_pending AS
     mq.error_message,
     mq.metadata,
     e.name AS requested_by_name
-   FROM (public.media_queue mq
-     LEFT JOIN public.entities e ON ((mq.requested_by = e.id)))
-  WHERE ((mq.status)::text = 'pending'::text)
+   FROM media_queue mq
+     LEFT JOIN entities e ON mq.requested_by = e.id
+  WHERE mq.status::text = 'pending'::text
   ORDER BY mq.priority, mq.requested_at;
 
-
---
--- Name: v_media_with_tags; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_media_with_tags AS
-SELECT
-    NULL::integer AS id,
-    NULL::character varying(50) AS media_type,
-    NULL::character varying(500) AS title,
-    NULL::character varying(255) AS creator,
-    NULL::text AS url,
-    NULL::date AS consumed_date,
-    NULL::integer AS consumed_by,
-    NULL::integer AS rating,
-    NULL::text AS notes,
-    NULL::text AS transcript,
-    NULL::timestamp without time zone AS created_at,
-    NULL::text AS summary,
-    NULL::jsonb AS metadata,
-    NULL::text AS source_file,
-    NULL::character varying(20) AS status,
-    NULL::integer AS ingested_by,
-    NULL::timestamp without time zone AS ingested_at,
-    NULL::tsvector AS search_vector,
-    NULL::character varying[] AS tags;
-
-
---
--- Name: v_metamours; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_metamours AS
- SELECT DISTINCT e1.name AS person,
-    e3.name AS metamour,
-    e2.name AS connected_through
-   FROM ((((public.entities e1
-     JOIN public.entity_relationships r1 ON ((e1.id = r1.entity_a)))
-     JOIN public.entities e2 ON ((r1.entity_b = e2.id)))
-     JOIN public.entity_relationships r2 ON (((e2.id = r2.entity_a) OR (e2.id = r2.entity_b))))
-     JOIN public.entities e3 ON (((r2.entity_a = e3.id) OR (r2.entity_b = e3.id))))
-  WHERE (((e1.name)::text = 'I)ruid'::text) AND ((r1.relationship)::text = ANY ((ARRAY['partner'::character varying, 'casual'::character varying])::text[])) AND (e3.id <> e1.id) AND (e3.id <> e2.id) AND ((e3.type)::text = 'person'::text));
-
-
---
--- Name: v_pending_tasks; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_pending_tasks AS
- SELECT t.id,
-    t.title,
-    t.status,
-    t.priority,
-    t.due_date,
-    p.name AS project_name,
-    t.parent_task_id,
-    t.notes
-   FROM (public.tasks t
-     LEFT JOIN public.projects p ON ((t.project_id = p.id)))
-  WHERE ((t.status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying])::text[]))
-  ORDER BY t.priority, t.due_date;
-
-
---
--- Name: v_pending_test_failures; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_pending_test_failures AS
- SELECT id,
-    repo,
-    title,
-    error_message,
-    created_at
-   FROM public.git_issue_queue
-  WHERE ((source = 'test_failure'::text) AND (issue_number < 0))
-  ORDER BY created_at;
-
-
---
--- Name: VIEW v_pending_test_failures; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON VIEW public.v_pending_test_failures IS 'Test failures that need GitHub issues created via gh CLI';
-
-
---
--- Name: v_portfolio_allocation; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_portfolio_allocation AS
- SELECT p.asset_class,
-    count(*) AS num_positions,
-    sum((p.quantity * COALESCE(pc.price, p.avg_price))) AS market_value,
-    sum(p.cost_basis) AS total_cost_basis,
-    (sum((p.quantity * COALESCE(pc.price, p.avg_price))) - sum(p.cost_basis)) AS unrealized_pl
-   FROM (public.positions p
-     LEFT JOIN public.price_cache_v2 pc ON ((((p.symbol)::text = (pc.symbol)::text) AND ((p.asset_class)::text = (pc.asset_class)::text))))
-  WHERE (p.sold_at IS NULL)
-  GROUP BY p.asset_class;
-
-
---
--- Name: v_ralph_active; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_ralph_active AS
- SELECT session_series_id,
-    agent_id,
-    max(iteration) AS current_iteration,
-    ( SELECT r2.status
-           FROM public.ralph_sessions r2
-          WHERE (r2.session_series_id = r1.session_series_id)
-          ORDER BY r2.iteration DESC
-         LIMIT 1) AS latest_status,
-    min(created_at) AS started_at,
-    sum(tokens_used) AS total_tokens,
-    sum(cost) AS total_cost
-   FROM public.ralph_sessions r1
-  GROUP BY session_series_id, agent_id
- HAVING (( SELECT r2.status
-           FROM public.ralph_sessions r2
-          WHERE (r2.session_series_id = r1.session_series_id)
-          ORDER BY r2.iteration DESC
-         LIMIT 1) = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'CONTINUE'::text]));
-
-
---
--- Name: v_relationships; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_relationships AS
- SELECT e1.name AS entity_a_name,
-    e1.type AS entity_a_type,
-    r.relationship,
-    e2.name AS entity_b_name,
-    e2.type AS entity_b_type,
-    r.since
-   FROM ((public.entity_relationships r
-     JOIN public.entities e1 ON ((r.entity_a = e1.id)))
-     JOIN public.entities e2 ON ((r.entity_b = e2.id)));
-
-
---
--- Name: v_task_tree; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_task_tree AS
- WITH RECURSIVE task_hierarchy AS (
-         SELECT tasks.id,
-            tasks.title,
-            tasks.status,
-            tasks.priority,
-            tasks.parent_task_id,
-            tasks.project_id,
-            tasks.due_date,
-            0 AS depth,
-            ARRAY[tasks.id] AS path
-           FROM public.tasks
-          WHERE (tasks.parent_task_id IS NULL)
-        UNION ALL
-         SELECT t.id,
-            t.title,
-            t.status,
-            t.priority,
-            t.parent_task_id,
-            t.project_id,
-            t.due_date,
-            (th.depth + 1),
-            (th.path || t.id)
-           FROM (public.tasks t
-             JOIN task_hierarchy th ON ((t.parent_task_id = th.id)))
-        )
- SELECT id,
-    title,
-    status,
-    priority,
-    parent_task_id,
-    project_id,
-    due_date,
-    depth,
-    path
-   FROM task_hierarchy
-  ORDER BY path;
-
-
---
--- Name: v_users; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.v_users AS
- SELECT e.id,
-    e.name,
-    e.full_name,
-    e.type,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'phone'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS phone,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'email'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS email,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'current_timezone'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS current_timezone,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'home_timezone'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS home_timezone,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'onboarded'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS onboarded_date,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'owner_number'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS owner_number,
-    max(
-        CASE
-            WHEN ((ef.key)::text = 'signal_uuid'::text) THEN ef.value
-            ELSE NULL::text
-        END) AS signal_uuid
-   FROM (public.entities e
-     JOIN public.entity_facts ef ON ((e.id = ef.entity_id)))
-  WHERE (EXISTS ( SELECT 1
-           FROM public.entity_facts ef2
-          WHERE ((ef2.entity_id = e.id) AND ((ef2.key)::text = ANY ((ARRAY['is_user'::character varying, 'onboarded'::character varying])::text[])))))
-  GROUP BY e.id, e.name, e.full_name, e.type;
-
-
---
--- Name: vehicles; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.vehicles (
-    id integer NOT NULL,
-    owner_id integer,
-    color character varying(50),
-    year integer,
-    make character varying(100),
-    model character varying(100),
-    vin character varying(17),
-    license_plate_state character varying(20),
-    license_plate_number character varying(20),
-    nickname character varying(100),
-    notes text,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
---
--- Name: TABLE vehicles; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.vehicles IS 'Vehicle tracking and management. Cars, bikes, boats, planes owned or used.';
-
-
---
--- Name: vehicles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.vehicles_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: vehicles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.vehicles_id_seq OWNED BY public.vehicles.id;
-
-
---
--- Name: vocabulary; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.vocabulary (
-    id integer NOT NULL,
-    word character varying(255) NOT NULL,
-    category character varying(100),
-    pronunciation character varying(255),
-    misheard_as text[],
-    added_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    vote_count integer DEFAULT 1,
-    last_confirmed timestamp without time zone DEFAULT now()
-);
-
-
---
--- Name: TABLE vocabulary; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.vocabulary IS 'Custom vocabulary for speech recognition. Add names, terms, jargon as encountered.';
-
-
---
--- Name: COLUMN vocabulary.vote_count; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.vocabulary.vote_count IS 'Reinforcement count - incremented each time this word is mentioned';
-
-
---
--- Name: COLUMN vocabulary.last_confirmed; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.vocabulary.last_confirmed IS 'Timestamp of most recent confirmation';
-
-
---
--- Name: vocabulary_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.vocabulary_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: vocabulary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.vocabulary_id_seq OWNED BY public.vocabulary.id;
-
-
---
--- Name: work_tags; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.work_tags (
-    work_id integer NOT NULL,
-    tag_id integer NOT NULL,
-    added_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: workflow_steps; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.workflow_steps (
-    id integer NOT NULL,
-    workflow_id integer NOT NULL,
-    step_order integer NOT NULL,
-    description text NOT NULL,
-    produces_deliverable boolean DEFAULT false,
-    deliverable_type text,
-    deliverable_description text,
-    handoff_to_step integer,
-    required boolean DEFAULT true,
-    estimated_duration_minutes integer,
-    requires_authorization boolean DEFAULT false,
-    requires_discussion boolean DEFAULT false,
-    domain text,
-    domains text[],
-    CONSTRAINT workflow_steps_check CHECK ((((produces_deliverable = true) AND (deliverable_type IS NOT NULL)) OR (produces_deliverable = false)))
-);
-
-
---
--- Name: TABLE workflow_steps; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.workflow_steps IS 'Ordered steps in a workflow with agent assignments and deliverable specifications';
-
-
---
--- Name: COLUMN workflow_steps.requires_authorization; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.workflow_steps.requires_authorization IS 'If true, must get explicit human authorization before proceeding to next step';
-
-
---
--- Name: COLUMN workflow_steps.requires_discussion; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.workflow_steps.requires_discussion IS 'If true, discuss with human before proceeding (but can continue without explicit authorization if authorization=false)';
-
-
---
--- Name: COLUMN workflow_steps.domain; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.workflow_steps.domain IS 'Subject-matter domain for agent routing (e.g., sql/database, python/daemon)';
-
-
---
--- Name: workflows; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.workflows (
-    id integer NOT NULL,
-    name text NOT NULL,
-    description text NOT NULL,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    created_by text DEFAULT 'newhart'::text,
-    status text DEFAULT 'active'::text,
-    tags text[] DEFAULT '{}'::text[],
-    department text,
-    orchestrator_domain text,
-    CONSTRAINT workflows_status_check CHECK ((status = ANY (ARRAY['active'::text, 'deprecated'::text, 'archived'::text])))
-);
-
-
---
--- Name: TABLE workflows; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.workflows IS 'Defines multi-agent workflows with ordered steps and deliverable handoffs';
-
-
---
--- Name: workflow_steps_detail; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.workflow_steps_detail AS
- SELECT w.name AS workflow_name,
-    w.description AS workflow_description,
-    ws.step_order,
-    ws.domain,
-    ws.domains,
-    ws.description AS step_description,
-    ws.produces_deliverable,
-    ws.deliverable_type,
-    ws.deliverable_description,
-    ws.estimated_duration_minutes
-   FROM (public.workflow_steps ws
-     JOIN public.workflows w ON ((w.id = ws.workflow_id)))
-  ORDER BY w.name, ws.step_order;
-
-
---
--- Name: workflow_steps_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.workflow_steps_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: workflow_steps_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.workflow_steps_id_seq OWNED BY public.workflow_steps.id;
-
-
---
--- Name: workflows_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.workflows_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: workflows_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.workflows_id_seq OWNED BY public.workflows.id;
-
-
---
--- Name: works; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.works (
-    id integer NOT NULL,
-    title character varying(255) NOT NULL,
-    work_type character varying(50) NOT NULL,
-    content text NOT NULL,
-    context_prompt text,
-    word_count integer,
-    character_count integer,
-    language character varying(10) DEFAULT 'en'::character varying,
-    status character varying(20) DEFAULT 'draft'::character varying,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    version integer DEFAULT 1,
-    parent_work_id integer,
-    metadata jsonb,
-    CONSTRAINT positive_counts CHECK (((word_count >= 0) AND (character_count >= 0))),
-    CONSTRAINT valid_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'complete'::character varying, 'published'::character varying, 'archived'::character varying])::text[]))),
-    CONSTRAINT valid_work_type CHECK (((work_type)::text = ANY ((ARRAY['haiku'::character varying, 'poem'::character varying, 'prose'::character varying, 'documentation'::character varying, 'story'::character varying, 'dialogue'::character varying, 'microfiction'::character varying, 'essay'::character varying, 'other'::character varying])::text[])))
-);
-
-
---
--- Name: works_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.works_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: works_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.works_id_seq OWNED BY public.works.id;
-
-
---
--- Name: agent_actions id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_actions ALTER COLUMN id SET DEFAULT nextval('public.agent_actions_id_seq'::regclass);
-
-
---
--- Name: agent_bootstrap_context id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_bootstrap_context ALTER COLUMN id SET DEFAULT nextval('public.agent_bootstrap_context_id_seq'::regclass);
-
-
---
--- Name: agent_chat id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_chat ALTER COLUMN id SET DEFAULT nextval('public.agent_chat_id_seq'::regclass);
-
-
---
--- Name: agent_domains id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_domains ALTER COLUMN id SET DEFAULT nextval('public.agent_domains_id_seq'::regclass);
-
-
---
--- Name: agent_jobs id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_jobs ALTER COLUMN id SET DEFAULT nextval('public.agent_jobs_id_seq'::regclass);
-
-
---
--- Name: agent_modifications id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_modifications ALTER COLUMN id SET DEFAULT nextval('public.agent_modifications_id_seq'::regclass);
-
-
---
--- Name: agent_spawns id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_spawns ALTER COLUMN id SET DEFAULT nextval('public.agent_spawns_id_seq'::regclass);
-
-
---
--- Name: agent_turn_context id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_turn_context ALTER COLUMN id SET DEFAULT nextval('public.agent_turn_context_id_seq'::regclass);
-
-
---
--- Name: agents id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agents_id_seq'::regclass);
-
-
---
--- Name: ai_models id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ai_models ALTER COLUMN id SET DEFAULT nextval('public.models_id_seq'::regclass);
-
-
---
--- Name: artwork id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.artwork ALTER COLUMN id SET DEFAULT nextval('public.artwork_id_seq'::regclass);
-
-
---
--- Name: certificates id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.certificates ALTER COLUMN id SET DEFAULT nextval('public.certificates_id_seq'::regclass);
-
-
---
--- Name: conversations id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.conversations ALTER COLUMN id SET DEFAULT nextval('public.conversations_id_seq'::regclass);
-
-
---
--- Name: entities id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entities ALTER COLUMN id SET DEFAULT nextval('public.entities_id_seq'::regclass);
-
-
---
--- Name: entity_fact_conflicts id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_fact_conflicts ALTER COLUMN id SET DEFAULT nextval('public.entity_fact_conflicts_id_seq'::regclass);
-
-
---
--- Name: entity_facts id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_facts ALTER COLUMN id SET DEFAULT nextval('public.entity_facts_id_seq'::regclass);
-
-
---
--- Name: entity_relationships id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_relationships ALTER COLUMN id SET DEFAULT nextval('public.entity_relationships_id_seq'::regclass);
-
-
---
--- Name: events id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.events_id_seq'::regclass);
-
-
---
--- Name: extraction_metrics id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.extraction_metrics ALTER COLUMN id SET DEFAULT nextval('public.extraction_metrics_id_seq'::regclass);
-
-
---
--- Name: fact_change_log id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.fact_change_log ALTER COLUMN id SET DEFAULT nextval('public.fact_change_log_id_seq'::regclass);
-
-
---
--- Name: gambling_entries id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.gambling_entries ALTER COLUMN id SET DEFAULT nextval('public.gambling_entries_id_seq'::regclass);
-
-
---
--- Name: gambling_logs id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.gambling_logs ALTER COLUMN id SET DEFAULT nextval('public.gambling_logs_id_seq'::regclass);
-
-
---
--- Name: git_issue_queue id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.git_issue_queue ALTER COLUMN id SET DEFAULT nextval('public.git_issue_queue_id_seq'::regclass);
-
-
---
--- Name: job_messages id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.job_messages ALTER COLUMN id SET DEFAULT nextval('public.job_messages_id_seq'::regclass);
-
-
---
--- Name: lessons id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lessons ALTER COLUMN id SET DEFAULT nextval('public.lessons_id_seq'::regclass);
-
-
---
--- Name: library_authors id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_authors ALTER COLUMN id SET DEFAULT nextval('public.library_authors_id_seq'::regclass);
-
-
---
--- Name: library_tags id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_tags ALTER COLUMN id SET DEFAULT nextval('public.library_tags_id_seq'::regclass);
-
-
---
--- Name: library_works id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_works ALTER COLUMN id SET DEFAULT nextval('public.library_works_id_seq'::regclass);
-
-
---
--- Name: media_consumed id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_consumed ALTER COLUMN id SET DEFAULT nextval('public.media_consumed_id_seq'::regclass);
-
-
---
--- Name: media_queue id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_queue ALTER COLUMN id SET DEFAULT nextval('public.media_queue_id_seq'::regclass);
-
-
---
--- Name: media_tags id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_tags ALTER COLUMN id SET DEFAULT nextval('public.media_tags_id_seq'::regclass);
-
-
---
--- Name: memory_embeddings id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.memory_embeddings ALTER COLUMN id SET DEFAULT nextval('public.memory_embeddings_id_seq'::regclass);
-
-
---
--- Name: music_analysis id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.music_analysis ALTER COLUMN id SET DEFAULT nextval('public.music_analysis_id_seq'::regclass);
-
-
---
--- Name: music_library id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.music_library ALTER COLUMN id SET DEFAULT nextval('public.music_library_id_seq'::regclass);
-
-
---
--- Name: place_properties id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.place_properties ALTER COLUMN id SET DEFAULT nextval('public.place_properties_id_seq'::regclass);
-
-
---
--- Name: places id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.places ALTER COLUMN id SET DEFAULT nextval('public.places_id_seq'::regclass);
-
-
---
--- Name: portfolio_positions id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.portfolio_positions ALTER COLUMN id SET DEFAULT nextval('public.portfolio_positions_id_seq'::regclass);
-
-
---
--- Name: portfolio_snapshots id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.portfolio_snapshots ALTER COLUMN id SET DEFAULT nextval('public.portfolio_snapshots_id_seq'::regclass);
-
-
---
--- Name: positions id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.positions ALTER COLUMN id SET DEFAULT nextval('public.positions_id_seq'::regclass);
-
-
---
--- Name: preferences id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.preferences ALTER COLUMN id SET DEFAULT nextval('public.preferences_id_seq'::regclass);
-
-
---
--- Name: project_tasks id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.project_tasks ALTER COLUMN id SET DEFAULT nextval('public.project_tasks_id_seq'::regclass);
-
-
---
--- Name: projects id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.projects ALTER COLUMN id SET DEFAULT nextval('public.projects_id_seq'::regclass);
-
-
---
--- Name: publications id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.publications ALTER COLUMN id SET DEFAULT nextval('public.publications_id_seq'::regclass);
-
-
---
--- Name: ralph_sessions id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ralph_sessions ALTER COLUMN id SET DEFAULT nextval('public.ralph_sessions_id_seq'::regclass);
-
-
---
--- Name: shopping_history id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_history ALTER COLUMN id SET DEFAULT nextval('public.shopping_history_id_seq'::regclass);
-
-
---
--- Name: shopping_preferences id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_preferences ALTER COLUMN id SET DEFAULT nextval('public.shopping_preferences_id_seq'::regclass);
-
-
---
--- Name: shopping_wishlist id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_wishlist ALTER COLUMN id SET DEFAULT nextval('public.shopping_wishlist_id_seq'::regclass);
-
-
---
--- Name: tags id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tags ALTER COLUMN id SET DEFAULT nextval('public.tags_id_seq'::regclass);
-
-
---
--- Name: tasks id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tasks ALTER COLUMN id SET DEFAULT nextval('public.tasks_id_seq'::regclass);
-
-
---
--- Name: unsolved_problems id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.unsolved_problems ALTER COLUMN id SET DEFAULT nextval('public.unsolved_problems_id_seq'::regclass);
-
-
---
--- Name: vehicles id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vehicles ALTER COLUMN id SET DEFAULT nextval('public.vehicles_id_seq'::regclass);
-
-
---
--- Name: vocabulary id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vocabulary ALTER COLUMN id SET DEFAULT nextval('public.vocabulary_id_seq'::regclass);
-
-
---
--- Name: workflow_steps id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.workflow_steps ALTER COLUMN id SET DEFAULT nextval('public.workflow_steps_id_seq'::regclass);
-
-
---
--- Name: workflows id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.workflows ALTER COLUMN id SET DEFAULT nextval('public.workflows_id_seq'::regclass);
-
-
---
--- Name: works id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.works ALTER COLUMN id SET DEFAULT nextval('public.works_id_seq'::regclass);
-
-
---
--- Name: agent_actions agent_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_actions
-    ADD CONSTRAINT agent_actions_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_aliases agent_aliases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_aliases
-    ADD CONSTRAINT agent_aliases_pkey PRIMARY KEY (agent_id, alias);
-
-
---
--- Name: agent_bootstrap_context agent_bootstrap_context_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_bootstrap_context
-    ADD CONSTRAINT agent_bootstrap_context_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_chat agent_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_chat
-    ADD CONSTRAINT agent_chat_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_chat_processed agent_chat_processed_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_chat_processed
-    ADD CONSTRAINT agent_chat_processed_pkey PRIMARY KEY (chat_id, agent);
-
-
---
--- Name: agent_domains agent_domains_domain_topic_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_domains
-    ADD CONSTRAINT agent_domains_domain_topic_key UNIQUE (domain_topic);
-
-
---
--- Name: agent_domains agent_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_domains
-    ADD CONSTRAINT agent_domains_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_jobs agent_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_jobs
-    ADD CONSTRAINT agent_jobs_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_modifications agent_modifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_modifications
-    ADD CONSTRAINT agent_modifications_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_spawns agent_spawns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_spawns
-    ADD CONSTRAINT agent_spawns_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_system_config agent_system_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_system_config
-    ADD CONSTRAINT agent_system_config_pkey PRIMARY KEY (key);
-
-
---
--- Name: agent_turn_context agent_turn_context_context_type_file_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_turn_context
-    ADD CONSTRAINT agent_turn_context_context_type_file_key_key UNIQUE (context_type, file_key);
-
-
---
--- Name: agent_turn_context agent_turn_context_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_turn_context
-    ADD CONSTRAINT agent_turn_context_pkey PRIMARY KEY (id);
-
-
---
--- Name: agents agents_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agents
-    ADD CONSTRAINT agents_name_key UNIQUE (name);
-
-
---
--- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agents
-    ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
-
-
---
--- Name: artwork artwork_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.artwork
-    ADD CONSTRAINT artwork_pkey PRIMARY KEY (id);
-
-
---
--- Name: asset_classes asset_classes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.asset_classes
-    ADD CONSTRAINT asset_classes_pkey PRIMARY KEY (code);
-
-
---
--- Name: certificates certificates_fingerprint_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.certificates
-    ADD CONSTRAINT certificates_fingerprint_key UNIQUE (fingerprint);
-
-
---
--- Name: certificates certificates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.certificates
-    ADD CONSTRAINT certificates_pkey PRIMARY KEY (id);
-
-
---
--- Name: certificates certificates_serial_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.certificates
-    ADD CONSTRAINT certificates_serial_key UNIQUE (serial);
-
-
---
--- Name: channel_activity channel_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.channel_activity
-    ADD CONSTRAINT channel_activity_pkey PRIMARY KEY (channel);
-
-
---
--- Name: conversations conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.conversations
-    ADD CONSTRAINT conversations_pkey PRIMARY KEY (id);
-
-
---
--- Name: entities entities_name_type_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entities
-    ADD CONSTRAINT entities_name_type_key UNIQUE (name, type);
-
-
---
--- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entities
-    ADD CONSTRAINT entities_pkey PRIMARY KEY (id);
-
-
---
--- Name: entities entities_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entities
-    ADD CONSTRAINT entities_user_id_key UNIQUE (user_id);
-
-
---
--- Name: entity_fact_conflicts entity_fact_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_fact_conflicts
-    ADD CONSTRAINT entity_fact_conflicts_pkey PRIMARY KEY (id);
-
-
---
--- Name: entity_facts entity_facts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_facts
-    ADD CONSTRAINT entity_facts_pkey PRIMARY KEY (id);
-
-
---
--- Name: entity_relationships entity_relationships_entity_a_entity_b_relationship_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_relationships
-    ADD CONSTRAINT entity_relationships_entity_a_entity_b_relationship_key UNIQUE (entity_a, entity_b, relationship);
-
-
---
--- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entity_relationships
-    ADD CONSTRAINT entity_relationships_pkey PRIMARY KEY (id);
-
-
---
--- Name: event_entities event_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.event_entities
-    ADD CONSTRAINT event_entities_pkey PRIMARY KEY (event_id, entity_id);
-
-
---
--- Name: event_places event_places_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.event_places
-    ADD CONSTRAINT event_places_pkey PRIMARY KEY (event_id, place_id);
-
-
---
--- Name: event_projects event_projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.event_projects
-    ADD CONSTRAINT event_projects_pkey PRIMARY KEY (event_id, project_id);
-
-
---
--- Name: events_archive events_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events_archive
-    ADD CONSTRAINT events_archive_pkey PRIMARY KEY (id);
-
-
---
--- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_pkey PRIMARY KEY (id);
-
-
---
--- Name: extraction_metrics extraction_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.extraction_metrics
-    ADD CONSTRAINT extraction_metrics_pkey PRIMARY KEY (id);
-
-
---
--- Name: fact_change_log fact_change_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.fact_change_log
-    ADD CONSTRAINT fact_change_log_pkey PRIMARY KEY (id);
-
-
---
--- Name: gambling_entries gambling_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.gambling_entries
-    ADD CONSTRAINT gambling_entries_pkey PRIMARY KEY (id);
-
-
---
--- Name: gambling_logs gambling_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.gambling_logs
-    ADD CONSTRAINT gambling_logs_pkey PRIMARY KEY (id);
-
-
---
--- Name: git_issue_queue git_issue_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.git_issue_queue
-    ADD CONSTRAINT git_issue_queue_pkey PRIMARY KEY (id);
-
-
---
--- Name: git_issue_queue git_issue_queue_repo_issue_number_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.git_issue_queue
-    ADD CONSTRAINT git_issue_queue_repo_issue_number_key UNIQUE (repo, issue_number);
-
-
---
--- Name: job_messages job_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.job_messages
-    ADD CONSTRAINT job_messages_pkey PRIMARY KEY (id);
-
-
---
--- Name: lessons_archive lessons_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lessons_archive
-    ADD CONSTRAINT lessons_archive_pkey PRIMARY KEY (id);
-
-
---
--- Name: lessons lessons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lessons
-    ADD CONSTRAINT lessons_pkey PRIMARY KEY (id);
-
-
---
--- Name: library_authors library_authors_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_authors
-    ADD CONSTRAINT library_authors_name_key UNIQUE (name);
-
-
---
--- Name: library_authors library_authors_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_authors
-    ADD CONSTRAINT library_authors_pkey PRIMARY KEY (id);
-
-
---
--- Name: library_tags library_tags_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_tags
-    ADD CONSTRAINT library_tags_name_key UNIQUE (name);
-
-
---
--- Name: library_tags library_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_tags
-    ADD CONSTRAINT library_tags_pkey PRIMARY KEY (id);
-
-
---
--- Name: library_work_authors library_work_authors_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_work_authors
-    ADD CONSTRAINT library_work_authors_pkey PRIMARY KEY (work_id, author_id);
-
-
---
--- Name: library_work_relationships library_work_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_work_relationships
-    ADD CONSTRAINT library_work_relationships_pkey PRIMARY KEY (from_work_id, to_work_id, relation_type);
-
-
---
--- Name: library_work_tags library_work_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_work_tags
-    ADD CONSTRAINT library_work_tags_pkey PRIMARY KEY (work_id, tag_id);
-
-
---
--- Name: library_works library_works_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.library_works
-    ADD CONSTRAINT library_works_pkey PRIMARY KEY (id);
-
-
---
--- Name: media_consumed media_consumed_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_consumed
-    ADD CONSTRAINT media_consumed_pkey PRIMARY KEY (id);
-
-
---
--- Name: media_queue media_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_queue
-    ADD CONSTRAINT media_queue_pkey PRIMARY KEY (id);
-
-
---
--- Name: media_tags media_tags_media_id_tag_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_tags
-    ADD CONSTRAINT media_tags_media_id_tag_key UNIQUE (media_id, tag);
-
-
---
--- Name: media_tags media_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.media_tags
-    ADD CONSTRAINT media_tags_pkey PRIMARY KEY (id);
-
-
---
--- Name: memory_embeddings_archive memory_embeddings_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.memory_embeddings_archive
-    ADD CONSTRAINT memory_embeddings_archive_pkey PRIMARY KEY (id);
-
-
---
--- Name: memory_embeddings memory_embeddings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.memory_embeddings
-    ADD CONSTRAINT memory_embeddings_pkey PRIMARY KEY (id);
-
-
---
--- Name: memory_type_priorities memory_type_priorities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.memory_type_priorities
-    ADD CONSTRAINT memory_type_priorities_pkey PRIMARY KEY (source_type);
-
-
---
--- Name: ai_models models_model_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ai_models
-    ADD CONSTRAINT models_model_id_key UNIQUE (model_id);
-
-
---
--- Name: ai_models models_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ai_models
-    ADD CONSTRAINT models_pkey PRIMARY KEY (id);
-
-
---
--- Name: motivation_d100 motivation_d100_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.motivation_d100
-    ADD CONSTRAINT motivation_d100_pkey PRIMARY KEY (roll);
-
-
---
--- Name: music_analysis music_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.music_analysis
-    ADD CONSTRAINT music_analysis_pkey PRIMARY KEY (id);
-
-
---
--- Name: music_library music_library_media_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.music_library
-    ADD CONSTRAINT music_library_media_id_key UNIQUE (media_id);
-
-
---
--- Name: music_library music_library_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.music_library
-    ADD CONSTRAINT music_library_pkey PRIMARY KEY (id);
-
-
---
--- Name: place_properties place_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.place_properties
-    ADD CONSTRAINT place_properties_pkey PRIMARY KEY (id);
-
-
---
--- Name: places places_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.places
-    ADD CONSTRAINT places_name_key UNIQUE (name);
-
-
---
--- Name: places places_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.places
-    ADD CONSTRAINT places_pkey PRIMARY KEY (id);
-
-
---
--- Name: portfolio_positions portfolio_positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.portfolio_positions
-    ADD CONSTRAINT portfolio_positions_pkey PRIMARY KEY (id);
-
-
---
--- Name: portfolio_snapshots portfolio_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.portfolio_snapshots
-    ADD CONSTRAINT portfolio_snapshots_pkey PRIMARY KEY (id);
-
-
---
--- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.positions
-    ADD CONSTRAINT positions_pkey PRIMARY KEY (id);
-
-
---
--- Name: preferences preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.preferences
-    ADD CONSTRAINT preferences_pkey PRIMARY KEY (id);
-
-
---
--- Name: price_cache_v2 price_cache_v2_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.price_cache_v2
-    ADD CONSTRAINT price_cache_v2_pkey PRIMARY KEY (symbol, asset_class);
-
-
---
--- Name: project_entities project_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.project_entities
-    ADD CONSTRAINT project_entities_pkey PRIMARY KEY (project_id, entity_id);
-
-
---
--- Name: project_tasks project_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.project_tasks
-    ADD CONSTRAINT project_tasks_pkey PRIMARY KEY (id);
-
-
---
--- Name: projects projects_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.projects
-    ADD CONSTRAINT projects_name_key UNIQUE (name);
-
-
---
--- Name: projects projects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.projects
-    ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
-
-
---
--- Name: publications publications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.publications
-    ADD CONSTRAINT publications_pkey PRIMARY KEY (id);
-
-
---
--- Name: ralph_sessions ralph_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ralph_sessions
-    ADD CONSTRAINT ralph_sessions_pkey PRIMARY KEY (id);
-
-
---
--- Name: ralph_sessions ralph_sessions_session_series_id_iteration_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ralph_sessions
-    ADD CONSTRAINT ralph_sessions_session_series_id_iteration_key UNIQUE (session_series_id, iteration);
-
-
---
--- Name: shopping_history shopping_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_history
-    ADD CONSTRAINT shopping_history_pkey PRIMARY KEY (id);
-
-
---
--- Name: shopping_preferences shopping_preferences_entity_id_category_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_preferences
-    ADD CONSTRAINT shopping_preferences_entity_id_category_key_key UNIQUE (entity_id, category, key);
-
-
---
--- Name: shopping_preferences shopping_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_preferences
-    ADD CONSTRAINT shopping_preferences_pkey PRIMARY KEY (id);
-
-
---
--- Name: shopping_wishlist shopping_wishlist_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shopping_wishlist
-    ADD CONSTRAINT shopping_wishlist_pkey PRIMARY KEY (id);
-
-
---
--- Name: tags tags_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tags
-    ADD CONSTRAINT tags_name_key UNIQUE (name);
-
-
---
--- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tags
-    ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
-
-
---
--- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
-
-
---
--- Name: unsolved_problems unsolved_problems_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.unsolved_problems
-    ADD CONSTRAINT unsolved_problems_pkey PRIMARY KEY (id);
-
-
---
--- Name: vehicles vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vehicles
-    ADD CONSTRAINT vehicles_pkey PRIMARY KEY (id);
-
-
---
--- Name: vocabulary vocabulary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vocabulary
-    ADD CONSTRAINT vocabulary_pkey PRIMARY KEY (id);
-
-
---
--- Name: vocabulary vocabulary_word_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vocabulary
-    ADD CONSTRAINT vocabulary_word_key UNIQUE (word);
-
-
---
--- Name: work_tags work_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.work_tags
-    ADD CONSTRAINT work_tags_pkey PRIMARY KEY (work_id, tag_id);
-
-
---
--- Name: workflow_steps workflow_steps_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.workflow_steps
-    ADD CONSTRAINT workflow_steps_pkey PRIMARY KEY (id);
-
-
---
--- Name: workflow_steps workflow_steps_workflow_id_step_order_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.workflow_steps
-    ADD CONSTRAINT workflow_steps_workflow_id_step_order_key UNIQUE (workflow_id, step_order);
-
-
---
--- Name: workflows workflows_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.workflows
-    ADD CONSTRAINT workflows_name_key UNIQUE (name);
-
-
---
--- Name: workflows workflows_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.workflows
-    ADD CONSTRAINT workflows_pkey PRIMARY KEY (id);
-
-
---
--- Name: works works_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.works
-    ADD CONSTRAINT works_pkey PRIMARY KEY (id);
-
-
---
--- Name: agent_bootstrap_context_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX agent_bootstrap_context_unique_idx ON public.agent_bootstrap_context USING btree (context_type, COALESCE(agent_name, ''::text), COALESCE(domain_name, ''::text), file_key);
-
-
---
--- Name: events_archive_event_date_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX events_archive_event_date_idx ON public.events_archive USING btree (event_date);
-
-
---
--- Name: events_archive_search_vector_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX events_archive_search_vector_idx ON public.events_archive USING gin (search_vector);
-
-
---
--- Name: idx_abc_agent_name; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_abc_agent_name ON public.agent_bootstrap_context USING btree (agent_name) WHERE (agent_name IS NOT NULL);
-
-
---
--- Name: idx_agent_actions_agent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_actions_agent ON public.agent_actions USING btree (agent_id);
-
-
---
--- Name: idx_agent_actions_time; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_actions_time ON public.agent_actions USING btree (created_at DESC);
-
-
---
--- Name: idx_agent_actions_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_actions_type ON public.agent_actions USING btree (action_type);
-
-
---
--- Name: idx_agent_aliases_alias_lower; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_aliases_alias_lower ON public.agent_aliases USING btree (lower((alias)::text));
-
-
---
--- Name: idx_agent_chat_channel; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_chat_channel ON public.agent_chat USING btree (channel, created_at DESC);
-
-
---
--- Name: idx_agent_chat_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_chat_created_at ON public.agent_chat USING btree (created_at);
-
-
---
--- Name: idx_agent_chat_mentions; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_chat_mentions ON public.agent_chat USING gin (mentions);
-
-
---
--- Name: idx_agent_chat_processed_agent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
-
-
---
--- Name: idx_agent_chat_processed_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_chat_processed_status ON public.agent_chat_processed USING btree (status);
-
-
---
--- Name: idx_agent_chat_processed_unique; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_agent_chat_processed_unique ON public.agent_chat_processed USING btree (chat_id, agent);
-
-
---
--- Name: idx_agent_chat_sender; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_chat_sender ON public.agent_chat USING btree (sender, created_at DESC);
-
-
---
--- Name: idx_agent_domains_agent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_domains_agent ON public.agent_domains USING btree (agent_id);
-
-
---
--- Name: idx_agent_domains_topic; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_domains_topic ON public.agent_domains USING btree (domain_topic);
-
-
---
--- Name: idx_agent_domains_votes; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_domains_votes ON public.agent_domains USING btree (vote_count DESC);
-
-
---
--- Name: idx_agent_modifications_agent_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_modifications_agent_id ON public.agent_modifications USING btree (agent_id);
-
-
---
--- Name: idx_agent_modifications_modified_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_modifications_modified_at ON public.agent_modifications USING btree (modified_at DESC);
-
-
---
--- Name: idx_agent_spawns_agent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_spawns_agent ON public.agent_spawns USING btree (agent_id);
-
-
---
--- Name: idx_agent_spawns_domain; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_spawns_domain ON public.agent_spawns USING btree (domain);
-
-
---
--- Name: idx_agent_spawns_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_spawns_status ON public.agent_spawns USING btree (status);
-
-
---
--- Name: idx_agent_spawns_trigger; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agent_spawns_trigger ON public.agent_spawns USING btree (trigger_source, trigger_id);
-
-
---
--- Name: idx_agents_provider; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agents_provider ON public.agents USING btree (provider);
-
-
---
--- Name: idx_agents_role; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agents_role ON public.agents USING btree (role);
-
-
---
--- Name: idx_agents_single_default; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_agents_single_default ON public.agents USING btree (is_default) WHERE (is_default = true);
-
-
---
--- Name: idx_agents_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_agents_status ON public.agents USING btree (status);
-
-
---
--- Name: idx_certificates_entity_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_certificates_entity_id ON public.certificates USING btree (entity_id);
-
-
---
--- Name: idx_certificates_fingerprint; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_certificates_fingerprint ON public.certificates USING btree (fingerprint);
-
-
---
--- Name: idx_certificates_serial; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_certificates_serial ON public.certificates USING btree (serial);
-
-
---
--- Name: idx_chat_processed_agent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_chat_processed_agent ON public.agent_chat_processed USING btree (agent);
-
-
---
--- Name: idx_entities_name; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entities_name ON public.entities USING btree (name);
-
-
---
--- Name: idx_entities_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entities_type ON public.entities USING btree (type);
-
-
---
--- Name: idx_entities_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entities_user_id ON public.entities USING btree (user_id) WHERE (user_id IS NOT NULL);
-
-
---
--- Name: idx_entity_facts_archive_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_archive_date ON public.entity_facts_archive USING btree (archived_at);
-
-
---
--- Name: idx_entity_facts_archive_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_archive_entity ON public.entity_facts_archive USING btree (entity_id);
-
-
---
--- Name: idx_entity_facts_archive_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_archive_key ON public.entity_facts_archive USING btree (key);
-
-
---
--- Name: idx_entity_facts_confidence; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_confidence ON public.entity_facts USING btree (confidence) WHERE (confidence < (1.0)::double precision);
-
-
---
--- Name: idx_entity_facts_data; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_data ON public.entity_facts USING gin (data);
-
-
---
--- Name: idx_entity_facts_data_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_data_type ON public.entity_facts USING btree (data_type);
-
-
---
--- Name: idx_entity_facts_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_entity ON public.entity_facts USING btree (entity_id);
-
-
---
--- Name: idx_entity_facts_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_key ON public.entity_facts USING btree (key);
-
-
---
--- Name: idx_entity_facts_privacy_scope; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_privacy_scope ON public.entity_facts USING gin (privacy_scope);
-
-
---
--- Name: idx_entity_facts_source_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_source_entity ON public.entity_facts USING btree (source_entity_id);
-
-
---
--- Name: idx_entity_facts_value_trgm; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_value_trgm ON public.entity_facts USING gin (lower(value) public.gin_trgm_ops);
-
-
---
--- Name: idx_entity_facts_visibility; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_visibility ON public.entity_facts USING btree (visibility);
-
-
---
--- Name: idx_entity_facts_vote_count; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_facts_vote_count ON public.entity_facts USING btree (vote_count DESC);
-
-
---
--- Name: idx_entity_rel_a; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_rel_a ON public.entity_relationships USING btree (entity_a);
-
-
---
--- Name: idx_entity_rel_b; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_entity_rel_b ON public.entity_relationships USING btree (entity_b);
-
-
---
--- Name: idx_events_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_date ON public.events USING btree (event_date);
-
-
---
--- Name: idx_events_search; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_search ON public.events USING gin (search_vector);
-
-
---
--- Name: idx_gambling_entries_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_gambling_entries_date ON public.gambling_entries USING btree (session_date);
-
-
---
--- Name: idx_gambling_entries_log; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_gambling_entries_log ON public.gambling_entries USING btree (log_id);
-
-
---
--- Name: idx_gambling_logs_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_gambling_logs_entity ON public.gambling_logs USING btree (entity_id);
-
-
---
--- Name: idx_git_queue_priority; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_git_queue_priority ON public.git_issue_queue USING btree (priority DESC, created_at);
-
-
---
--- Name: idx_git_queue_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_git_queue_status ON public.git_issue_queue USING btree (status);
-
-
---
--- Name: idx_history_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_history_entity ON public.shopping_history USING btree (entity_id);
-
-
---
--- Name: idx_history_restock; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_history_restock ON public.shopping_history USING btree (next_restock_at) WHERE (next_restock_at IS NOT NULL);
-
-
---
--- Name: idx_job_messages; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_job_messages ON public.job_messages USING btree (job_id, added_at);
-
-
---
--- Name: idx_jobs_agent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jobs_agent ON public.agent_jobs USING btree (agent_name, status);
-
-
---
--- Name: idx_jobs_parent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jobs_parent ON public.agent_jobs USING btree (parent_job_id);
-
-
---
--- Name: idx_jobs_requester; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jobs_requester ON public.agent_jobs USING btree (requester_agent, status);
-
-
---
--- Name: idx_jobs_root; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jobs_root ON public.agent_jobs USING btree (root_job_id);
-
-
---
--- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic) WHERE ((status)::text <> ALL ((ARRAY['completed'::character varying, 'cancelled'::character varying])::text[]));
-
-
---
--- Name: idx_library_authors_name; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_authors_name ON public.library_authors USING btree (name);
-
-
---
--- Name: idx_library_works_arxiv; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_arxiv ON public.library_works USING btree (arxiv_id) WHERE (arxiv_id IS NOT NULL);
-
-
---
--- Name: idx_library_works_doi; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_doi ON public.library_works USING btree (doi) WHERE (doi IS NOT NULL);
-
-
---
--- Name: idx_library_works_embed; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_embed ON public.library_works USING btree (embed) WHERE (embed = true);
-
-
---
--- Name: idx_library_works_isbn; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_isbn ON public.library_works USING btree (isbn) WHERE (isbn IS NOT NULL);
-
-
---
--- Name: idx_library_works_search; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_search ON public.library_works USING gin (search_vector);
-
-
---
--- Name: idx_library_works_subjects; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_subjects ON public.library_works USING gin (subjects);
-
-
---
--- Name: idx_library_works_title_edition; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_library_works_title_edition ON public.library_works USING btree (lower(TRIM(BOTH FROM title)), COALESCE(edition, ''::text));
-
-
---
--- Name: idx_library_works_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_library_works_type ON public.library_works USING btree (work_type);
-
-
---
--- Name: idx_media_consumed_by; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_consumed_by ON public.media_consumed USING btree (consumed_by);
-
-
---
--- Name: idx_media_queue_priority; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_queue_priority ON public.media_queue USING btree (priority, requested_at);
-
-
---
--- Name: idx_media_queue_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_queue_status ON public.media_queue USING btree (status);
-
-
---
--- Name: idx_media_search; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_search ON public.media_consumed USING gin (search_vector);
-
-
---
--- Name: idx_media_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_status ON public.media_consumed USING btree (status);
-
-
---
--- Name: idx_media_tags_media; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_tags_media ON public.media_tags USING btree (media_id);
-
-
---
--- Name: idx_media_tags_tag; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_tags_tag ON public.media_tags USING btree (tag);
-
-
---
--- Name: idx_media_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_media_type ON public.media_consumed USING btree (media_type);
-
-
---
--- Name: idx_memory_embeddings_source; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_memory_embeddings_source ON public.memory_embeddings USING btree (source_type);
-
-
---
--- Name: idx_memory_embeddings_vector; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
-
-
---
--- Name: idx_music_analysis_music; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_analysis_music ON public.music_analysis USING btree (music_id);
-
-
---
--- Name: idx_music_analysis_search; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_analysis_search ON public.music_analysis USING gin (search_vector);
-
-
---
--- Name: idx_music_analysis_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_analysis_type ON public.music_analysis USING btree (analysis_type);
-
-
---
--- Name: idx_music_library_album; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_album ON public.music_library USING btree (musicbrainz_album_id);
-
-
---
--- Name: idx_music_library_artist; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_artist ON public.music_library USING btree (musicbrainz_artist_id);
-
-
---
--- Name: idx_music_library_bpm; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_bpm ON public.music_library USING btree (bpm);
-
-
---
--- Name: idx_music_library_genre; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_genre ON public.music_library USING btree (genre);
-
-
---
--- Name: idx_music_library_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_key ON public.music_library USING btree (key);
-
-
---
--- Name: idx_music_library_media; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_media ON public.music_library USING btree (media_id);
-
-
---
--- Name: idx_music_library_mood; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_mood ON public.music_library USING btree (mood);
-
-
---
--- Name: idx_music_library_year; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_library_year ON public.music_library USING btree (year);
-
-
---
--- Name: idx_music_search; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_music_search ON public.music_library USING gin (search_vector);
-
-
---
--- Name: idx_place_props_place; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_place_props_place ON public.place_properties USING btree (place_id);
-
-
---
--- Name: idx_places_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_places_type ON public.places USING btree (type);
-
-
---
--- Name: idx_positions_account; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_positions_account ON public.positions USING btree (account_id) WHERE (sold_at IS NULL);
-
-
---
--- Name: idx_positions_asset_class; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_positions_asset_class ON public.positions USING btree (asset_class) WHERE (sold_at IS NULL);
-
-
---
--- Name: idx_positions_held; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_positions_held ON public.portfolio_positions USING btree (sold_at) WHERE (sold_at IS NULL);
-
-
---
--- Name: idx_positions_symbol; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_positions_symbol ON public.portfolio_positions USING btree (symbol);
-
-
---
--- Name: idx_preferences_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_preferences_entity ON public.preferences USING btree (entity_id);
-
-
---
--- Name: idx_preferences_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_preferences_key ON public.preferences USING btree (key);
-
-
---
--- Name: idx_prefs_entity_cat; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_prefs_entity_cat ON public.shopping_preferences USING btree (entity_id, category);
-
-
---
--- Name: idx_price_cache_v2_lookup; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_price_cache_v2_lookup ON public.price_cache_v2 USING btree (symbol, asset_class, cached_at DESC);
-
-
---
--- Name: idx_project_tasks_project; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_project_tasks_project ON public.project_tasks USING btree (project_id);
-
-
---
--- Name: idx_project_tasks_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_project_tasks_status ON public.project_tasks USING btree (status);
-
-
---
--- Name: idx_projects_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_projects_status ON public.projects USING btree (status);
-
-
---
--- Name: idx_publications_by; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_publications_by ON public.publications USING btree (published_by);
-
-
---
--- Name: idx_publications_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_publications_date ON public.publications USING btree (published_at DESC);
-
-
---
--- Name: idx_publications_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_publications_type ON public.publications USING btree (publication_type);
-
-
---
--- Name: idx_publications_work; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_publications_work ON public.publications USING btree (work_id);
-
-
---
--- Name: idx_ralph_series_latest; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_ralph_series_latest ON public.ralph_sessions USING btree (session_series_id, iteration DESC);
-
-
---
--- Name: idx_ralph_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_ralph_status ON public.ralph_sessions USING btree (status) WHERE (status = ANY (ARRAY['PENDING'::text, 'RUNNING'::text]));
-
-
---
--- Name: idx_snapshots_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_snapshots_date ON public.portfolio_snapshots USING btree (snapshot_at);
-
-
---
--- Name: idx_snapshots_day; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_snapshots_day ON public.portfolio_snapshots USING btree (((snapshot_at)::date));
-
-
---
--- Name: idx_tags_category; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tags_category ON public.tags USING btree (category);
-
-
---
--- Name: idx_tags_name; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tags_name ON public.tags USING btree (name);
-
-
---
--- Name: idx_tasks_due; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tasks_due ON public.tasks USING btree (due_date);
-
-
---
--- Name: idx_tasks_parent; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tasks_parent ON public.tasks USING btree (parent_task_id);
-
-
---
--- Name: idx_tasks_priority; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tasks_priority ON public.tasks USING btree (priority);
-
-
---
--- Name: idx_tasks_project; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tasks_project ON public.tasks USING btree (project_id);
-
-
---
--- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_tasks_status ON public.tasks USING btree (status);
-
-
---
--- Name: idx_unsolved_problems_priority; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_unsolved_problems_priority ON public.unsolved_problems USING btree (priority DESC);
-
-
---
--- Name: idx_unsolved_problems_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_unsolved_problems_status ON public.unsolved_problems USING btree (status);
-
-
---
--- Name: idx_vehicles_owner; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_vehicles_owner ON public.vehicles USING btree (owner_id);
-
-
---
--- Name: idx_vehicles_vin; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_vehicles_vin ON public.vehicles USING btree (vin);
-
-
---
--- Name: idx_vocabulary_vote_count; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_vocabulary_vote_count ON public.vocabulary USING btree (vote_count DESC);
-
-
---
--- Name: idx_wishlist_category; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_wishlist_category ON public.shopping_wishlist USING btree (category);
-
-
---
--- Name: idx_wishlist_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_wishlist_entity ON public.shopping_wishlist USING btree (entity_id);
-
-
---
--- Name: idx_wishlist_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_wishlist_status ON public.shopping_wishlist USING btree (status);
-
-
---
--- Name: idx_work_tags_tag; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_work_tags_tag ON public.work_tags USING btree (tag_id);
-
-
---
--- Name: idx_work_tags_work; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_work_tags_work ON public.work_tags USING btree (work_id);
-
-
---
--- Name: idx_workflow_steps_domain; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflow_steps_domain ON public.workflow_steps USING btree (domain);
-
-
---
--- Name: idx_workflow_steps_domains; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflow_steps_domains ON public.workflow_steps USING gin (domains);
-
-
---
--- Name: idx_workflow_steps_order; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflow_steps_order ON public.workflow_steps USING btree (workflow_id, step_order);
-
-
---
--- Name: idx_workflow_steps_workflow; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflow_steps_workflow ON public.workflow_steps USING btree (workflow_id);
-
-
---
--- Name: idx_workflows_department; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflows_department ON public.workflows USING btree (department);
-
-
---
--- Name: idx_workflows_name; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflows_name ON public.workflows USING btree (name);
-
-
---
--- Name: idx_workflows_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_workflows_status ON public.workflows USING btree (status);
-
-
---
--- Name: idx_works_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_works_created ON public.works USING btree (created_at DESC);
-
-
---
--- Name: idx_works_language; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_works_language ON public.works USING btree (language);
-
-
---
--- Name: idx_works_metadata; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_works_metadata ON public.works USING gin (metadata);
-
-
---
--- Name: idx_works_status; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_works_status ON public.works USING btree (status);
-
-
---
--- Name: idx_works_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_works_type ON public.works USING btree (work_type);
-
-
---
--- Name: idx_works_updated; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_works_updated ON public.works USING btree (updated_at DESC);
-
-
---
--- Name: memory_embeddings_archive_embedding_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX memory_embeddings_archive_embedding_idx ON public.memory_embeddings_archive USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
-
-
---
--- Name: memory_embeddings_archive_source_type_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX memory_embeddings_archive_source_type_idx ON public.memory_embeddings_archive USING btree (source_type);
-
-
 --
--- Name: v_media_with_tags _RETURN; Type: RULE; Schema: public; Owner: -
+-- Name: v_media_with_tags; Type: VIEW; Schema: -; Owner: -
 --
 
-CREATE OR REPLACE VIEW public.v_media_with_tags AS
+CREATE OR REPLACE VIEW v_media_with_tags AS
  SELECT mc.id,
     mc.media_type,
     mc.title,
@@ -8062,763 +5114,5792 @@ CREATE OR REPLACE VIEW public.v_media_with_tags AS
     mc.ingested_by,
     mc.ingested_at,
     mc.search_vector,
-    array_agg(mt.tag) FILTER (WHERE (mt.tag IS NOT NULL)) AS tags
-   FROM (public.media_consumed mc
-     LEFT JOIN public.media_tags mt ON ((mc.id = mt.media_id)))
+    array_agg(mt.tag) FILTER (WHERE mt.tag IS NOT NULL) AS tags
+   FROM media_consumed mc
+     LEFT JOIN media_tags mt ON mc.id = mt.media_id
   GROUP BY mc.id;
 
+--
+-- Name: v_metamours; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_metamours AS
+ SELECT DISTINCT e1.name AS person,
+    e3.name AS metamour,
+    e2.name AS connected_through
+   FROM entities e1
+     JOIN entity_relationships r1 ON e1.id = r1.entity_a
+     JOIN entities e2 ON r1.entity_b = e2.id
+     JOIN entity_relationships r2 ON e2.id = r2.entity_a OR e2.id = r2.entity_b
+     JOIN entities e3 ON r2.entity_a = e3.id OR r2.entity_b = e3.id
+  WHERE e1.name::text = 'I)ruid'::text AND (r1.relationship::text = ANY (ARRAY['partner'::character varying::text, 'casual'::character varying::text])) AND e3.id <> e1.id AND e3.id <> e2.id AND e3.type::text = 'person'::text;
+
+--
+-- Name: v_pending_tasks; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_pending_tasks AS
+ SELECT t.id,
+    t.title,
+    t.status,
+    t.priority,
+    t.due_date,
+    p.name AS project_name,
+    t.parent_task_id,
+    t.notes
+   FROM tasks t
+     LEFT JOIN projects p ON t.project_id = p.id
+  WHERE t.status::text = ANY (ARRAY['pending'::character varying::text, 'in_progress'::character varying::text, 'blocked'::character varying::text])
+  ORDER BY t.priority, t.due_date;
+
+--
+-- Name: v_pending_test_failures; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_pending_test_failures AS
+ SELECT id,
+    repo,
+    title,
+    error_message,
+    created_at
+   FROM git_issue_queue
+  WHERE source = 'test_failure'::text AND issue_number < 0
+  ORDER BY created_at;
+
+
+COMMENT ON VIEW v_pending_test_failures IS 'Test failures that need GitHub issues created via gh CLI';
+
+--
+-- Name: v_portfolio_allocation; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_portfolio_allocation AS
+ SELECT p.asset_class,
+    count(*) AS num_positions,
+    sum(p.quantity * COALESCE(pc.price, p.avg_price)) AS market_value,
+    sum(p.cost_basis) AS total_cost_basis,
+    sum(p.quantity * COALESCE(pc.price, p.avg_price)) - sum(p.cost_basis) AS unrealized_pl
+   FROM positions p
+     LEFT JOIN price_cache_v2 pc ON p.symbol::text = pc.symbol::text AND p.asset_class::text = pc.asset_class::text
+  WHERE p.sold_at IS NULL
+  GROUP BY p.asset_class;
+
+--
+-- Name: v_ralph_active; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_ralph_active AS
+ SELECT session_series_id,
+    agent_id,
+    max(iteration) AS current_iteration,
+    ( SELECT r2.status
+           FROM ralph_sessions r2
+          WHERE r2.session_series_id = r1.session_series_id
+          ORDER BY r2.iteration DESC
+         LIMIT 1) AS latest_status,
+    min(created_at) AS started_at,
+    sum(tokens_used) AS total_tokens,
+    sum(cost) AS total_cost
+   FROM ralph_sessions r1
+  GROUP BY session_series_id, agent_id
+ HAVING (( SELECT r2.status
+           FROM ralph_sessions r2
+          WHERE r2.session_series_id = r1.session_series_id
+          ORDER BY r2.iteration DESC
+         LIMIT 1)) = ANY (ARRAY['PENDING'::text, 'RUNNING'::text, 'CONTINUE'::text]);
+
+--
+-- Name: v_relationships; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_relationships AS
+ SELECT e1.name AS entity_a_name,
+    e1.type AS entity_a_type,
+    r.relationship,
+    e2.name AS entity_b_name,
+    e2.type AS entity_b_type,
+    r.since
+   FROM entity_relationships r
+     JOIN entities e1 ON r.entity_a = e1.id
+     JOIN entities e2 ON r.entity_b = e2.id;
+
+--
+-- Name: v_task_tree; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_task_tree AS
+ WITH RECURSIVE task_hierarchy AS (
+         SELECT tasks.id,
+            tasks.title,
+            tasks.status,
+            tasks.priority,
+            tasks.parent_task_id,
+            tasks.project_id,
+            tasks.due_date,
+            0 AS depth,
+            ARRAY[tasks.id] AS path
+           FROM tasks
+          WHERE tasks.parent_task_id IS NULL
+        UNION ALL
+         SELECT t.id,
+            t.title,
+            t.status,
+            t.priority,
+            t.parent_task_id,
+            t.project_id,
+            t.due_date,
+            th.depth + 1,
+            th.path || t.id
+           FROM tasks t
+             JOIN task_hierarchy th ON t.parent_task_id = th.id
+        )
+ SELECT id,
+    title,
+    status,
+    priority,
+    parent_task_id,
+    project_id,
+    due_date,
+    depth,
+    path
+   FROM task_hierarchy
+  ORDER BY path;
+
+--
+-- Name: v_users; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW v_users AS
+ SELECT e.id,
+    e.name,
+    e.full_name,
+    e.type,
+    max(
+        CASE
+            WHEN ef.key::text = 'phone'::text THEN ef.value
+            ELSE NULL::text
+        END) AS phone,
+    max(
+        CASE
+            WHEN ef.key::text = 'email'::text THEN ef.value
+            ELSE NULL::text
+        END) AS email,
+    max(
+        CASE
+            WHEN ef.key::text = 'current_timezone'::text THEN ef.value
+            ELSE NULL::text
+        END) AS current_timezone,
+    max(
+        CASE
+            WHEN ef.key::text = 'home_timezone'::text THEN ef.value
+            ELSE NULL::text
+        END) AS home_timezone,
+    max(
+        CASE
+            WHEN ef.key::text = 'onboarded'::text THEN ef.value
+            ELSE NULL::text
+        END) AS onboarded_date,
+    max(
+        CASE
+            WHEN ef.key::text = 'owner_number'::text THEN ef.value
+            ELSE NULL::text
+        END) AS owner_number,
+    max(
+        CASE
+            WHEN ef.key::text = 'signal_uuid'::text THEN ef.value
+            ELSE NULL::text
+        END) AS signal_uuid
+   FROM entities e
+     JOIN entity_facts ef ON e.id = ef.entity_id
+  WHERE (EXISTS ( SELECT 1
+           FROM entity_facts ef2
+          WHERE ef2.entity_id = e.id AND (ef2.key::text = ANY (ARRAY['is_user'::character varying::text, 'onboarded'::character varying::text]))))
+  GROUP BY e.id, e.name, e.full_name, e.type;
+
+--
+-- Name: workflow_steps_detail; Type: VIEW; Schema: -; Owner: -
+--
+
+CREATE OR REPLACE VIEW workflow_steps_detail AS
+ SELECT w.name AS workflow_name,
+    w.description AS workflow_description,
+    ws.step_order,
+    ws.domain,
+    ws.domains,
+    ws.description AS step_description,
+    ws.produces_deliverable,
+    ws.deliverable_type,
+    ws.deliverable_description,
+    ws.estimated_duration_minutes
+   FROM workflow_steps ws
+     JOIN workflows w ON w.id = ws.workflow_id
+  ORDER BY w.name, ws.step_order;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_actions FROM erato;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_actions FROM newhart;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_aliases FROM erato;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_aliases FROM newhart;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_bootstrap_context FROM erato;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_bootstrap_context FROM newhart;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat FROM erato;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_chat FROM newhart;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat_processed FROM erato;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_chat_processed FROM newhart;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_domains FROM erato;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_domains FROM newhart;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_jobs FROM erato;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_jobs FROM newhart;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_modifications FROM erato;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_modifications FROM newhart;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_spawns FROM erato;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_spawns FROM newhart;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_system_config FROM erato;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_system_config FROM newhart;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_turn_context FROM erato;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agent_turn_context FROM newhart;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agents FROM erato;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE agents FROM newhart;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE ai_models FROM erato;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE ai_models FROM newhart;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE artwork FROM erato;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE artwork FROM newhart;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE asset_classes FROM erato;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE asset_classes FROM newhart;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE certificates FROM erato;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE certificates FROM newhart;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE channel_activity FROM erato;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE channel_activity FROM newhart;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE conversations FROM erato;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE conversations FROM newhart;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entities FROM erato;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE entities FROM newhart;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_fact_conflicts FROM erato;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE entity_fact_conflicts FROM newhart;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_facts FROM erato;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE entity_facts FROM newhart;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_facts_archive FROM erato;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE entity_facts_archive FROM newhart;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_relationships FROM erato;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE entity_relationships FROM newhart;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE event_entities FROM erato;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE event_entities FROM newhart;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE event_places FROM erato;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE event_places FROM newhart;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE event_projects FROM erato;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE event_projects FROM newhart;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE events FROM erato;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE events FROM newhart;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE events_archive FROM erato;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE events_archive FROM newhart;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE extraction_metrics FROM erato;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE extraction_metrics FROM newhart;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE fact_change_log FROM erato;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE fact_change_log FROM newhart;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE gambling_entries FROM erato;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE gambling_entries FROM newhart;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE gambling_logs FROM erato;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE gambling_logs FROM newhart;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE git_issue_queue FROM erato;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE git_issue_queue FROM newhart;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE job_messages FROM erato;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE job_messages FROM newhart;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE lessons FROM erato;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE lessons FROM newhart;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE lessons_archive FROM erato;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE lessons_archive FROM newhart;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_authors FROM erato;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE library_authors FROM newhart;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_tags FROM erato;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE library_tags FROM newhart;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_authors FROM erato;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE library_work_authors FROM newhart;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_relationships FROM erato;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE library_work_relationships FROM newhart;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_tags FROM erato;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE library_work_tags FROM newhart;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_works FROM erato;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE library_works FROM newhart;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE media_consumed FROM erato;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE media_consumed FROM newhart;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE media_queue FROM erato;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE media_queue FROM newhart;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE media_tags FROM erato;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE media_tags FROM newhart;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE memory_embeddings FROM erato;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE memory_embeddings FROM newhart;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE memory_embeddings_archive FROM erato;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE memory_embeddings_archive FROM newhart;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE memory_type_priorities FROM erato;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE memory_type_priorities FROM newhart;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE motivation_d100 FROM erato;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE motivation_d100 FROM newhart;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE music_analysis FROM erato;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE music_analysis FROM newhart;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE music_library FROM erato;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE music_library FROM newhart;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE place_properties FROM erato;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE place_properties FROM newhart;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE places FROM erato;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE places FROM newhart;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE portfolio_positions FROM erato;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE portfolio_positions FROM newhart;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE portfolio_snapshots FROM erato;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE portfolio_snapshots FROM newhart;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE positions FROM erato;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE positions FROM newhart;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE preferences FROM erato;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE preferences FROM newhart;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE price_cache_v2 FROM erato;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE price_cache_v2 FROM newhart;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE project_entities FROM erato;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE project_entities FROM newhart;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE project_tasks FROM erato;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE project_tasks FROM newhart;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE projects FROM erato;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE projects FROM newhart;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE publications FROM erato;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE publications FROM newhart;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE ralph_sessions FROM erato;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE ralph_sessions FROM newhart;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE shopping_history FROM erato;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE shopping_history FROM newhart;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE shopping_preferences FROM erato;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE shopping_preferences FROM newhart;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE shopping_wishlist FROM erato;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE shopping_wishlist FROM newhart;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE tags FROM erato;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE tags FROM newhart;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE tasks FROM erato;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE tasks FROM newhart;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE unsolved_problems FROM erato;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE unsolved_problems FROM newhart;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE vehicles FROM erato;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE vehicles FROM newhart;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE vocabulary FROM erato;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE vocabulary FROM newhart;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE work_tags FROM erato;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE work_tags FROM newhart;
+
+--
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE workflow_steps FROM erato;
+
+--
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE workflow_steps FROM newhart;
+
+--
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE workflows FROM erato;
+
+--
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE workflows FROM newhart;
+
+--
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE works FROM erato;
+
+--
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+REVOKE SELECT ON TABLE works FROM newhart;
+
+--
+-- Name: chat(p_message text, p_sender character varying); Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT EXECUTE ON FUNCTION chat(p_message text, p_sender character varying) TO newhart;
+
+--
+-- Name: send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT EXECUTE ON FUNCTION send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) TO newhart;
+
+--
+-- Name: agent_actions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_actions_id_seq TO "nova-staging";
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO athena;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO coder;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO gem;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO gidget;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO graybeard;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO iris;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_chat_id_seq TO newhart;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_chat_id_seq TO "nova-staging";
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO scout;
+
+--
+-- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO ticker;
+
+--
+-- Name: agent_domains_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_domains_id_seq TO "nova-staging";
+
+--
+-- Name: agent_jobs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_jobs_id_seq TO "nova-staging";
+
+--
+-- Name: agent_modifications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_modifications_id_seq TO "nova-staging";
+
+--
+-- Name: agents_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE agents_id_seq TO "nova-staging";
+
+--
+-- Name: artwork_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE artwork_id_seq TO newhart;
+
+--
+-- Name: artwork_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE artwork_id_seq TO "nova-staging";
+
+--
+-- Name: certificates_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE certificates_id_seq TO newhart;
+
+--
+-- Name: certificates_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE certificates_id_seq TO "nova-staging";
+
+--
+-- Name: conversations_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE conversations_id_seq TO newhart;
+
+--
+-- Name: conversations_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE conversations_id_seq TO "nova-staging";
+
+--
+-- Name: entities_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entities_id_seq TO newhart;
+
+--
+-- Name: entities_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entities_id_seq TO "nova-staging";
+
+--
+-- Name: entity_fact_conflicts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_fact_conflicts_id_seq TO newhart;
+
+--
+-- Name: entity_fact_conflicts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_fact_conflicts_id_seq TO "nova-staging";
+
+--
+-- Name: entity_facts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_facts_id_seq TO newhart;
+
+--
+-- Name: entity_facts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_facts_id_seq TO "nova-staging";
+
+--
+-- Name: entity_relationships_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_relationships_id_seq TO newhart;
+
+--
+-- Name: entity_relationships_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_relationships_id_seq TO "nova-staging";
+
+--
+-- Name: events_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE events_id_seq TO newhart;
+
+--
+-- Name: events_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE events_id_seq TO "nova-staging";
+
+--
+-- Name: extraction_metrics_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE extraction_metrics_id_seq TO newhart;
+
+--
+-- Name: fact_change_log_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE fact_change_log_id_seq TO newhart;
+
+--
+-- Name: gambling_entries_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_entries_id_seq TO newhart;
+
+--
+-- Name: gambling_entries_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_entries_id_seq TO "nova-staging";
+
+--
+-- Name: gambling_logs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_logs_id_seq TO newhart;
+
+--
+-- Name: gambling_logs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_logs_id_seq TO "nova-staging";
+
+--
+-- Name: git_issue_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE git_issue_queue_id_seq TO newhart;
+
+--
+-- Name: job_messages_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE job_messages_id_seq TO newhart;
+
+--
+-- Name: job_messages_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE job_messages_id_seq TO "nova-staging";
+
+--
+-- Name: lessons_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE lessons_id_seq TO newhart;
+
+--
+-- Name: lessons_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE lessons_id_seq TO "nova-staging";
+
+--
+-- Name: library_authors_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE library_authors_id_seq TO athena;
+
+--
+-- Name: library_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE library_tags_id_seq TO athena;
+
+--
+-- Name: library_works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE library_works_id_seq TO athena;
+
+--
+-- Name: media_consumed_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_consumed_id_seq TO newhart;
+
+--
+-- Name: media_consumed_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_consumed_id_seq TO "nova-staging";
+
+--
+-- Name: media_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_queue_id_seq TO newhart;
+
+--
+-- Name: media_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_queue_id_seq TO "nova-staging";
+
+--
+-- Name: media_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_tags_id_seq TO newhart;
+
+--
+-- Name: media_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_tags_id_seq TO "nova-staging";
+
+--
+-- Name: memory_embeddings_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE memory_embeddings_id_seq TO newhart;
+
+--
+-- Name: memory_embeddings_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE memory_embeddings_id_seq TO "nova-staging";
+
+--
+-- Name: music_analysis_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_analysis_id_seq TO newhart;
+
+--
+-- Name: music_analysis_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_analysis_id_seq TO "nova-staging";
+
+--
+-- Name: music_library_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_library_id_seq TO newhart;
+
+--
+-- Name: music_library_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_library_id_seq TO "nova-staging";
+
+--
+-- Name: place_properties_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE place_properties_id_seq TO newhart;
+
+--
+-- Name: place_properties_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE place_properties_id_seq TO "nova-staging";
+
+--
+-- Name: places_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE places_id_seq TO newhart;
+
+--
+-- Name: places_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE places_id_seq TO "nova-staging";
+
+--
+-- Name: portfolio_positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_positions_id_seq TO newhart;
+
+--
+-- Name: portfolio_positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_positions_id_seq TO "nova-staging";
+
+--
+-- Name: portfolio_snapshots_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_snapshots_id_seq TO newhart;
+
+--
+-- Name: portfolio_snapshots_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_snapshots_id_seq TO "nova-staging";
+
+--
+-- Name: positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE positions_id_seq TO newhart;
+
+--
+-- Name: positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE positions_id_seq TO "nova-staging";
+
+--
+-- Name: preferences_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE preferences_id_seq TO newhart;
+
+--
+-- Name: preferences_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE preferences_id_seq TO "nova-staging";
+
+--
+-- Name: project_tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE project_tasks_id_seq TO newhart;
+
+--
+-- Name: project_tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE project_tasks_id_seq TO "nova-staging";
+
+--
+-- Name: projects_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE projects_id_seq TO newhart;
+
+--
+-- Name: projects_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE projects_id_seq TO "nova-staging";
+
+--
+-- Name: publications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE publications_id_seq TO newhart;
+
+--
+-- Name: publications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE publications_id_seq TO "nova-staging";
+
+--
+-- Name: ralph_sessions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE ralph_sessions_id_seq TO newhart;
+
+--
+-- Name: ralph_sessions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE ralph_sessions_id_seq TO "nova-staging";
+
+--
+-- Name: tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE tags_id_seq TO newhart;
+
+--
+-- Name: tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE tags_id_seq TO "nova-staging";
+
+--
+-- Name: tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE tasks_id_seq TO newhart;
+
+--
+-- Name: tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE tasks_id_seq TO "nova-staging";
+
+--
+-- Name: unsolved_problems_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE unsolved_problems_id_seq TO newhart;
+
+--
+-- Name: unsolved_problems_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE unsolved_problems_id_seq TO "nova-staging";
+
+--
+-- Name: vehicles_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE vehicles_id_seq TO newhart;
+
+--
+-- Name: vehicles_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE vehicles_id_seq TO "nova-staging";
+
+--
+-- Name: vocabulary_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE vocabulary_id_seq TO newhart;
+
+--
+-- Name: vocabulary_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE vocabulary_id_seq TO "nova-staging";
+
+--
+-- Name: workflow_steps_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE workflow_steps_id_seq TO newhart;
+
+--
+-- Name: workflows_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE workflows_id_seq TO newhart;
+
+--
+-- Name: works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, USAGE ON SEQUENCE works_id_seq TO newhart;
+
+--
+-- Name: works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT, UPDATE, USAGE ON SEQUENCE works_id_seq TO "nova-staging";
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO athena;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO coder;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO gem;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO gidget;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO iris;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO scout;
+
+--
+-- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_actions TO ticker;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO athena;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO coder;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO gem;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO gidget;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO iris;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO scout;
+
+--
+-- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_aliases TO ticker;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO athena;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO coder;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO gem;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO gidget;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO iris;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO scout;
+
+--
+-- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_bootstrap_context TO ticker;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat TO athena;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE agent_chat TO coder;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE agent_chat TO gem;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE agent_chat TO gidget;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE agent_chat TO iris;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE agent_chat TO scout;
+
+--
+-- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE agent_chat TO ticker;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat_processed TO athena;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_chat_processed TO coder;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_chat_processed TO gem;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_chat_processed TO gidget;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_chat_processed TO iris;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_chat_processed TO scout;
+
+--
+-- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_chat_processed TO ticker;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO athena;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO coder;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO gem;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO gidget;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO iris;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO scout;
+
+--
+-- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_domains TO ticker;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO athena;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO coder;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO gem;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO gidget;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO iris;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO scout;
+
+--
+-- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_jobs TO ticker;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO athena;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO coder;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO gem;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO gidget;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO iris;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO scout;
+
+--
+-- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_modifications TO ticker;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO athena;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO coder;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO gem;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO gidget;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO iris;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO scout;
+
+--
+-- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_spawns TO ticker;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO athena;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO coder;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO gem;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO gidget;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO iris;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO scout;
+
+--
+-- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_system_config TO ticker;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO athena;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO coder;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO gem;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO gidget;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO iris;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO scout;
+
+--
+-- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agent_turn_context TO ticker;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO athena;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO coder;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO gem;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO gidget;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE agents TO graybeard;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO iris;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO scout;
+
+--
+-- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE agents TO ticker;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO athena;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO coder;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO gem;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO gidget;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO iris;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO scout;
+
+--
+-- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ai_models TO ticker;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE artwork TO athena;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE artwork TO coder;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE artwork TO gem;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE artwork TO gidget;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE artwork TO iris;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE artwork TO scout;
+
+--
+-- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE artwork TO ticker;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO athena;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO coder;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO gem;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO gidget;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO iris;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO scout;
+
+--
+-- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE asset_classes TO ticker;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO athena;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO coder;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO gem;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO gidget;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO iris;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO scout;
+
+--
+-- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE certificates TO ticker;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO athena;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO coder;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO gem;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO gidget;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO iris;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO scout;
+
+--
+-- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE channel_activity TO ticker;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO athena;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO coder;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO gem;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO gidget;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO iris;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO scout;
+
+--
+-- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE conversations TO ticker;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO athena;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO coder;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO gem;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO gidget;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE entities TO graybeard;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO iris;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO scout;
+
+--
+-- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entities TO ticker;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO athena;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO coder;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO gem;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO gidget;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO iris;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO scout;
+
+--
+-- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_fact_conflicts TO ticker;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO athena;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO coder;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO gem;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO gidget;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE entity_facts TO graybeard;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO iris;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO scout;
+
+--
+-- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts TO ticker;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO athena;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO coder;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO gem;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO gidget;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO iris;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO scout;
+
+--
+-- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_facts_archive TO ticker;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO athena;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO coder;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO gem;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO gidget;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE entity_relationships TO graybeard;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO iris;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO scout;
+
+--
+-- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE entity_relationships TO ticker;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO athena;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO coder;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO gem;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO gidget;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO iris;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO scout;
+
+--
+-- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_entities TO ticker;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO athena;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO coder;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO gem;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO gidget;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO iris;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO scout;
+
+--
+-- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_places TO ticker;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO athena;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO coder;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO gem;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO gidget;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO iris;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO scout;
+
+--
+-- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE event_projects TO ticker;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO athena;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO coder;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO gem;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO gidget;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO iris;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO scout;
+
+--
+-- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events TO ticker;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO athena;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO coder;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO gem;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO gidget;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO iris;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO scout;
+
+--
+-- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE events_archive TO ticker;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO athena;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO coder;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO gem;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO gidget;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO iris;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO scout;
+
+--
+-- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE extraction_metrics TO ticker;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO athena;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO coder;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO gem;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO gidget;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO iris;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO scout;
+
+--
+-- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE fact_change_log TO ticker;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO athena;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO coder;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO gem;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO gidget;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO iris;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO scout;
+
+--
+-- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_entries TO ticker;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO athena;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO coder;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO gem;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO gidget;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO iris;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO scout;
+
+--
+-- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE gambling_logs TO ticker;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO athena;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO coder;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO gem;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO gidget;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO iris;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO scout;
+
+--
+-- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE git_issue_queue TO ticker;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO athena;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO coder;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO gem;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO gidget;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO iris;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO scout;
+
+--
+-- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE job_messages TO ticker;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO athena;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO coder;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO gem;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO gidget;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO iris;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO scout;
+
+--
+-- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons TO ticker;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO athena;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO coder;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO gem;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO gidget;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO iris;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO scout;
+
+--
+-- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE lessons_archive TO ticker;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_authors TO athena;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_authors TO coder;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_authors TO gem;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_authors TO gidget;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_authors TO iris;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_authors TO scout;
+
+--
+-- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_authors TO ticker;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_tags TO athena;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_tags TO coder;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_tags TO gem;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_tags TO gidget;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_tags TO iris;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_tags TO scout;
+
+--
+-- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_tags TO ticker;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_authors TO athena;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_authors TO coder;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_authors TO gem;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_authors TO gidget;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_authors TO iris;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_authors TO scout;
+
+--
+-- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_authors TO ticker;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_relationships TO athena;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_relationships TO coder;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_relationships TO gem;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_relationships TO gidget;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_relationships TO iris;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_relationships TO scout;
+
+--
+-- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_relationships TO ticker;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_tags TO athena;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_tags TO coder;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_tags TO gem;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_tags TO gidget;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_tags TO iris;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_tags TO scout;
+
+--
+-- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_work_tags TO ticker;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_works TO athena;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_works TO coder;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_works TO gem;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_works TO gidget;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_works TO iris;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_works TO scout;
+
+--
+-- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE library_works TO ticker;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE media_consumed TO athena;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_consumed TO coder;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_consumed TO gem;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_consumed TO gidget;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_consumed TO iris;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_consumed TO scout;
+
+--
+-- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_consumed TO ticker;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE media_queue TO athena;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_queue TO coder;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_queue TO gem;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_queue TO gidget;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_queue TO iris;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_queue TO scout;
+
+--
+-- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_queue TO ticker;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE media_tags TO athena;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_tags TO coder;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_tags TO gem;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_tags TO gidget;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_tags TO iris;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_tags TO scout;
+
+--
+-- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE media_tags TO ticker;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE memory_embeddings TO athena;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE memory_embeddings TO coder;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE memory_embeddings TO gem;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE memory_embeddings TO gidget;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE memory_embeddings TO iris;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE memory_embeddings TO scout;
+
+--
+-- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT INSERT, SELECT ON TABLE memory_embeddings TO ticker;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO athena;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO coder;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO gem;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO gidget;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO iris;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO scout;
+
+--
+-- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_embeddings_archive TO ticker;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO athena;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO coder;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO gem;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO gidget;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO iris;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO scout;
+
+--
+-- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE memory_type_priorities TO ticker;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO athena;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO coder;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO gem;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO gidget;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO iris;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO scout;
+
+--
+-- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE motivation_d100 TO ticker;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO athena;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO coder;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO gem;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO gidget;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO iris;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO scout;
+
+--
+-- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_analysis TO ticker;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO athena;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO coder;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO gem;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO gidget;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO iris;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO scout;
+
+--
+-- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE music_library TO ticker;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO athena;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO coder;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO gem;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO gidget;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO iris;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO scout;
+
+--
+-- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE place_properties TO ticker;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO athena;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO coder;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO gem;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO gidget;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO iris;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO scout;
+
+--
+-- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE places TO ticker;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO athena;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO coder;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO gem;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO gidget;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO iris;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO scout;
+
+--
+-- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_positions TO ticker;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO athena;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO coder;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO gem;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO gidget;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO iris;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO scout;
+
+--
+-- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE portfolio_snapshots TO ticker;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO athena;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO coder;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO gem;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO gidget;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO iris;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO scout;
+
+--
+-- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE positions TO ticker;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO athena;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO coder;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO gem;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO gidget;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO iris;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO scout;
+
+--
+-- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE preferences TO ticker;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO athena;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO coder;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO gem;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO gidget;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO iris;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO scout;
+
+--
+-- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE price_cache_v2 TO ticker;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO athena;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO coder;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO gem;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO gidget;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO iris;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO scout;
+
+--
+-- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_entities TO ticker;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO athena;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO coder;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO gem;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO gidget;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO iris;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO scout;
+
+--
+-- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE project_tasks TO ticker;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO athena;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO coder;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO gem;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO gidget;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO iris;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO scout;
+
+--
+-- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE projects TO ticker;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO athena;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO coder;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO gem;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO gidget;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO iris;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO scout;
+
+--
+-- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE publications TO ticker;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO athena;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO coder;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO gem;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO gidget;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO iris;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO scout;
+
+--
+-- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE ralph_sessions TO ticker;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO athena;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO coder;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO gem;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO gidget;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO iris;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO scout;
+
+--
+-- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_history TO ticker;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO athena;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO coder;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO gem;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO gidget;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO iris;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO scout;
+
+--
+-- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_preferences TO ticker;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO athena;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO coder;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO gem;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO gidget;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO iris;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO scout;
+
+--
+-- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE shopping_wishlist TO ticker;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO athena;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO coder;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO gem;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO gidget;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO iris;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO scout;
+
+--
+-- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tags TO ticker;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO athena;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO coder;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO gem;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO gidget;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO iris;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO scout;
+
+--
+-- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE tasks TO ticker;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO athena;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO coder;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO gem;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO gidget;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO iris;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO scout;
+
+--
+-- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE unsolved_problems TO ticker;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO athena;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO coder;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO gem;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO gidget;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO iris;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO scout;
+
+--
+-- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vehicles TO ticker;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO athena;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO coder;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO gem;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO gidget;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO iris;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO scout;
+
+--
+-- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE vocabulary TO ticker;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE work_tags TO athena;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE work_tags TO coder;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE work_tags TO gem;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
+
+GRANT SELECT ON TABLE work_tags TO gidget;
+
+--
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE work_tags TO iris;
+
 --
--- Name: agents agent_config_changed; Type: TRIGGER; Schema: public; Owner: -
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER agent_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_agent_config_changed();
 
+GRANT SELECT ON TABLE work_tags TO scout;
 
 --
--- Name: agents agents_config_changed; Type: TRIGGER; Schema: public; Owner: -
+-- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER agents_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_agent_config_changed();
+GRANT SELECT ON TABLE work_tags TO ticker;
 
-
 --
--- Name: agents agents_delegation_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER agents_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
 
+GRANT SELECT ON TABLE workflow_steps TO athena;
 
 --
--- Name: agents agents_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER agents_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.update_agents_timestamp();
+GRANT SELECT ON TABLE workflow_steps TO coder;
 
-
 --
--- Name: git_issue_queue coder_queue_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER coder_queue_notify AFTER INSERT OR UPDATE ON public.git_issue_queue FOR EACH ROW EXECUTE FUNCTION public.notify_coder_queue_change();
 
+GRANT SELECT ON TABLE workflow_steps TO gem;
 
 --
--- Name: projects enforce_project_lock; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER enforce_project_lock BEFORE UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION public.prevent_locked_project_update();
+GRANT SELECT ON TABLE workflow_steps TO gidget;
 
-
 --
--- Name: gambling_entries gambling_entries_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER gambling_entries_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_entries FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
 
+GRANT SELECT ON TABLE workflow_steps TO iris;
 
 --
--- Name: gambling_logs gambling_logs_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER gambling_logs_notify AFTER INSERT OR DELETE OR UPDATE ON public.gambling_logs FOR EACH ROW EXECUTE FUNCTION public.notify_gambling_change();
+GRANT SELECT ON TABLE workflow_steps TO scout;
 
-
 --
--- Name: media_consumed media_search_update; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER media_search_update BEFORE INSERT OR UPDATE ON public.media_consumed FOR EACH ROW EXECUTE FUNCTION public.update_media_search_vector();
 
+GRANT SELECT ON TABLE workflow_steps TO ticker;
 
 --
--- Name: media_consumed media_search_vector_update; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER media_search_vector_update BEFORE INSERT OR UPDATE ON public.media_consumed FOR EACH ROW EXECUTE FUNCTION public.update_media_search_vector();
+GRANT SELECT ON TABLE workflows TO athena;
 
-
 --
--- Name: music_analysis music_analysis_search_update; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER music_analysis_search_update BEFORE INSERT OR UPDATE ON public.music_analysis FOR EACH ROW EXECUTE FUNCTION public.update_music_analysis_search_vector();
 
+GRANT SELECT ON TABLE workflows TO coder;
 
 --
--- Name: music_library music_search_update; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER music_search_update BEFORE INSERT OR UPDATE ON public.music_library FOR EACH ROW EXECUTE FUNCTION public.update_music_search_vector();
+GRANT SELECT ON TABLE workflows TO gem;
 
-
 --
--- Name: agent_bootstrap_context protect_bootstrap_context; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER protect_bootstrap_context BEFORE INSERT OR DELETE OR UPDATE ON public.agent_bootstrap_context FOR EACH ROW EXECUTE FUNCTION public.protect_bootstrap_context_writes();
 
+GRANT SELECT ON TABLE workflows TO gidget;
 
 --
--- Name: publications publication_status_update; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER publication_status_update AFTER INSERT ON public.publications FOR EACH ROW EXECUTE FUNCTION public.update_work_status_on_publication();
+GRANT SELECT ON TABLE workflows TO iris;
 
-
 --
--- Name: agent_system_config system_config_changed; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
-
-CREATE TRIGGER system_config_changed AFTER INSERT OR DELETE OR UPDATE ON public.agent_system_config FOR EACH ROW EXECUTE FUNCTION public.notify_system_config_changed();
 
+GRANT SELECT ON TABLE workflows TO scout;
 
 --
--- Name: agent_turn_context trg_agent_turn_context_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER trg_agent_turn_context_updated_at BEFORE UPDATE ON public.agent_turn_context FOR EACH ROW EXECUTE FUNCTION public.update_agent_turn_context_timestamp();
+GRANT SELECT ON TABLE workflows TO ticker;
 
+--
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE works TO athena;
+
 --
--- Name: agent_chat trg_embed_chat_message; Type: TRIGGER; Schema: public; Owner: -
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER trg_embed_chat_message AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.embed_chat_message();
+GRANT SELECT ON TABLE works TO coder;
 
-ALTER TABLE public.agent_chat DISABLE TRIGGER trg_embed_chat_message;
+--
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE works TO gem;
 
 --
--- Name: library_works trg_library_works_search; Type: TRIGGER; Schema: public; Owner: -
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE works TO gidget;
 
-CREATE TRIGGER trg_library_works_search BEFORE INSERT OR UPDATE ON public.library_works FOR EACH ROW EXECUTE FUNCTION public.library_works_search_trigger();
+--
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE works TO iris;
 
 --
--- Name: agent_chat trg_normalize_mentions; Type: TRIGGER; Schema: public; Owner: -
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER trg_normalize_mentions BEFORE INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.normalize_agent_chat_mentions();
+GRANT SELECT ON TABLE works TO scout;
 
+--
+-- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE works TO ticker;
+
 --
--- Name: agent_chat trg_notify_agent_chat; Type: TRIGGER; Schema: public; Owner: -
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER trg_notify_agent_chat AFTER INSERT ON public.agent_chat FOR EACH ROW EXECUTE FUNCTION public.notify_agent_chat();
+GRANT SELECT ON TABLE delegation_knowledge TO athena;
 
-ALTER TABLE public.agent_chat ENABLE ALWAYS TRIGGER trg_notify_agent_chat;
+--
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE delegation_knowledge TO coder;
 
 --
--- Name: workflow_steps workflow_step_change_trigger; Type: TRIGGER; Schema: public; Owner: -
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE delegation_knowledge TO gem;
 
-CREATE TRIGGER workflow_step_change_trigger AFTER UPDATE ON public.workflow_steps FOR EACH ROW EXECUTE FUNCTION public.notify_workflow_step_change();
+--
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE delegation_knowledge TO gidget;
 
 --
--- Name: workflow_steps workflow_steps_delegation_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER workflow_steps_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.workflow_steps FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
+GRANT SELECT ON TABLE delegation_knowledge TO iris;
 
+--
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE delegation_knowledge TO scout;
+
 --
--- Name: workflows workflows_delegation_notify; Type: TRIGGER; Schema: public; Owner: -
+-- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE delegation_knowledge TO ticker;
 
-CREATE TRIGGER workflows_delegation_notify AFTER INSERT OR DELETE OR UPDATE ON public.workflows FOR EACH ROW EXECUTE FUNCTION public.notify_delegation_change();
+--
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agent_chat_recent TO athena;
 
 --
--- Name: works works_calculate_counts; Type: TRIGGER; Schema: public; Owner: -
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE TRIGGER works_calculate_counts BEFORE INSERT OR UPDATE OF content ON public.works FOR EACH ROW EXECUTE FUNCTION public.calculate_word_count();
+GRANT SELECT ON TABLE v_agent_chat_recent TO coder;
+
+--
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_recent TO gem;
 
 --
--- Name: works works_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_agent_chat_recent TO gidget;
 
-CREATE TRIGGER works_updated_at BEFORE UPDATE ON public.works FOR EACH ROW EXECUTE FUNCTION public.update_works_timestamp();
+--
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_recent TO iris;
 
 --
--- Name: agent_actions agent_actions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_actions
-    ADD CONSTRAINT agent_actions_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.entities(id);
+GRANT SELECT ON TABLE v_agent_chat_recent TO newhart;
 
+--
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_agent_chat_recent TO "nova-staging";
+
 --
--- Name: agent_actions agent_actions_related_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_agent_chat_recent TO scout;
 
-ALTER TABLE ONLY public.agent_actions
-    ADD CONSTRAINT agent_actions_related_event_id_fkey FOREIGN KEY (related_event_id) REFERENCES public.events(id);
+--
+-- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_recent TO ticker;
 
 --
--- Name: agent_actions agent_actions_related_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_actions
-    ADD CONSTRAINT agent_actions_related_media_id_fkey FOREIGN KEY (related_media_id) REFERENCES public.media_consumed(id);
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agent_chat_stats TO athena;
+
+--
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_stats TO coder;
 
 --
--- Name: agent_aliases agent_aliases_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_agent_chat_stats TO gem;
 
-ALTER TABLE ONLY public.agent_aliases
-    ADD CONSTRAINT agent_aliases_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE;
+--
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_stats TO gidget;
 
 --
--- Name: agent_chat_processed agent_chat_processed_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_chat_processed
-    ADD CONSTRAINT agent_chat_processed_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.agent_chat(id);
+GRANT SELECT ON TABLE v_agent_chat_stats TO iris;
 
+--
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_stats TO newhart;
+
 --
--- Name: agent_chat agent_chat_reply_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_agent_chat_stats TO "nova-staging";
 
-ALTER TABLE ONLY public.agent_chat
-    ADD CONSTRAINT agent_chat_reply_to_fkey FOREIGN KEY (reply_to) REFERENCES public.agent_chat(id);
+--
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_chat_stats TO scout;
 
 --
--- Name: agent_domains agent_domains_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_domains
-    ADD CONSTRAINT agent_domains_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_agent_chat_stats TO ticker;
+
+--
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agent_spawn_stats TO athena;
 
 --
--- Name: agent_domains agent_domains_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_agent_spawn_stats TO coder;
 
-ALTER TABLE ONLY public.agent_domains
-    ADD CONSTRAINT agent_domains_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(id);
+--
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_spawn_stats TO gem;
 
 --
--- Name: agent_jobs agent_jobs_parent_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_jobs
-    ADD CONSTRAINT agent_jobs_parent_job_id_fkey FOREIGN KEY (parent_job_id) REFERENCES public.agent_jobs(id);
+GRANT SELECT ON TABLE v_agent_spawn_stats TO gidget;
 
+--
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_spawn_stats TO iris;
+
 --
--- Name: agent_jobs agent_jobs_root_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_agent_spawn_stats TO scout;
 
-ALTER TABLE ONLY public.agent_jobs
-    ADD CONSTRAINT agent_jobs_root_job_id_fkey FOREIGN KEY (root_job_id) REFERENCES public.agent_jobs(id);
+--
+-- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agent_spawn_stats TO ticker;
 
 --
--- Name: agent_spawns agent_spawns_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_spawns
-    ADD CONSTRAINT agent_spawns_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id);
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agents TO athena;
+
+--
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agents TO coder;
 
 --
--- Name: certificates certificates_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_agents TO gem;
 
-ALTER TABLE ONLY public.certificates
-    ADD CONSTRAINT certificates_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+--
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agents TO gidget;
 
 --
--- Name: git_issue_queue coder_issue_queue_parent_issue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.git_issue_queue
-    ADD CONSTRAINT coder_issue_queue_parent_issue_id_fkey FOREIGN KEY (parent_issue_id) REFERENCES public.git_issue_queue(id);
+GRANT SELECT ON TABLE v_agents TO iris;
 
+--
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agents TO newhart;
+
 --
--- Name: entity_fact_conflicts entity_fact_conflicts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_agents TO "nova-staging";
 
-ALTER TABLE ONLY public.entity_fact_conflicts
-    ADD CONSTRAINT entity_fact_conflicts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+--
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_agents TO scout;
 
 --
--- Name: entity_facts entity_facts_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.entity_facts
-    ADD CONSTRAINT entity_facts_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_agents TO ticker;
+
+--
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_entity_facts TO athena;
 
 --
--- Name: entity_facts entity_facts_source_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_entity_facts TO coder;
 
-ALTER TABLE ONLY public.entity_facts
-    ADD CONSTRAINT entity_facts_source_entity_id_fkey FOREIGN KEY (source_entity_id) REFERENCES public.entities(id);
+--
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_entity_facts TO gem;
 
 --
--- Name: entity_relationships entity_relationships_entity_a_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.entity_relationships
-    ADD CONSTRAINT entity_relationships_entity_a_fkey FOREIGN KEY (entity_a) REFERENCES public.entities(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_entity_facts TO gidget;
 
+--
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_entity_facts TO iris;
+
 --
--- Name: entity_relationships entity_relationships_entity_b_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_entity_facts TO newhart;
 
-ALTER TABLE ONLY public.entity_relationships
-    ADD CONSTRAINT entity_relationships_entity_b_fkey FOREIGN KEY (entity_b) REFERENCES public.entities(id) ON DELETE CASCADE;
+--
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_entity_facts TO "nova-staging";
 
 --
--- Name: event_entities event_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.event_entities
-    ADD CONSTRAINT event_entities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_entity_facts TO scout;
+
+--
+-- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_entity_facts TO ticker;
 
 --
--- Name: event_entities event_entities_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_event_timeline TO athena;
 
-ALTER TABLE ONLY public.event_entities
-    ADD CONSTRAINT event_entities_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+--
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_event_timeline TO coder;
 
 --
--- Name: event_places event_places_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.event_places
-    ADD CONSTRAINT event_places_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_event_timeline TO gem;
 
+--
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_event_timeline TO gidget;
+
 --
--- Name: event_places event_places_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_event_timeline TO iris;
 
-ALTER TABLE ONLY public.event_places
-    ADD CONSTRAINT event_places_place_id_fkey FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE;
+--
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_event_timeline TO newhart;
 
 --
--- Name: event_projects event_projects_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.event_projects
-    ADD CONSTRAINT event_projects_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_event_timeline TO "nova-staging";
+
+--
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_event_timeline TO scout;
 
 --
--- Name: event_projects event_projects_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_event_timeline TO ticker;
 
-ALTER TABLE ONLY public.event_projects
-    ADD CONSTRAINT event_projects_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+--
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_gambling_summary TO athena;
 
 --
--- Name: agent_modifications fk_agent_modifications_agent; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.agent_modifications
-    ADD CONSTRAINT fk_agent_modifications_agent FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_gambling_summary TO coder;
 
+--
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_gambling_summary TO gem;
+
 --
--- Name: gambling_entries gambling_entries_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_gambling_summary TO gidget;
 
-ALTER TABLE ONLY public.gambling_entries
-    ADD CONSTRAINT gambling_entries_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.gambling_logs(id) ON DELETE CASCADE;
+--
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_gambling_summary TO iris;
 
 --
--- Name: gambling_logs gambling_logs_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.gambling_logs
-    ADD CONSTRAINT gambling_logs_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_gambling_summary TO newhart;
+
+--
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_gambling_summary TO "nova-staging";
 
 --
--- Name: job_messages job_messages_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_gambling_summary TO scout;
 
-ALTER TABLE ONLY public.job_messages
-    ADD CONSTRAINT job_messages_job_id_fkey FOREIGN KEY (job_id) REFERENCES public.agent_jobs(id);
+--
+-- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_gambling_summary TO ticker;
 
 --
--- Name: job_messages job_messages_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.job_messages
-    ADD CONSTRAINT job_messages_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.agent_chat(id);
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_media_queue_pending TO athena;
 
+--
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_queue_pending TO coder;
+
 --
--- Name: library_work_authors library_work_authors_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_media_queue_pending TO gem;
 
-ALTER TABLE ONLY public.library_work_authors
-    ADD CONSTRAINT library_work_authors_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.library_authors(id) ON DELETE CASCADE;
+--
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_queue_pending TO gidget;
 
 --
--- Name: library_work_authors library_work_authors_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.library_work_authors
-    ADD CONSTRAINT library_work_authors_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_media_queue_pending TO iris;
+
+--
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_queue_pending TO newhart;
 
 --
--- Name: library_work_relationships library_work_relationships_from_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_media_queue_pending TO "nova-staging";
 
-ALTER TABLE ONLY public.library_work_relationships
-    ADD CONSTRAINT library_work_relationships_from_work_id_fkey FOREIGN KEY (from_work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+--
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_queue_pending TO scout;
 
 --
--- Name: library_work_relationships library_work_relationships_to_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.library_work_relationships
-    ADD CONSTRAINT library_work_relationships_to_work_id_fkey FOREIGN KEY (to_work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_media_queue_pending TO ticker;
 
+--
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_media_with_tags TO athena;
+
 --
--- Name: library_work_tags library_work_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_media_with_tags TO coder;
 
-ALTER TABLE ONLY public.library_work_tags
-    ADD CONSTRAINT library_work_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.library_tags(id) ON DELETE CASCADE;
+--
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_with_tags TO gem;
 
 --
--- Name: library_work_tags library_work_tags_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.library_work_tags
-    ADD CONSTRAINT library_work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.library_works(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_media_with_tags TO gidget;
+
+--
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_with_tags TO iris;
 
 --
--- Name: media_consumed media_consumed_consumed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_media_with_tags TO newhart;
 
-ALTER TABLE ONLY public.media_consumed
-    ADD CONSTRAINT media_consumed_consumed_by_fkey FOREIGN KEY (consumed_by) REFERENCES public.entities(id);
+--
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_media_with_tags TO "nova-staging";
 
 --
--- Name: media_consumed media_consumed_ingested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.media_consumed
-    ADD CONSTRAINT media_consumed_ingested_by_fkey FOREIGN KEY (ingested_by) REFERENCES public.agents(id);
+GRANT SELECT ON TABLE v_media_with_tags TO scout;
 
+--
+-- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_media_with_tags TO ticker;
+
 --
--- Name: media_queue media_queue_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_metamours TO athena;
 
-ALTER TABLE ONLY public.media_queue
-    ADD CONSTRAINT media_queue_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.entities(id);
+--
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_metamours TO coder;
 
 --
--- Name: media_queue media_queue_result_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.media_queue
-    ADD CONSTRAINT media_queue_result_media_id_fkey FOREIGN KEY (result_media_id) REFERENCES public.media_consumed(id);
+GRANT SELECT ON TABLE v_metamours TO gem;
+
+--
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_metamours TO gidget;
 
 --
--- Name: media_tags media_tags_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_metamours TO iris;
 
-ALTER TABLE ONLY public.media_tags
-    ADD CONSTRAINT media_tags_media_id_fkey FOREIGN KEY (media_id) REFERENCES public.media_consumed(id) ON DELETE CASCADE;
+--
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_metamours TO scout;
 
 --
--- Name: motivation_d100 motivation_d100_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.motivation_d100
-    ADD CONSTRAINT motivation_d100_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES public.workflows(id);
+GRANT SELECT ON TABLE v_metamours TO ticker;
 
+--
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_tasks TO athena;
+
 --
--- Name: music_analysis music_analysis_analyzed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_pending_tasks TO coder;
 
-ALTER TABLE ONLY public.music_analysis
-    ADD CONSTRAINT music_analysis_analyzed_by_fkey FOREIGN KEY (analyzed_by) REFERENCES public.agents(id);
+--
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_tasks TO gem;
 
 --
--- Name: music_analysis music_analysis_music_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.music_analysis
-    ADD CONSTRAINT music_analysis_music_id_fkey FOREIGN KEY (music_id) REFERENCES public.music_library(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_pending_tasks TO gidget;
+
+--
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_tasks TO iris;
 
 --
--- Name: music_library music_library_media_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_pending_tasks TO scout;
 
-ALTER TABLE ONLY public.music_library
-    ADD CONSTRAINT music_library_media_id_fkey FOREIGN KEY (media_id) REFERENCES public.media_consumed(id) ON DELETE CASCADE;
+--
+-- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_tasks TO ticker;
 
 --
--- Name: place_properties place_properties_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.place_properties
-    ADD CONSTRAINT place_properties_place_id_fkey FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_pending_test_failures TO athena;
 
+--
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_test_failures TO coder;
+
 --
--- Name: places places_parent_place_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_pending_test_failures TO gem;
 
-ALTER TABLE ONLY public.places
-    ADD CONSTRAINT places_parent_place_id_fkey FOREIGN KEY (parent_place_id) REFERENCES public.places(id);
+--
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_test_failures TO gidget;
 
 --
--- Name: preferences preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.preferences
-    ADD CONSTRAINT preferences_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_pending_test_failures TO iris;
+
+--
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_pending_test_failures TO scout;
 
 --
--- Name: project_entities project_entities_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_pending_test_failures TO ticker;
 
-ALTER TABLE ONLY public.project_entities
-    ADD CONSTRAINT project_entities_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+--
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_portfolio_allocation TO athena;
 
 --
--- Name: project_entities project_entities_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.project_entities
-    ADD CONSTRAINT project_entities_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_portfolio_allocation TO coder;
 
+--
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_portfolio_allocation TO gem;
+
 --
--- Name: project_tasks project_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_portfolio_allocation TO gidget;
 
-ALTER TABLE ONLY public.project_tasks
-    ADD CONSTRAINT project_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+--
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_portfolio_allocation TO iris;
 
 --
--- Name: publications publications_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.publications
-    ADD CONSTRAINT publications_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_portfolio_allocation TO newhart;
+
+--
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_portfolio_allocation TO "nova-staging";
 
 --
--- Name: shopping_history shopping_history_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_portfolio_allocation TO scout;
 
-ALTER TABLE ONLY public.shopping_history
-    ADD CONSTRAINT shopping_history_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+--
+-- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_portfolio_allocation TO ticker;
 
 --
--- Name: shopping_preferences shopping_preferences_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.shopping_preferences
-    ADD CONSTRAINT shopping_preferences_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_ralph_active TO athena;
 
+--
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_ralph_active TO coder;
+
 --
--- Name: shopping_wishlist shopping_wishlist_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_ralph_active TO gem;
 
-ALTER TABLE ONLY public.shopping_wishlist
-    ADD CONSTRAINT shopping_wishlist_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+--
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_ralph_active TO gidget;
 
 --
--- Name: tasks tasks_assigned_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.entities(id);
+GRANT SELECT ON TABLE v_ralph_active TO iris;
+
+--
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_ralph_active TO "nova-staging";
 
 --
--- Name: tasks tasks_blocked_on_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_ralph_active TO scout;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_blocked_on_fkey FOREIGN KEY (blocked_on) REFERENCES public.entities(id);
+--
+-- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_ralph_active TO ticker;
 
 --
--- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.entities(id);
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_relationships TO athena;
 
+--
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_relationships TO coder;
+
 --
--- Name: tasks tasks_parent_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_relationships TO gem;
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_parent_task_id_fkey FOREIGN KEY (parent_task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;
+--
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_relationships TO gidget;
 
 --
--- Name: tasks tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
+GRANT SELECT ON TABLE v_relationships TO iris;
+
+--
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_relationships TO newhart;
 
 --
--- Name: vehicles vehicles_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_relationships TO "nova-staging";
 
-ALTER TABLE ONLY public.vehicles
-    ADD CONSTRAINT vehicles_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.entities(id);
+--
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_relationships TO scout;
 
 --
--- Name: work_tags work_tags_tag_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.work_tags
-    ADD CONSTRAINT work_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
+GRANT SELECT ON TABLE v_relationships TO ticker;
 
+--
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_task_tree TO athena;
+
 --
--- Name: work_tags work_tags_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_task_tree TO coder;
 
-ALTER TABLE ONLY public.work_tags
-    ADD CONSTRAINT work_tags_work_id_fkey FOREIGN KEY (work_id) REFERENCES public.works(id) ON DELETE CASCADE;
+--
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_task_tree TO gem;
 
 --
--- Name: workflow_steps workflow_steps_handoff_to_step_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.workflow_steps
-    ADD CONSTRAINT workflow_steps_handoff_to_step_fkey FOREIGN KEY (handoff_to_step) REFERENCES public.workflow_steps(id);
+GRANT SELECT ON TABLE v_task_tree TO gidget;
+
+--
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_task_tree TO iris;
 
 --
--- Name: workflow_steps workflow_steps_workflow_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_task_tree TO newhart;
 
-ALTER TABLE ONLY public.workflow_steps
-    ADD CONSTRAINT workflow_steps_workflow_id_fkey FOREIGN KEY (workflow_id) REFERENCES public.workflows(id) ON DELETE CASCADE;
+--
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_task_tree TO "nova-staging";
 
 --
--- Name: works works_parent_work_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE ONLY public.works
-    ADD CONSTRAINT works_parent_work_id_fkey FOREIGN KEY (parent_work_id) REFERENCES public.works(id) ON DELETE SET NULL;
+GRANT SELECT ON TABLE v_task_tree TO scout;
 
+--
+-- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_task_tree TO ticker;
+
 --
--- Name: agent_jobs; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER TABLE public.agent_jobs ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON TABLE v_users TO athena;
 
 --
--- Name: agent_chat_pub; Type: PUBLICATION; Schema: -; Owner: -
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_users TO coder;
 
-CREATE PUBLICATION agent_chat_pub WITH (publish = 'insert, update, delete, truncate');
+--
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_users TO gem;
 
 --
--- Name: graybeard_sync_pub; Type: PUBLICATION; Schema: -; Owner: -
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE PUBLICATION graybeard_sync_pub WITH (publish = 'insert, update, delete, truncate');
+GRANT SELECT ON TABLE v_users TO gidget;
+
+--
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_users TO iris;
 
 --
--- Name: graybeard_sync_pub agent_bootstrap_context; Type: PUBLICATION TABLE; Schema: public; Owner: -
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE v_users TO scout;
 
-ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agent_bootstrap_context WHERE (((context_type = 'UNIVERSAL'::text) OR ((context_type = 'AGENT'::text) AND (agent_name = 'graybeard'::text))));
+--
+-- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE v_users TO ticker;
 
 --
--- Name: agent_chat_pub agent_chat; Type: PUBLICATION TABLE; Schema: public; Owner: -
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-ALTER PUBLICATION agent_chat_pub ADD TABLE ONLY public.agent_chat;
+GRANT SELECT ON TABLE workflow_steps_detail TO athena;
 
+--
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE workflow_steps_detail TO coder;
+
 --
--- Name: graybeard_sync_pub agent_turn_context; Type: PUBLICATION TABLE; Schema: public; Owner: -
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
+
+GRANT SELECT ON TABLE workflow_steps_detail TO gem;
 
-ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agent_turn_context WHERE (((context_type = 'UNIVERSAL'::text) OR ((context_type = 'AGENT'::text) AND (context_key = 'graybeard'::text))));
+--
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE workflow_steps_detail TO gidget;
 
 --
--- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: -
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-CREATE EVENT TRIGGER schema_change_trigger ON ddl_command_end
-   EXECUTE FUNCTION public.notify_schema_change();
+GRANT SELECT ON TABLE workflow_steps_detail TO iris;
+
+--
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
+--
 
+GRANT SELECT ON TABLE workflow_steps_detail TO scout;
 
 --
--- PostgreSQL database dump complete
+-- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-\unrestrict gTRYCYrdxDe2fg6GM9bUfKtxYeB857LLKNmqkvTjxwqzRMcCqQ9kpJbINGku9y9
+GRANT SELECT ON TABLE workflow_steps_detail TO ticker;
 
