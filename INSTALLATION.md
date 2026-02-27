@@ -463,7 +463,7 @@ vim schema/schema.sql  # change 'foo' → 'bar' in the CREATE TABLE
 
 ### Plan Validation
 
-The installer first attempts `pg-schema-diff plan` with plan validation enabled (requires `CREATEDB` privilege — pg-schema-diff creates a temporary database to validate the plan). If that fails, it retries with `--disable-plan-validation` and logs a warning. The schema is still applied safely without validation.
+The installer requires `CREATEDB` privilege for the database user. pg-schema-diff uses this to create a temporary database for plan validation, ensuring that schema changes are safe before applying them. The installer checks for this privilege during prerequisites and fails early with a clear error message if it's missing.
 
 ## Architecture
 

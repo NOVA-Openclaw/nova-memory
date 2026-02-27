@@ -45,7 +45,7 @@ Testing will be performed in a controlled environment using temporary PostgreSQL
 | ID | Title | Description | Expected Result |
 |---|---|---|---|
 | VAL-01 | Successful Validation | Run installer where user has `CREATEDB`. | `pg-schema-diff` validates the plan using a temporary database. |
-| VAL-02 | Validation Fallback | Run installer where validation fails (e.g. temporary DB creation blocked). | Installer catches the failure, fallback to `--disable-plan-validation` is triggered with a warning, and apply continues. |
+| VAL-02 | Missing CREATEDB | Run installer where user lacks `CREATEDB` privilege. | Installer fails during prerequisites with a clear error message and instructions to grant `CREATEDB`. |
 
 ### 6. Domain-Specific (nova-memory)
 | ID | Title | Description | Expected Result |
@@ -65,5 +65,5 @@ Testing will be performed in a controlled environment using temporary PostgreSQL
 - [ ] Installer successfully uses `pg-schema-diff` for fresh and incremental schema updates.
 - [ ] All pre-migration scripts in `pre-migrations/` are executed before the schema diff.
 - [ ] Hazardous changes are detected and warned but not auto-applied.
-- [ ] Plan validation fallbacks work as intended.
+- [ ] CREATEDB prerequisite check fails early with clear instructions when missing.
 - [ ] All test cases listed above pass in a staging/test environment.
