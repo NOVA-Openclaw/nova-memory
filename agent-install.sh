@@ -704,14 +704,37 @@ echo "Applying schema (pg-schema-diff)..."
 PLAN_JSON=""
 PLAN_EXIT_CODE=0
 
-# pg-schema-diff cannot parse pg_dump's \restrict/\unrestrict meta-commands
-# Create a temp copy with those lines stripped
+# Extensions must be created BEFORE the schema diff because:
+# 1. pg-schema-diff plan validation replays schema in a temp DB — CREATE EXTENSION requires superuser
+# 2. The target DB needs extensions present so pg-schema-diff can reference their types (e.g., vector)
+echo "  Ensuring required extensions..."
+EXTENSIONS_NEEDED=()
+while IFS= read -r ext; do
+    [ -n "$ext" ] && EXTENSIONS_NEEDED+=("$ext")
+done < <(grep -oP '(?<=CREATE EXTENSION IF NOT EXISTS )\S+' "$SCHEMA_DIR"/*.sql 2>/dev/null | sort -u)
+
+for ext in "${EXTENSIONS_NEEDED[@]}"; do
+    if psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT 1 FROM pg_extension WHERE extname = '$ext'" | grep -q 1; then
+        echo -e "  ${CHECK_MARK} Extension '$ext' already installed"
+    else
+        if psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS $ext" 2>/dev/null; then
+            echo -e "  ${CHECK_MARK} Extension '$ext' installed"
+        else
+            echo -e "  ${WARNING} Could not install extension '$ext' (may require superuser)"
+            echo "      Try: sudo -u postgres psql -d $DB_NAME -c \"CREATE EXTENSION IF NOT EXISTS $ext;\""
+        fi
+    fi
+done
+
+# pg-schema-diff cannot parse pg_dump meta-commands (\restrict/\unrestrict) or handle
+# CREATE EXTENSION (requires superuser in temp validation DB). Create a cleaned copy
+# with those lines stripped — extensions are handled above.
 SCHEMA_CLEAN_DIR=$(mktemp -d)
 cleanup_schema_tmp() { rm -rf "$SCHEMA_CLEAN_DIR"; }
 trap cleanup_schema_tmp EXIT
 for f in "$SCHEMA_DIR"/*.sql; do
     [ -f "$f" ] || continue
-    sed '/^\\restrict/d;/^\\unrestrict/d' "$f" > "$SCHEMA_CLEAN_DIR/$(basename "$f")"
+    sed '/^\\restrict/d;/^\\unrestrict/d;/^CREATE EXTENSION /d;/^COMMENT ON EXTENSION /d' "$f" > "$SCHEMA_CLEAN_DIR/$(basename "$f")"
 done
 SCHEMA_DIR_FOR_DIFF="$SCHEMA_CLEAN_DIR"
 
