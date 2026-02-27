@@ -35,16 +35,23 @@ Before installing nova-memory, ensure you have the following:
 
 - **jq** - JSON processor for config patching
   - Install: `sudo apt install jq`
-  - Required for automatic OpenClaw config patching
+  - Required for automatic OpenClaw config patching and hazard output parsing
+
+### Schema Management Tool (Required)
+
+- **`pg-schema-diff`** — Stripe's declarative schema diff tool. Used by `agent-install.sh` to apply schema changes safely.
+  - macOS: `brew install pg-schema-diff`
+  - Linux/Go: `go install github.com/stripe/pg-schema-diff/cmd/pg-schema-diff@latest`
+  - The installer will fail with a clear error if this is not in your `PATH`.
 
 ## Quick Install
 
 ```bash
 cd ~/.openclaw/workspace/nova-memory
-./install.sh
+./agent-install.sh
 ```
 
-The installer is **idempotent** - safe to run multiple times.
+The installer is **idempotent** — safe to run multiple times.
 
 ## Recent Changes
 
@@ -164,7 +171,7 @@ Created `install.sh` - a fully idempotent installer that:
 #### Database Setup (Idempotent)
 - Creates database named `{username}_memory` (e.g., `nova_memory`, `argus_memory`)
 - Automatically replaces hyphens with underscores (e.g., `nova-staging` → `nova_staging_memory`)
-- Applies `schema.sql` (safe to run multiple times)
+- Applies `schema/schema.sql` declaratively via `pg-schema-diff` (detects hazards before applying; safe to run multiple times)
 - Reports what was created vs what already existed
 - Counts total tables in database
 
@@ -364,7 +371,7 @@ The schema includes **commented-out IVFFlat indexes** for semantic search perfor
 IVFFlat indexes divide vectors into clusters (lists). The default configuration uses 100 lists:
 
 ```sql
--- Currently commented out in schema.sql
+-- Currently commented out in schema/schema.sql
 -- CREATE INDEX idx_memory_embeddings_vector ON public.memory_embeddings 
 --   USING ivfflat (embedding public.vector_cosine_ops) WITH (lists='100');
 ```
@@ -405,6 +412,59 @@ SELECT COUNT(*) FROM memory_embeddings;
 - **With index (> 1000 rows):** Significant speedup for semantic search
 - **With index (< 100 rows):** Queries break, return wrong results ❌
 
+## Schema Management
+
+Nova-memory uses [`pg-schema-diff`](https://github.com/stripe/pg-schema-diff) (Stripe's declarative schema diff tool) to apply schema changes. The schema source of truth is `schema/schema.sql`.
+
+### How It Works
+
+The installer follows this sequence on every run:
+
+1. **Prerequisites check** — verifies `pg-schema-diff` is in `PATH`, exits with error if not
+2. **Database create/connect** — creates the database if it doesn't exist
+3. **Pre-migrations** — runs numbered SQL scripts in `pre-migrations/` in lexicographical order (e.g. `001_foo.sql`, `002_bar.sql`)
+4. **Schema plan** — runs `pg-schema-diff plan` to compute the diff and check for hazards
+5. **Schema apply** — if no hazards are detected, runs `pg-schema-diff apply`; if hazards exist, the apply is **skipped** with a warning
+
+### Hazard Handling (All-or-Nothing)
+
+`pg-schema-diff` is **all-or-nothing**: if any statement in the plan is hazardous (e.g. column drop, data-loss rename), the **entire apply is skipped**. Safe statements in the same plan are NOT applied either.
+
+When hazards are detected, the installer:
+- Prints each hazardous SQL statement and its hazard type
+- Explains how to resolve via `pre-migrations/`
+- Continues with the rest of installation (hooks, scripts, etc.) — the system remains functional with the existing schema
+
+### The `pre-migrations/` Directory
+
+`pre-migrations/` contains numbered SQL scripts that run before the schema diff. Use them for:
+
+- **Column or table renames** — `pg-schema-diff` treats renames as drop+add (a hazard). Add a script with `ALTER TABLE ... RENAME COLUMN` to perform the rename manually, then update `schema/schema.sql` to use the new name.
+- **Data backfills** — populate new columns before making them `NOT NULL`
+- **Other destructive operations** — drops that need data preservation
+
+**Naming convention:** `NNN_description.sql` where `NNN` is a zero-padded number (e.g. `001_rename_user_id_to_entity_id.sql`). Scripts run in lexicographical order.
+
+**Example rename workflow:**
+
+```bash
+# 1. Create pre-migration script
+cat > pre-migrations/001_rename_foo_to_bar.sql << 'EOF'
+ALTER TABLE my_table RENAME COLUMN foo TO bar;
+EOF
+
+# 2. Update the schema to reflect the new name
+vim schema/schema.sql  # change 'foo' → 'bar' in the CREATE TABLE
+
+# 3. Re-run the installer
+./agent-install.sh
+# Order: pre-migration renames 'foo'→'bar', then schema diff sees no rename needed
+```
+
+### Plan Validation
+
+The installer first attempts `pg-schema-diff plan` with plan validation enabled (requires `CREATEDB` privilege — pg-schema-diff creates a temporary database to validate the plan). If that fails, it retries with `--disable-plan-validation` and logs a warning. The schema is still applied safely without validation.
+
 ## Architecture
 
 ### Source Repository
@@ -414,9 +474,12 @@ nova-memory/
 ├── agent-install.sh        # Primary installer for AI agents
 ├── shell-install.sh        # Human-facing installer (prompts for config, then execs agent-install.sh)
 ├── verify-installation.sh  # Verification script
-├── schema.sql              # Database schema (idempotent)
-├── migrations/             # Incremental schema migrations (applied by agent-install.sh)
-│   └── 065_agent_turn_context.sql  # agent_turn_context table + get_agent_turn_context()
+├── schema/
+│   └── schema.sql          # Declarative schema (managed by pg-schema-diff)
+├── pre-migrations/         # Numbered SQL scripts run BEFORE the schema diff
+│   └── .gitkeep            # (add scripts here for renames, data migrations, etc.)
+├── migrations/             # Legacy incremental migrations (historical reference)
+│   └── 065_agent_turn_context.sql
 ├── hooks/                  # OpenClaw hooks (source)
 │   ├── memory-extract/     # Extracts memories from messages
 │   ├── semantic-recall/    # Recalls relevant context

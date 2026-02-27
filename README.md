@@ -14,6 +14,9 @@ A PostgreSQL-based long-term memory system for AI assistants, with natural langu
 - PostgreSQL 12+ with `pgvector` extension
 - `psql` command-line client
 - `jq` for JSON config parsing
+- **`pg-schema-diff`** — Stripe's declarative schema diff tool (required for schema management)
+  - macOS: `brew install pg-schema-diff`
+  - Linux/Go: `go install github.com/stripe/pg-schema-diff/cmd/pg-schema-diff@latest`
 
 ### Installer Entry Points
 
@@ -36,7 +39,8 @@ This is the human-facing wrapper. It:
 This is the actual installer. It:
 - Installs shared library files to `~/.openclaw/lib/` (pg-env.sh, pg_env.py, env-loader.sh, etc.)
 - Creates and initializes the database (named `{username}_memory` by default)
-- Applies schema with all tables (entities, facts, places, events, lessons, etc.)
+- Runs any `pre-migrations/` SQL scripts (for renames and other operations `pg-schema-diff` can't handle declaratively)
+- Applies schema declaratively via `pg-schema-diff` (detects hazards before applying, skips apply if any are found)
 - Installs hooks to OpenClaw hooks directory
 - Copies scripts to `~/.openclaw/scripts/` and workspace `scripts/`
 - Installs grammar parser to `~/.local/share/$USER/grammar_parser/`
@@ -51,7 +55,7 @@ This is the actual installer. It:
 - `--force` — Force overwrite existing files
 - `--database NAME` or `-d NAME` — Override database name (default: `${USER}_memory`)
 
-> **Upgrading?** Re-running `agent-install.sh` on an existing installation is safe. It automatically detects and applies any missing schema columns — no manual `ALTER TABLE` commands needed. (#127)
+> **Upgrading?** Re-running `agent-install.sh` on an existing installation is safe. It uses `pg-schema-diff` to declaratively apply only the changes needed — no manual `ALTER TABLE` commands required. If any destructive changes are detected (drops, renames), the schema apply is skipped and the installer prints a warning; use `pre-migrations/` scripts to handle those cases manually.
 
 **After installation, enable the hooks** (the installer auto-enables these if `enable-hooks.sh` succeeds; run manually if needed):
 ```bash
@@ -80,7 +84,7 @@ cd nova-memory
 DB_USER=$(whoami)
 DB_NAME="${DB_USER//-/_}_memory"
 createdb "$DB_NAME"
-psql -d "$DB_NAME" -f schema.sql
+pg-schema-diff apply --from-dsn "postgres://${DB_USER}@/${DB_NAME}?host=/var/run/postgresql" --to-dir schema/ --skip-confirm-prompt
 
 # 3. Set your Anthropic API key
 export ANTHROPIC_API_KEY="your-key-here"
@@ -152,7 +156,7 @@ This system allows an AI to:
 
 ## Database Schema
 
-The schema (`schema.sql`) includes tables for:
+The schema (`schema/schema.sql`) includes tables for:
 
 - **entities** - People, AIs, organizations, pets, stuffed animals
 - **entity_facts** - Key-value facts about entities
@@ -714,12 +718,17 @@ FROM artwork ORDER BY created_at DESC LIMIT 5;
 ### Setup
 
 ```bash
-# Create database
+# Create database (substituting your OS username)
 createdb nova_memory
 
-# Apply schema
-psql -d nova_memory -f schema.sql
+# Apply schema declaratively via pg-schema-diff
+pg-schema-diff apply \
+  --from-dsn "postgres://nova@/nova_memory?host=/var/run/postgresql" \
+  --to-dir schema/ \
+  --skip-confirm-prompt
 ```
+
+> **Tip:** Use `./agent-install.sh` instead of running these commands manually — it handles database creation, pre-migrations, schema application, and hook installation in the correct order.
 
 ## Extraction Scripts
 
@@ -768,14 +777,32 @@ Combined pipeline: extract → store.
 
 ## Schema Updates
 
-When modifying the schema, update both your local database and this repository:
+The schema lives in `schema/schema.sql`. To update your local database after editing the schema file, re-run the installer:
 
 ```bash
-# After modifying schema.sql
-psql -d nova_memory -f schema.sql
-git add schema.sql && git commit -m "Update schema: [description]"
+# Re-run installer — it will apply only the changes needed
+./agent-install.sh
+```
+
+Or apply directly with `pg-schema-diff`:
+
+```bash
+# Plan first to check for hazards
+pg-schema-diff plan \
+  --from-dsn "postgres://nova@/nova_memory?host=/var/run/postgresql" \
+  --to-dir schema/
+
+# Apply if no hazards
+pg-schema-diff apply \
+  --from-dsn "postgres://nova@/nova_memory?host=/var/run/postgresql" \
+  --to-dir schema/ \
+  --skip-confirm-prompt
+
+git add schema/schema.sql && git commit -m "schema: [description]"
 git push
 ```
+
+> **⚠️ Renames and drops:** `pg-schema-diff` treats column/table renames as drop+add, which are flagged as hazards. To rename a column, add a numbered SQL script to `pre-migrations/` (e.g., `pre-migrations/001_rename_foo.sql`) that performs the `ALTER TABLE ... RENAME COLUMN` manually, then update `schema/schema.sql` to reflect the new name. The installer runs pre-migrations before the schema diff, so the diff will see the column already in its final name and apply cleanly.
 
 ## OpenClaw Hooks (Automatic Extraction)
 
@@ -900,9 +927,10 @@ For AI agents using this system with OpenClaw (or similar frameworks), **include
 ### Maintenance
 
 When you modify the schema:
-1. Update `schema.sql` in this repo
-2. Update your local `MEMORY.md` schema section
-3. Both should stay in sync
+1. Update `schema/schema.sql` in this repo
+2. Re-run `./agent-install.sh` to apply changes to your local database
+3. Update your local `MEMORY.md` schema section
+4. Both should stay in sync
 
 ### Where to Put It
 

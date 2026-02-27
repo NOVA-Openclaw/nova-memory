@@ -120,7 +120,7 @@ Context: [Last 20 messages for reference resolution]
 |---------|----------|----------|
 | Constraint violations | UNIQUE constraint errors | Normal - deduplication working correctly |
 | Connection failures | psql connection errors | Check PostgreSQL service and database credentials |
-| Malformed data | Data truncation warnings | Increase column sizes in schema.sql |
+| Malformed data | Data truncation warnings | Increase column sizes in `schema/schema.sql`, then re-run `./agent-install.sh` |
 | Performance issues | Slow inserts | Add indexes: `CREATE INDEX ON entities(name)` |
 
 ## Context Window System
@@ -167,9 +167,9 @@ Extraction: {"preferences": [{"holder": "user", "subject": "retro-futuristic aes
 ### Prerequisites
 
 ```bash
-# 1. PostgreSQL with nova_memory database
-createdb nova_memory
-psql -d nova_memory -f ~/.openclaw/workspace/nova-memory/schema.sql
+# 1. PostgreSQL with nova_memory database — use the installer (handles schema application)
+cd ~/.openclaw/workspace/nova-memory
+./agent-install.sh
 
 # 2. Anthropic API key
 export ANTHROPIC_API_KEY="your-key-here"
