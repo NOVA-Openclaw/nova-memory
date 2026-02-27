@@ -655,41 +655,31 @@ WHERE status NOT IN ('active', 'paused', 'completed', 'blocked');
 
 ## Migration Patterns
 
-Nova-memory uses **declarative schema management** via [`pg-schema-diff`](https://github.com/stripe/pg-schema-diff). The source of truth is `schema/schema.sql`; changes are applied by running `./agent-install.sh` (or `pg-schema-diff apply` directly).
-
 ### Adding New Columns
 
-Edit `schema/schema.sql` to add the column to the `CREATE TABLE` statement, then re-run the installer:
+```sql
+-- Safe column addition (doesn't block reads)
+ALTER TABLE entities ADD COLUMN avatar_url TEXT;
 
-```bash
-# Re-run installer — applies only the delta
-./agent-install.sh
+-- Add with default and update in batches
+ALTER TABLE entities ADD COLUMN last_seen TIMESTAMP DEFAULT NOW();
 ```
 
-`pg-schema-diff` generates the `ALTER TABLE ... ADD COLUMN` statement automatically and applies it safely.
-
-### Renaming Columns or Tables
-
-`pg-schema-diff` treats renames as **drop + add**, which is flagged as a hazard. Handle renames via a pre-migration script:
-
-1. Create a numbered script in `pre-migrations/`, e.g. `pre-migrations/001_rename_foo_to_bar.sql`:
+### Schema Versioning
 
 ```sql
--- Rename column: entities.foo → entities.bar
-ALTER TABLE entities RENAME COLUMN foo TO bar;
+-- Track schema versions
+CREATE TABLE schema_versions (
+    version VARCHAR(20) PRIMARY KEY,
+    description TEXT,
+    applied_at TIMESTAMP DEFAULT NOW()
+);
+
+INSERT INTO schema_versions (version, description) 
+VALUES ('2026-02-08', 'Added collaborative column to agents table');
 ```
 
-2. Update `schema/schema.sql` to use the new column name.
-
-3. Re-run the installer. Pre-migrations run before the schema diff, so `pg-schema-diff` will see the column already in its final name and apply cleanly.
-
-### Dropping Columns or Tables
-
-Drops are also hazards. Use a pre-migration script to drop the column first, then remove it from `schema/schema.sql`. The schema diff will then see no difference for that column.
-
 ### Data Migration Scripts
-
-Pure data migrations (no schema changes) can also go in `pre-migrations/`:
 
 ```sql
 -- Example: Migrate old project format

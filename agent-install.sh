@@ -177,6 +177,116 @@ echo "════════════════════════�
 echo ""
 
 # ============================================
+# Schema Migration Function
+# ============================================
+
+migrate_schema() {
+    echo ""
+    echo "  Checking for schema migrations..."
+    local MIGRATIONS_APPLIED=0
+
+    # Helper: run a psql command and return its output
+    _psql() {
+        psql -U "$DB_USER" -d "$DB_NAME" -tAc "$1" 2>&1
+    }
+
+    # Helper: check whether a column exists in a table
+    _col_exists() {
+        local tbl="$1" col="$2"
+        _psql "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='$tbl' AND column_name='$col';" | tr -d '[:space:]'
+    }
+
+    # ----------------------------------------------------------------
+    # agents table — column migrations
+    # ----------------------------------------------------------------
+
+    # fallback_models TEXT[]
+    if [ "$(_col_exists agents fallback_models)" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c \
+            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS fallback_models TEXT[];" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added column 'fallback_models' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # thinking VARCHAR(20)
+    if [ "$(_col_exists agents thinking)" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c \
+            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS thinking VARCHAR(20);" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added column 'thinking' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # pronouns VARCHAR(50)
+    if [ "$(_col_exists agents pronouns)" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c \
+            "ALTER TABLE agents ADD COLUMN IF NOT EXISTS pronouns VARCHAR(50);" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added column 'pronouns' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # ----------------------------------------------------------------
+    # agents table — CHECK constraint for thinking (if not exists)
+    # ----------------------------------------------------------------
+    CONSTRAINT_EXISTS=$(_psql "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'agents_thinking_check';" | tr -d '[:space:]')
+    if [ "$CONSTRAINT_EXISTS" = "0" ]; then
+        psql -U "$DB_USER" -d "$DB_NAME" -c "
+DO \$\$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'agents_thinking_check') THEN
+        ALTER TABLE agents ADD CONSTRAINT agents_thinking_check
+            CHECK (thinking IN ('off', 'minimal', 'low', 'medium', 'high', 'xhigh'));
+    END IF;
+END \$\$;" > /dev/null 2>&1
+        echo -e "  ${CHECK_MARK} Added constraint 'agents_thinking_check' to 'agents'"
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+    fi
+
+    # ----------------------------------------------------------------
+    # agents table — data migration: fallback_model -> fallback_models
+    # ----------------------------------------------------------------
+    if [ "$(_col_exists agents fallback_model)" = "1" ] && [ "$(_col_exists agents fallback_models)" = "1" ]; then
+        MIGRATED_ROWS=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "
+WITH updated AS (
+    UPDATE agents
+    SET fallback_models = ARRAY[fallback_model]
+    WHERE fallback_model IS NOT NULL
+      AND fallback_model != ''
+      AND fallback_models IS NULL
+    RETURNING 1
+)
+SELECT COUNT(*) FROM updated;" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$MIGRATED_ROWS" ] && [ "$MIGRATED_ROWS" -gt 0 ] 2>/dev/null; then
+            echo -e "  ${CHECK_MARK} Migrated $MIGRATED_ROWS row(s) from 'fallback_model' to 'fallback_models'"
+            MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+        fi
+    fi
+
+    # ----------------------------------------------------------------
+    # agent_turn_context table (issue #143)
+    # ----------------------------------------------------------------
+    TABLE_EXISTS=$(_psql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='agent_turn_context';" | tr -d '[:space:]')
+    if [ "$TABLE_EXISTS" = "0" ]; then
+        MIGRATION_FILE="$SCRIPT_DIR/migrations/065_agent_turn_context.sql"
+        if [ -f "$MIGRATION_FILE" ]; then
+            psql -U "$DB_USER" -d "$DB_NAME" -f "$MIGRATION_FILE" > /dev/null 2>&1
+            echo -e "  ${CHECK_MARK} Created table 'agent_turn_context' and function 'get_agent_turn_context'"
+            MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
+        else
+            echo -e "  ${WARNING} Migration file not found: $MIGRATION_FILE"
+        fi
+    fi
+
+    # ----------------------------------------------------------------
+    # Summary
+    # ----------------------------------------------------------------
+    if [ "$MIGRATIONS_APPLIED" -eq 0 ]; then
+        echo -e "  ${CHECK_MARK} Schema up to date — no migrations needed"
+    else
+        echo -e "  ${CHECK_MARK} Applied $MIGRATIONS_APPLIED migration(s)"
+    fi
+}
+
+# ============================================
 # Verification Functions
 # ============================================
 
@@ -190,8 +300,8 @@ verify_schema() {
         return 1
     fi
     
-    # Extract expected table names from schema/schema.sql
-    TABLE_NAMES=$(grep "^CREATE TABLE" "$SCRIPT_DIR/schema/schema.sql" | sed -E 's/CREATE TABLE [^.]+\.([^ ]+).*/\1/' | sort)
+    # Extract expected table names from schema.sql
+    TABLE_NAMES=$(grep "^CREATE TABLE" "$SCRIPT_DIR/schema.sql" | sed -E 's/CREATE TABLE [^.]+\.([^ ]+).*/\1/' | sort)
     
     local tables_missing=()
     local tables_present=0
@@ -215,7 +325,7 @@ verify_schema() {
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + ${#tables_missing[@]}))
     fi
     
-    # Reverse check: warn about extra tables not defined in schema/schema.sql
+    # Reverse check: warn about extra tables not defined in schema.sql
     local db_tables
     db_tables=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name")
     
@@ -227,13 +337,13 @@ verify_schema() {
     done
     
     if [ ${#tables_extra[@]} -gt 0 ]; then
-        echo -e "  ${WARNING} Extra tables not in schema/schema.sql (not managed by installer):"
+        echo -e "  ${WARNING} Extra tables not in schema.sql (not managed by installer):"
         for table in "${tables_extra[@]}"; do
             echo "      • $table"
         done
         VERIFICATION_WARNINGS=$((VERIFICATION_WARNINGS + ${#tables_extra[@]}))
     else
-        echo -e "  ${CHECK_MARK} No extra tables found outside schema/schema.sql"
+        echo -e "  ${CHECK_MARK} No extra tables found outside schema.sql"
     fi
     
     # Sample column count check for a few key tables
@@ -534,35 +644,6 @@ else
     echo "      Install: sudo apt install postgresql-16-pgvector"
 fi
 
-# Check for pg-schema-diff (required for declarative schema management)
-if command -v pg-schema-diff &> /dev/null; then
-    PG_SCHEMA_DIFF_VERSION=$(pg-schema-diff --version 2>/dev/null | head -1 || echo "unknown")
-    echo -e "  ${CHECK_MARK} pg-schema-diff available ($PG_SCHEMA_DIFF_VERSION)"
-else
-    echo -e "  ${CROSS_MARK} pg-schema-diff not found (required for schema management)"
-    echo ""
-    echo "Please install pg-schema-diff first:"
-    echo "  macOS:    brew install pg-schema-diff"
-    echo "  Linux/Go: go install github.com/stripe/pg-schema-diff/cmd/pg-schema-diff@latest"
-    echo ""
-    echo "After installing, ensure it is in your PATH and re-run this installer."
-    exit 1
-fi
-
-# Check SUPERUSER privilege (required for CREATE EXTENSION and pg-schema-diff temp DBs)
-IS_SUPERUSER_PREREQ=$(psql -U "$DB_USER" -d postgres -tAc "SELECT rolsuper FROM pg_roles WHERE rolname = '$DB_USER'" 2>/dev/null | tr -d '[:space:]')
-if [ "$IS_SUPERUSER_PREREQ" = "t" ]; then
-    echo -e "  ${CHECK_MARK} $DB_USER has SUPERUSER privilege"
-else
-    echo -e "  ${CROSS_MARK} $DB_USER is not a superuser (required for schema management)"
-    echo ""
-    echo "  The installing agent needs full control of its database."
-    echo "  Extensions (pgvector, pg_trgm) and pg-schema-diff require superuser."
-    echo "  Grant it with:"
-    echo "    sudo -u postgres psql -c \"ALTER USER $DB_USER SUPERUSER;\""
-    exit 1
-fi
-
 # ============================================
 # Part 1.5: Install Shared PG Loader Libraries
 # ============================================
@@ -638,225 +719,41 @@ else
     echo -e "  ${CHECK_MARK} Database '$DB_NAME' created"
 fi
 
-# Verify schema/ directory exists
-SCHEMA_DIR="$SCRIPT_DIR/schema"
-if [ ! -d "$SCHEMA_DIR" ]; then
-    echo -e "  ${CROSS_MARK} schema/ directory not found at $SCHEMA_DIR"
-    exit 1
-fi
-if [ -z "$(ls -A "$SCHEMA_DIR"/*.sql 2>/dev/null)" ]; then
-    echo -e "  ${CROSS_MARK} No .sql files found in $SCHEMA_DIR"
+# Apply schema (idempotent - uses CREATE IF NOT EXISTS)
+SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
+if [ ! -f "$SCHEMA_FILE" ]; then
+    echo -e "  ${CROSS_MARK} schema.sql not found at $SCHEMA_FILE"
     exit 1
 fi
 
-# Build the DSN for pg-schema-diff
-# Use PGPASSWORD if set (password auth), otherwise use socket-based DSN (peer auth)
-if [ -n "${PGPASSWORD:-}" ]; then
-    PG_DSN="postgres://${DB_USER}:${PGPASSWORD}@${PGHOST:-localhost}:${PGPORT:-5432}/${DB_NAME}"
-else
-    # Peer auth: connect via unix socket by omitting host
-    PG_DSN="postgres://${DB_USER}@/${DB_NAME}?host=/var/run/postgresql"
-fi
+echo "  Applying schema..."
+SCHEMA_OUTPUT=$(psql -U "$DB_USER" -d "$DB_NAME" -f "$SCHEMA_FILE" 2>&1)
+SCHEMA_EXIT_CODE=$?
 
-# ============================================
-# Pre-migrations: Run scripts before schema diff
-# ============================================
-echo ""
-echo "Pre-migrations..."
-
-PRE_MIGRATIONS_DIR="$SCRIPT_DIR/pre-migrations"
-if [ -d "$PRE_MIGRATIONS_DIR" ]; then
-    # Find .sql files in lexicographical order (nullglob-safe)
-    PRE_MIGRATION_FILES=()
-    while IFS= read -r -d '' f; do
-        PRE_MIGRATION_FILES+=("$f")
-    done < <(find "$PRE_MIGRATIONS_DIR" -maxdepth 1 -name '*.sql' -print0 | sort -z)
-
-    if [ ${#PRE_MIGRATION_FILES[@]} -eq 0 ]; then
-        echo -e "  ${INFO} No pre-migration scripts found"
-    else
-        echo "  Running ${#PRE_MIGRATION_FILES[@]} pre-migration script(s)..."
-        for migration_file in "${PRE_MIGRATION_FILES[@]}"; do
-            migration_name=$(basename "$migration_file")
-            echo -e "  Executing: $migration_name"
-            if psql -U "$DB_USER" -d "$DB_NAME" -f "$migration_file" > /dev/null 2>&1; then
-                echo -e "  ${CHECK_MARK} $migration_name: OK"
-            else
-                echo -e "  ${CROSS_MARK} $migration_name: FAILED"
-                echo "      Pre-migration script failed. Aborting."
-                exit 1
-            fi
-        done
-    fi
-else
-    echo -e "  ${INFO} No pre-migrations/ directory found — skipping"
-fi
-
-# ============================================
-# Schema application via pg-schema-diff
-# ============================================
-echo ""
-echo "Applying schema (pg-schema-diff)..."
-
-# Step A: Run pg-schema-diff plan to detect hazards
-# Superuser is verified in prerequisites — needed for CREATEDB (temp DBs) and extensions.
-PLAN_JSON=""
-PLAN_EXIT_CODE=0
-
-# Extensions must be created BEFORE the schema diff because:
-# 1. pg-schema-diff plan validation replays schema in a temp DB — CREATE EXTENSION requires superuser
-# 2. The target DB needs extensions present so pg-schema-diff can reference their types (e.g., vector)
-echo "  Ensuring required extensions..."
-EXTENSIONS_NEEDED=()
-while IFS= read -r ext; do
-    [ -n "$ext" ] && EXTENSIONS_NEEDED+=("$ext")
-done < <(grep -oP '(?<=CREATE EXTENSION IF NOT EXISTS )\S+' "$SCHEMA_DIR"/*.sql 2>/dev/null | sort -u)
-
-for ext in "${EXTENSIONS_NEEDED[@]}"; do
-    if psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT 1 FROM pg_extension WHERE extname = '$ext'" | grep -q 1; then
-        echo -e "  ${CHECK_MARK} Extension '$ext' already installed"
-    else
-        if psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS $ext" 2>/dev/null; then
-            echo -e "  ${CHECK_MARK} Extension '$ext' installed"
-        else
-            echo -e "  ${WARNING} Could not install extension '$ext' (may require superuser)"
-            echo "      Try: sudo -u postgres psql -d $DB_NAME -c \"CREATE EXTENSION IF NOT EXISTS $ext;\""
-        fi
-    fi
-done
-
-# pg-schema-diff cannot parse pg_dump meta-commands (\restrict/\unrestrict).
-# COMMENT ON EXTENSION is a pg_dump artifact not needed for schema diff.
-# CREATE EXTENSION lines are KEPT — superuser can create extensions in temp DBs.
-# OWNER TO / SET ROLE / GRANT / REVOKE are already absent (--no-owner --no-privileges).
-SCHEMA_CLEAN_DIR=$(mktemp -d)
-cleanup_schema_tmp() { rm -rf "$SCHEMA_CLEAN_DIR"; }
-trap cleanup_schema_tmp EXIT
-for f in "$SCHEMA_DIR"/*.sql; do
-    [ -f "$f" ] || continue
-    sed -e '/^\\restrict/d' -e '/^\\unrestrict/d' -e '/^COMMENT ON EXTENSION /d' "$f" > "$SCHEMA_CLEAN_DIR/$(basename "$f")"
-done
-SCHEMA_DIR_FOR_DIFF="$SCHEMA_CLEAN_DIR"
-
-echo "  Running schema diff plan..."
-# Capture output and exit code
-set +e  # Disable errexit for plan command
-# Plan validation disabled — pg-schema-diff's temp DB inherits server-level objects
-# (logical replication subscriptions) that cause validation to fail. The hazard check
-# in Step B provides the safety gate instead.
-PLAN_JSON=$(pg-schema-diff plan \
-    --from-dsn "$PG_DSN" \
-    --to-dir "$SCHEMA_DIR_FOR_DIFF" \
-    --disable-plan-validation \
-    --output-format json 2>&1)
-PLAN_EXIT_CODE=$?
-set -e  # Re-enable errexit
-
-if [ $PLAN_EXIT_CODE -ne 0 ]; then
-    echo -e "  ${CROSS_MARK} Schema diff plan failed"
-    echo "$PLAN_JSON"
-    exit 1
-fi
-
-# Step B: Parse plan output — check for DESTRUCTIVE hazardous statements
-# DESTRUCTIVE hazards block apply (data loss risk)
-# AUTHZ_UPDATE hazards (GRANT/REVOKE) are ignored — privileges are environment config,
-# not managed by schema diff (schema.sql is dumped with --no-privileges)
-DESTRUCTIVE_HAZARDS='["DELETES_DATA", "TABLE_DROPPED", "COLUMN_DROPPED", "ACQUIRES_ACCESS_EXCLUSIVE_LOCK"]'
-HAZARD_COUNT=0
-if command -v jq &> /dev/null; then
-    HAZARD_COUNT=$(echo "$PLAN_JSON" | jq --argjson blocklist "$DESTRUCTIVE_HAZARDS" '
-        [.statements[]? 
-         | select(.hazards != null) 
-         | select([.hazards[].type] | any(. as $h | $blocklist | index($h) != null))
-        ] | length
-    ' 2>/dev/null || echo "0")
-fi
-
-SCHEMA_DIFF_SKIPPED=0
-if [ "${HAZARD_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    echo -e "  ${WARNING} Schema diff plan contains ${HAZARD_COUNT} DESTRUCTIVE statement(s):"
-    echo ""
-    if command -v jq &> /dev/null; then
-        echo "$PLAN_JSON" | jq -r --argjson blocklist "$DESTRUCTIVE_HAZARDS" '
-            .statements[]?
-            | select(.hazards != null)
-            | select([.hazards[].type] | any(. as $h | $blocklist | index($h) != null))
-            | "    SQL: " + .ddl + "\n    Hazards: " + ([.hazards[].type] | join(", "))
-        ' 2>/dev/null || true
-    else
-        echo "$PLAN_JSON"
-    fi
-    echo ""
-    echo -e "  ${WARNING} Schema apply SKIPPED to protect data. Review the hazards above."
-    echo "      To resolve: add a pre-migration script in pre-migrations/ that handles"
-    echo "      the destructive change manually (e.g., data migration, rename), then"
-    echo "      update schema/schema.sql to reflect the desired final state."
-    SCHEMA_DIFF_SKIPPED=1
-fi
-
-# Count real schema changes vs privilege-only changes
-TOTAL_STATEMENTS=0
-AUTHZ_ONLY_COUNT=0
-if command -v jq &> /dev/null; then
-    TOTAL_STATEMENTS=$(echo "$PLAN_JSON" | jq '[.statements[]?] | length' 2>/dev/null || echo "0")
-    AUTHZ_ONLY_COUNT=$(echo "$PLAN_JSON" | jq '
-        [.statements[]? | select(
-            .hazards != null and
-            ([.hazards[].type] | all(. == "AUTHZ_UPDATE"))
-        )] | length
-    ' 2>/dev/null || echo "0")
-fi
-REAL_CHANGE_COUNT=$((TOTAL_STATEMENTS - AUTHZ_ONLY_COUNT))
-
-if [ "${AUTHZ_ONLY_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    echo -e "  ${INFO} Ignoring ${AUTHZ_ONLY_COUNT} privilege diff(s) (GRANT/REVOKE are environment config)"
-fi
-
-# Step C: Apply schema changes
-if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 1 ]; then
+if [ $SCHEMA_EXIT_CODE -eq 0 ]; then
+    # Count tables created vs already existed
+    CREATED_COUNT=$(echo "$SCHEMA_OUTPUT" | grep -c "CREATE TABLE" 2>/dev/null || echo "0")
+    SKIPPED_COUNT=$(echo "$SCHEMA_OUTPUT" | grep -c "already exists" 2>/dev/null || echo "0")
+    
+    # Get total table count
     TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
-    echo "      Current tables in database: $TABLE_COUNT"
-elif [ "${REAL_CHANGE_COUNT:-0}" -eq 0 ]; then
-    TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
-    echo -e "  ${CHECK_MARK} Schema is up to date (no structural changes)"
+    
+    echo -e "  ${CHECK_MARK} Schema applied successfully"
+    if [ "$CREATED_COUNT" -gt 0 ] 2>/dev/null; then
+        echo "      Created $CREATED_COUNT new tables"
+    fi
+    if [ "$SKIPPED_COUNT" -gt 0 ] 2>/dev/null; then
+        echo "      Skipped $SKIPPED_COUNT existing objects"
+    fi
     echo "      Total tables in database: $TABLE_COUNT"
 else
-    echo "  Applying ${REAL_CHANGE_COUNT} schema change(s)..."
-    # AUTHZ_UPDATE must be allowed because pg-schema-diff apply is all-or-nothing.
-    # We log the privilege diffs above and restore privileges after apply if needed.
-    set +e
-    APPLY_OUTPUT=$(pg-schema-diff apply \
-        --from-dsn "$PG_DSN" \
-        --to-dir "$SCHEMA_DIR_FOR_DIFF" \
-        --skip-confirm-prompt \
-        --disable-plan-validation \
-        --allow-hazards HAS_UNTRACKABLE_DEPENDENCIES,INDEX_BUILD,INDEX_DROPPED,AUTHZ_UPDATE 2>&1)
-    APPLY_EXIT_CODE=$?
-    set -e
-
-    if [ $APPLY_EXIT_CODE -eq 0 ]; then
-        TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
-        echo -e "  ${CHECK_MARK} Schema applied successfully"
-        echo "      Total tables in database: $TABLE_COUNT"
-        # Restore privileges if AUTHZ changes were applied
-        if [ "${AUTHZ_ONLY_COUNT:-0}" -gt 0 ]; then
-            echo -e "  ${INFO} Restoring database privileges..."
-            if [ -f "$SCRIPT_DIR/scripts/setup-permissions.sh" ]; then
-                bash "$SCRIPT_DIR/scripts/setup-permissions.sh" 2>/dev/null && \
-                    echo -e "  ${CHECK_MARK} Privileges restored" || \
-                    echo -e "  ${WARNING} Privilege restore script failed — run scripts/setup-permissions.sh manually"
-            else
-                echo -e "  ${WARNING} No permissions script found (scripts/setup-permissions.sh)"
-                echo "      pg-schema-diff may have revoked privileges. Re-apply GRANT statements as needed."
-            fi
-        fi
-    else
-        echo -e "  ${CROSS_MARK} Schema apply failed"
-        echo "$APPLY_OUTPUT"
-        exit 1
-    fi
+    echo -e "  ${CROSS_MARK} Schema application failed"
+    echo "$SCHEMA_OUTPUT"
+    exit 1
 fi
+
+# Run schema migrations (adds missing columns to existing tables)
+migrate_schema
 
 # ============================================
 # Part 3: Hooks Installation

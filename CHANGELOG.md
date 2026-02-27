@@ -3,20 +3,13 @@
 ## Unreleased
 
 ### Added
-- **Declarative schema management via `pg-schema-diff`** (#128) — `agent-install.sh` now uses [Stripe's `pg-schema-diff`](https://github.com/stripe/pg-schema-diff) to apply schema changes declaratively.
-  - `pg-schema-diff` is now a **required prerequisite** (install via `brew install pg-schema-diff` or `go install github.com/stripe/pg-schema-diff/cmd/pg-schema-diff@latest`).
-  - `schema.sql` has been moved to `schema/schema.sql` (pg-schema-diff expects `--to-dir`).
-  - New **`pre-migrations/` directory** for numbered SQL scripts that run *before* the schema diff — required for renames, data migrations, and any operation `pg-schema-diff` can't handle declaratively (it treats renames as drop+add, flagging them as hazards).
-  - **Hazard-safe apply:** The installer runs `pg-schema-diff plan` first. If any hazardous statements are detected (drops, renames, etc.) the entire schema apply is **skipped** (all-or-nothing) and a warning is printed. The installer continues with hooks and other steps.
-  - **CREATEDB required:** The database user must have `CREATEDB` privilege — pg-schema-diff uses it to create a temporary database for plan validation. The installer checks this during prerequisites and fails early if missing.
-  - `migrate_schema()` and all hand-written `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` blocks have been **removed** from `agent-install.sh`.
 - **`agent_turn_context` table and per-turn injection hook** (#143) — New table stores short critical-context records (≤500 chars each) injected before every agent response. `get_agent_turn_context(agent_name)` aggregates context in priority order (UNIVERSAL → GLOBAL → DOMAIN → AGENT) up to a 2000-character budget with truncation warning. The new `agent-turn-context` hook fires on `message:received`, queries the table, and injects results into the agent's turn context with a 5-minute cache TTL per agent. Migration: `migrations/065_agent_turn_context.sql`.
 - **Library domain schema** — New tables for storing written works (research papers, books, novels, poems, essays, articles, etc.) with normalized authors, flexible tagging, and work-to-work relationships. Database constraints enforce complete ingestion (summary, insights, and all core metadata are required). See `docs/library-schema.md` and `patches/add-library-schema.sql`.
 - **Library semantic embedding** — Added `library` source type to `embed-full-database.py`. Embeds concise summaries (not full text) for high-density semantic search. Full records are fetched on recall hit.
 - **embed-full-database.py** — Added full database embedding script covering all source types (entities, facts, tasks, projects, agents, lessons, events, positions, media, vocabulary, library works).
 
 ### Fixed
-- **Installer handles schema migrations automatically** (#127) — superseded by #128. Schema evolution is now managed declaratively via `pg-schema-diff` rather than hand-written `ALTER TABLE` blocks.
+- **Installer now handles schema migrations automatically** — when re-running `agent-install.sh` on an existing installation, missing columns are detected and added automatically. Users no longer need to run manual `ALTER TABLE` commands when the schema evolves. (#127)
 - Remove old pg-env.sh/pg_env imports from migrated scripts (#117)
 
 ### Changed

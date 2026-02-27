@@ -206,26 +206,22 @@ WHERE name = 'nova-memory';
 
 ### Making Schema Changes
 ```bash
-# 1. Update the declarative schema
-vim ~/.openclaw/workspace/nova-memory/schema/schema.sql
+# 1. Update schema.sql
+vim ~/.openclaw/workspace/nova-memory/schema.sql
 
-# 2. (If adding renames/drops) Add a numbered pre-migration script first
-# e.g. pre-migrations/001_rename_foo_to_bar.sql
-# pg-schema-diff treats renames as drop+add (a hazard); handle them manually here
+# 2. Test on development database
+createdb nova_memory_test  
+psql_test -f schema.sql
 
-# 3. Re-run the installer to apply changes
-cd ~/.openclaw/workspace/nova-memory
-./agent-install.sh
-# OR apply directly:
-# pg-schema-diff plan  --from-dsn "postgres://..." --to-dir schema/
-# pg-schema-diff apply --from-dsn "postgres://..." --to-dir schema/ --skip-confirm-prompt
+# 3. Run migration on production
+psql -f migration-YYYY-MM-DD.sql
 
 # 4. Update documentation
 vim docs/database-schema-guide.md
 
 # 5. Commit changes
-git add schema/schema.sql pre-migrations/ docs/
-git commit -m "schema: add new table for feature X"
+git add schema.sql docs/
+git commit -m "feat: add new table for feature X"
 ```
 
 ### Adding New Extraction Categories
@@ -237,7 +233,7 @@ vim scripts/extract-memories.sh
 vim scripts/store-memories.sh
 
 # 3. Add database table if needed
-vim schema/schema.sql
+vim schema.sql
 
 # 4. Test end-to-end
 ./scripts/process-input.sh "Test message for new category"
