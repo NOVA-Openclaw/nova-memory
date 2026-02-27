@@ -5339,5567 +5339,4639 @@ CREATE OR REPLACE VIEW workflow_steps_detail AS
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_actions FROM erato;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_actions FROM newhart;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_aliases FROM erato;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_aliases FROM newhart;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_bootstrap_context FROM erato;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_bootstrap_context FROM newhart;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat FROM erato;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_chat FROM newhart;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat_processed FROM erato;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_chat_processed FROM newhart;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_domains FROM erato;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_domains FROM newhart;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_jobs FROM erato;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_jobs FROM newhart;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_modifications FROM erato;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_modifications FROM newhart;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_spawns FROM erato;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_spawns FROM newhart;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_system_config FROM erato;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_system_config FROM newhart;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agent_turn_context FROM erato;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agent_turn_context FROM newhart;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE agents FROM erato;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE agents FROM newhart;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE ai_models FROM erato;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE ai_models FROM newhart;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE artwork FROM erato;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE artwork FROM newhart;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE asset_classes FROM erato;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE asset_classes FROM newhart;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE certificates FROM erato;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE certificates FROM newhart;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE channel_activity FROM erato;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE channel_activity FROM newhart;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE conversations FROM erato;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE conversations FROM newhart;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entities FROM erato;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE entities FROM newhart;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_fact_conflicts FROM erato;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE entity_fact_conflicts FROM newhart;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_facts FROM erato;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE entity_facts FROM newhart;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_facts_archive FROM erato;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE entity_facts_archive FROM newhart;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE entity_relationships FROM erato;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE entity_relationships FROM newhart;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE event_entities FROM erato;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE event_entities FROM newhart;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE event_places FROM erato;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE event_places FROM newhart;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE event_projects FROM erato;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE event_projects FROM newhart;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE events FROM erato;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE events FROM newhart;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE events_archive FROM erato;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE events_archive FROM newhart;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE extraction_metrics FROM erato;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE extraction_metrics FROM newhart;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE fact_change_log FROM erato;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE fact_change_log FROM newhart;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE gambling_entries FROM erato;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE gambling_entries FROM newhart;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE gambling_logs FROM erato;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE gambling_logs FROM newhart;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE git_issue_queue FROM erato;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE git_issue_queue FROM newhart;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE job_messages FROM erato;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE job_messages FROM newhart;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE lessons FROM erato;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE lessons FROM newhart;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE lessons_archive FROM erato;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE lessons_archive FROM newhart;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_authors FROM erato;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE library_authors FROM newhart;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_tags FROM erato;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE library_tags FROM newhart;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_authors FROM erato;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE library_work_authors FROM newhart;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_relationships FROM erato;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE library_work_relationships FROM newhart;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_tags FROM erato;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE library_work_tags FROM newhart;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE library_works FROM erato;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE library_works FROM newhart;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE media_consumed FROM erato;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE media_consumed FROM newhart;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE media_queue FROM erato;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE media_queue FROM newhart;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE media_tags FROM erato;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE media_tags FROM newhart;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE memory_embeddings FROM erato;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE memory_embeddings FROM newhart;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE memory_embeddings_archive FROM erato;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE memory_embeddings_archive FROM newhart;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE memory_type_priorities FROM erato;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE memory_type_priorities FROM newhart;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE motivation_d100 FROM erato;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE motivation_d100 FROM newhart;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE music_analysis FROM erato;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE music_analysis FROM newhart;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE music_library FROM erato;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE music_library FROM newhart;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE place_properties FROM erato;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE place_properties FROM newhart;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE places FROM erato;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE places FROM newhart;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE portfolio_positions FROM erato;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE portfolio_positions FROM newhart;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE portfolio_snapshots FROM erato;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE portfolio_snapshots FROM newhart;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE positions FROM erato;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE positions FROM newhart;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE preferences FROM erato;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE preferences FROM newhart;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE price_cache_v2 FROM erato;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE price_cache_v2 FROM newhart;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE project_entities FROM erato;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE project_entities FROM newhart;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE project_tasks FROM erato;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE project_tasks FROM newhart;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE projects FROM erato;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE projects FROM newhart;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE publications FROM erato;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE publications FROM newhart;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE ralph_sessions FROM erato;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE ralph_sessions FROM newhart;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE shopping_history FROM erato;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE shopping_history FROM newhart;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE shopping_preferences FROM erato;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE shopping_preferences FROM newhart;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE shopping_wishlist FROM erato;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE shopping_wishlist FROM newhart;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE tags FROM erato;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE tags FROM newhart;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE tasks FROM erato;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE tasks FROM newhart;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE unsolved_problems FROM erato;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE unsolved_problems FROM newhart;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE vehicles FROM erato;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE vehicles FROM newhart;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE vocabulary FROM erato;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE vocabulary FROM newhart;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE work_tags FROM erato;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE work_tags FROM newhart;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE workflow_steps FROM erato;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE workflow_steps FROM newhart;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE workflows FROM erato;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE workflows FROM newhart;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE DELETE, INSERT, SELECT, UPDATE ON TABLE works FROM erato;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-REVOKE SELECT ON TABLE works FROM newhart;
 
 --
 -- Name: chat(p_message text, p_sender character varying); Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT EXECUTE ON FUNCTION chat(p_message text, p_sender character varying) TO newhart;
 
 --
 -- Name: send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT EXECUTE ON FUNCTION send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]) TO newhart;
 
 --
 -- Name: agent_actions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_actions_id_seq TO "nova-staging";
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO athena;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO coder;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO gem;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO gidget;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO graybeard;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO iris;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_chat_id_seq TO newhart;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_chat_id_seq TO "nova-staging";
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO scout;
 
 --
 -- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE agent_chat_id_seq TO ticker;
 
 --
 -- Name: agent_domains_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_domains_id_seq TO "nova-staging";
 
 --
 -- Name: agent_jobs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_jobs_id_seq TO "nova-staging";
 
 --
 -- Name: agent_modifications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agent_modifications_id_seq TO "nova-staging";
 
 --
 -- Name: agents_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE agents_id_seq TO "nova-staging";
 
 --
 -- Name: artwork_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE artwork_id_seq TO newhart;
 
 --
 -- Name: artwork_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE artwork_id_seq TO "nova-staging";
 
 --
 -- Name: certificates_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE certificates_id_seq TO newhart;
 
 --
 -- Name: certificates_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE certificates_id_seq TO "nova-staging";
 
 --
 -- Name: conversations_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE conversations_id_seq TO newhart;
 
 --
 -- Name: conversations_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE conversations_id_seq TO "nova-staging";
 
 --
 -- Name: entities_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entities_id_seq TO newhart;
 
 --
 -- Name: entities_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entities_id_seq TO "nova-staging";
 
 --
 -- Name: entity_fact_conflicts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_fact_conflicts_id_seq TO newhart;
 
 --
 -- Name: entity_fact_conflicts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_fact_conflicts_id_seq TO "nova-staging";
 
 --
 -- Name: entity_facts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_facts_id_seq TO newhart;
 
 --
 -- Name: entity_facts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_facts_id_seq TO "nova-staging";
 
 --
 -- Name: entity_relationships_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_relationships_id_seq TO newhart;
 
 --
 -- Name: entity_relationships_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE entity_relationships_id_seq TO "nova-staging";
 
 --
 -- Name: events_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE events_id_seq TO newhart;
 
 --
 -- Name: events_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE events_id_seq TO "nova-staging";
 
 --
 -- Name: extraction_metrics_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE extraction_metrics_id_seq TO newhart;
 
 --
 -- Name: fact_change_log_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE fact_change_log_id_seq TO newhart;
 
 --
 -- Name: gambling_entries_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_entries_id_seq TO newhart;
 
 --
 -- Name: gambling_entries_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_entries_id_seq TO "nova-staging";
 
 --
 -- Name: gambling_logs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_logs_id_seq TO newhart;
 
 --
 -- Name: gambling_logs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE gambling_logs_id_seq TO "nova-staging";
 
 --
 -- Name: git_issue_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE git_issue_queue_id_seq TO newhart;
 
 --
 -- Name: job_messages_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE job_messages_id_seq TO newhart;
 
 --
 -- Name: job_messages_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE job_messages_id_seq TO "nova-staging";
 
 --
 -- Name: lessons_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE lessons_id_seq TO newhart;
 
 --
 -- Name: lessons_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE lessons_id_seq TO "nova-staging";
 
 --
 -- Name: library_authors_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE library_authors_id_seq TO athena;
 
 --
 -- Name: library_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE library_tags_id_seq TO athena;
 
 --
 -- Name: library_works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE library_works_id_seq TO athena;
 
 --
 -- Name: media_consumed_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_consumed_id_seq TO newhart;
 
 --
 -- Name: media_consumed_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_consumed_id_seq TO "nova-staging";
 
 --
 -- Name: media_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_queue_id_seq TO newhart;
 
 --
 -- Name: media_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_queue_id_seq TO "nova-staging";
 
 --
 -- Name: media_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_tags_id_seq TO newhart;
 
 --
 -- Name: media_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE media_tags_id_seq TO "nova-staging";
 
 --
 -- Name: memory_embeddings_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE memory_embeddings_id_seq TO newhart;
 
 --
 -- Name: memory_embeddings_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE memory_embeddings_id_seq TO "nova-staging";
 
 --
 -- Name: music_analysis_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_analysis_id_seq TO newhart;
 
 --
 -- Name: music_analysis_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_analysis_id_seq TO "nova-staging";
 
 --
 -- Name: music_library_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_library_id_seq TO newhart;
 
 --
 -- Name: music_library_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE music_library_id_seq TO "nova-staging";
 
 --
 -- Name: place_properties_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE place_properties_id_seq TO newhart;
 
 --
 -- Name: place_properties_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE place_properties_id_seq TO "nova-staging";
 
 --
 -- Name: places_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE places_id_seq TO newhart;
 
 --
 -- Name: places_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE places_id_seq TO "nova-staging";
 
 --
 -- Name: portfolio_positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_positions_id_seq TO newhart;
 
 --
 -- Name: portfolio_positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_positions_id_seq TO "nova-staging";
 
 --
 -- Name: portfolio_snapshots_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_snapshots_id_seq TO newhart;
 
 --
 -- Name: portfolio_snapshots_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE portfolio_snapshots_id_seq TO "nova-staging";
 
 --
 -- Name: positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE positions_id_seq TO newhart;
 
 --
 -- Name: positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE positions_id_seq TO "nova-staging";
 
 --
 -- Name: preferences_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE preferences_id_seq TO newhart;
 
 --
 -- Name: preferences_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE preferences_id_seq TO "nova-staging";
 
 --
 -- Name: project_tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE project_tasks_id_seq TO newhart;
 
 --
 -- Name: project_tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE project_tasks_id_seq TO "nova-staging";
 
 --
 -- Name: projects_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE projects_id_seq TO newhart;
 
 --
 -- Name: projects_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE projects_id_seq TO "nova-staging";
 
 --
 -- Name: publications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE publications_id_seq TO newhart;
 
 --
 -- Name: publications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE publications_id_seq TO "nova-staging";
 
 --
 -- Name: ralph_sessions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE ralph_sessions_id_seq TO newhart;
 
 --
 -- Name: ralph_sessions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE ralph_sessions_id_seq TO "nova-staging";
 
 --
 -- Name: tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE tags_id_seq TO newhart;
 
 --
 -- Name: tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE tags_id_seq TO "nova-staging";
 
 --
 -- Name: tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE tasks_id_seq TO newhart;
 
 --
 -- Name: tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE tasks_id_seq TO "nova-staging";
 
 --
 -- Name: unsolved_problems_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE unsolved_problems_id_seq TO newhart;
 
 --
 -- Name: unsolved_problems_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE unsolved_problems_id_seq TO "nova-staging";
 
 --
 -- Name: vehicles_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE vehicles_id_seq TO newhart;
 
 --
 -- Name: vehicles_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE vehicles_id_seq TO "nova-staging";
 
 --
 -- Name: vocabulary_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE vocabulary_id_seq TO newhart;
 
 --
 -- Name: vocabulary_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE vocabulary_id_seq TO "nova-staging";
 
 --
 -- Name: workflow_steps_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE workflow_steps_id_seq TO newhart;
 
 --
 -- Name: workflows_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE workflows_id_seq TO newhart;
 
 --
 -- Name: works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, USAGE ON SEQUENCE works_id_seq TO newhart;
 
 --
 -- Name: works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE works_id_seq TO "nova-staging";
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO athena;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO coder;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO gem;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO gidget;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO iris;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO scout;
 
 --
 -- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_actions TO ticker;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO athena;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO coder;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO gem;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO gidget;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO iris;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO scout;
 
 --
 -- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_aliases TO ticker;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO athena;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO coder;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO gem;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO gidget;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO iris;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO scout;
 
 --
 -- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_bootstrap_context TO ticker;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat TO athena;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE agent_chat TO coder;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE agent_chat TO gem;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE agent_chat TO gidget;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE agent_chat TO iris;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE agent_chat TO scout;
 
 --
 -- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE agent_chat TO ticker;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE agent_chat_processed TO athena;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_chat_processed TO coder;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_chat_processed TO gem;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_chat_processed TO gidget;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_chat_processed TO iris;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_chat_processed TO scout;
 
 --
 -- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_chat_processed TO ticker;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO athena;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO coder;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO gem;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO gidget;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO iris;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO scout;
 
 --
 -- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_domains TO ticker;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO athena;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO coder;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO gem;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO gidget;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO iris;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO scout;
 
 --
 -- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_jobs TO ticker;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO athena;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO coder;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO gem;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO gidget;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO iris;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO scout;
 
 --
 -- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_modifications TO ticker;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO athena;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO coder;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO gem;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO gidget;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO iris;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO scout;
 
 --
 -- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_spawns TO ticker;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO athena;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO coder;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO gem;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO gidget;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO iris;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO scout;
 
 --
 -- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_system_config TO ticker;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO athena;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO coder;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO gem;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO gidget;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO iris;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO scout;
 
 --
 -- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agent_turn_context TO ticker;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO athena;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO coder;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO gem;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO gidget;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE agents TO graybeard;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO iris;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO scout;
 
 --
 -- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE agents TO ticker;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO athena;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO coder;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO gem;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO gidget;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO iris;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO scout;
 
 --
 -- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ai_models TO ticker;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE artwork TO athena;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE artwork TO coder;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE artwork TO gem;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE artwork TO gidget;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE artwork TO iris;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE artwork TO scout;
 
 --
 -- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE artwork TO ticker;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO athena;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO coder;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO gem;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO gidget;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO iris;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO scout;
 
 --
 -- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE asset_classes TO ticker;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO athena;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO coder;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO gem;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO gidget;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO iris;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO scout;
 
 --
 -- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE certificates TO ticker;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO athena;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO coder;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO gem;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO gidget;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO iris;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO scout;
 
 --
 -- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE channel_activity TO ticker;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO athena;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO coder;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO gem;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO gidget;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO iris;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO scout;
 
 --
 -- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE conversations TO ticker;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO athena;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO coder;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO gem;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO gidget;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE entities TO graybeard;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO iris;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO scout;
 
 --
 -- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entities TO ticker;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO athena;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO coder;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO gem;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO gidget;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO iris;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO scout;
 
 --
 -- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_fact_conflicts TO ticker;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO athena;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO coder;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO gem;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO gidget;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE entity_facts TO graybeard;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO iris;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO scout;
 
 --
 -- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts TO ticker;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO athena;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO coder;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO gem;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO gidget;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO iris;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO scout;
 
 --
 -- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_facts_archive TO ticker;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO athena;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO coder;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO gem;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO gidget;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE entity_relationships TO graybeard;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO iris;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO scout;
 
 --
 -- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE entity_relationships TO ticker;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO athena;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO coder;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO gem;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO gidget;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO iris;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO scout;
 
 --
 -- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_entities TO ticker;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO athena;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO coder;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO gem;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO gidget;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO iris;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO scout;
 
 --
 -- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_places TO ticker;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO athena;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO coder;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO gem;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO gidget;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO iris;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO scout;
 
 --
 -- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE event_projects TO ticker;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO athena;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO coder;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO gem;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO gidget;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO iris;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO scout;
 
 --
 -- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events TO ticker;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO athena;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO coder;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO gem;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO gidget;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO iris;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO scout;
 
 --
 -- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE events_archive TO ticker;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO athena;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO coder;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO gem;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO gidget;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO iris;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO scout;
 
 --
 -- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE extraction_metrics TO ticker;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO athena;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO coder;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO gem;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO gidget;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO iris;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO scout;
 
 --
 -- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE fact_change_log TO ticker;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO athena;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO coder;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO gem;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO gidget;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO iris;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO scout;
 
 --
 -- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_entries TO ticker;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO athena;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO coder;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO gem;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO gidget;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO iris;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO scout;
 
 --
 -- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE gambling_logs TO ticker;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO athena;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO coder;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO gem;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO gidget;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO iris;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO scout;
 
 --
 -- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE git_issue_queue TO ticker;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO athena;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO coder;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO gem;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO gidget;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO iris;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO scout;
 
 --
 -- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE job_messages TO ticker;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO athena;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO coder;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO gem;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO gidget;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO iris;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO scout;
 
 --
 -- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons TO ticker;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO athena;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO coder;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO gem;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO gidget;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO iris;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO scout;
 
 --
 -- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE lessons_archive TO ticker;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_authors TO athena;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_authors TO coder;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_authors TO gem;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_authors TO gidget;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_authors TO iris;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_authors TO scout;
 
 --
 -- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_authors TO ticker;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_tags TO athena;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_tags TO coder;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_tags TO gem;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_tags TO gidget;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_tags TO iris;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_tags TO scout;
 
 --
 -- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_tags TO ticker;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_authors TO athena;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_authors TO coder;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_authors TO gem;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_authors TO gidget;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_authors TO iris;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_authors TO scout;
 
 --
 -- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_authors TO ticker;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_relationships TO athena;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_relationships TO coder;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_relationships TO gem;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_relationships TO gidget;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_relationships TO iris;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_relationships TO scout;
 
 --
 -- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_relationships TO ticker;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_work_tags TO athena;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_tags TO coder;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_tags TO gem;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_tags TO gidget;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_tags TO iris;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_tags TO scout;
 
 --
 -- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_work_tags TO ticker;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE library_works TO athena;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_works TO coder;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_works TO gem;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_works TO gidget;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_works TO iris;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_works TO scout;
 
 --
 -- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE library_works TO ticker;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE media_consumed TO athena;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_consumed TO coder;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_consumed TO gem;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_consumed TO gidget;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_consumed TO iris;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_consumed TO scout;
 
 --
 -- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_consumed TO ticker;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE media_queue TO athena;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_queue TO coder;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_queue TO gem;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_queue TO gidget;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_queue TO iris;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_queue TO scout;
 
 --
 -- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_queue TO ticker;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE media_tags TO athena;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_tags TO coder;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_tags TO gem;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_tags TO gidget;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_tags TO iris;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_tags TO scout;
 
 --
 -- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE media_tags TO ticker;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE memory_embeddings TO athena;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE memory_embeddings TO coder;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE memory_embeddings TO gem;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE memory_embeddings TO gidget;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE memory_embeddings TO iris;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE memory_embeddings TO scout;
 
 --
 -- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT INSERT, SELECT ON TABLE memory_embeddings TO ticker;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO athena;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO coder;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO gem;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO gidget;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO iris;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO scout;
 
 --
 -- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_embeddings_archive TO ticker;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO athena;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO coder;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO gem;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO gidget;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO iris;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO scout;
 
 --
 -- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE memory_type_priorities TO ticker;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO athena;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO coder;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO gem;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO gidget;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO iris;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO scout;
 
 --
 -- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE motivation_d100 TO ticker;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO athena;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO coder;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO gem;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO gidget;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO iris;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO scout;
 
 --
 -- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_analysis TO ticker;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO athena;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO coder;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO gem;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO gidget;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO iris;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO scout;
 
 --
 -- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE music_library TO ticker;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO athena;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO coder;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO gem;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO gidget;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO iris;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO scout;
 
 --
 -- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE place_properties TO ticker;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO athena;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO coder;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO gem;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO gidget;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO iris;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO scout;
 
 --
 -- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE places TO ticker;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO athena;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO coder;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO gem;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO gidget;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO iris;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO scout;
 
 --
 -- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_positions TO ticker;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO athena;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO coder;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO gem;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO gidget;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO iris;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO scout;
 
 --
 -- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE portfolio_snapshots TO ticker;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO athena;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO coder;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO gem;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO gidget;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO iris;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO scout;
 
 --
 -- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE positions TO ticker;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO athena;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO coder;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO gem;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO gidget;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO iris;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO scout;
 
 --
 -- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE preferences TO ticker;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO athena;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO coder;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO gem;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO gidget;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO iris;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO scout;
 
 --
 -- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE price_cache_v2 TO ticker;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO athena;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO coder;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO gem;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO gidget;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO iris;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO scout;
 
 --
 -- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_entities TO ticker;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO athena;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO coder;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO gem;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO gidget;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO iris;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO scout;
 
 --
 -- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE project_tasks TO ticker;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO athena;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO coder;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO gem;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO gidget;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO iris;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO scout;
 
 --
 -- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE projects TO ticker;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO athena;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO coder;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO gem;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO gidget;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO iris;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO scout;
 
 --
 -- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE publications TO ticker;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO athena;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO coder;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO gem;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO gidget;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO iris;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO scout;
 
 --
 -- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE ralph_sessions TO ticker;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO athena;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO coder;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO gem;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO gidget;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO iris;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO scout;
 
 --
 -- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_history TO ticker;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO athena;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO coder;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO gem;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO gidget;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO iris;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO scout;
 
 --
 -- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_preferences TO ticker;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO athena;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO coder;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO gem;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO gidget;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO iris;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO scout;
 
 --
 -- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE shopping_wishlist TO ticker;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO athena;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO coder;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO gem;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO gidget;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO iris;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO scout;
 
 --
 -- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tags TO ticker;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO athena;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO coder;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO gem;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO gidget;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO iris;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO scout;
 
 --
 -- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE tasks TO ticker;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO athena;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO coder;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO gem;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO gidget;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO iris;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO scout;
 
 --
 -- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE unsolved_problems TO ticker;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO athena;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO coder;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO gem;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO gidget;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO iris;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO scout;
 
 --
 -- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vehicles TO ticker;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO athena;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO coder;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO gem;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO gidget;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO iris;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO scout;
 
 --
 -- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE vocabulary TO ticker;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO athena;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO coder;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO gem;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO gidget;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO iris;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO scout;
 
 --
 -- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE work_tags TO ticker;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO athena;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO coder;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO gem;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO gidget;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO iris;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO scout;
 
 --
 -- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps TO ticker;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO athena;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO coder;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO gem;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO gidget;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO iris;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO scout;
 
 --
 -- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflows TO ticker;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO athena;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO coder;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO gem;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO gidget;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO iris;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO scout;
 
 --
 -- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE works TO ticker;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO athena;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO coder;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO gem;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO gidget;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO iris;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO scout;
 
 --
 -- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE delegation_knowledge TO ticker;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agent_chat_recent TO athena;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO coder;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO gem;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO gidget;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO iris;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO newhart;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_agent_chat_recent TO "nova-staging";
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO scout;
 
 --
 -- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_recent TO ticker;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agent_chat_stats TO athena;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO coder;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO gem;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO gidget;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO iris;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO newhart;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_agent_chat_stats TO "nova-staging";
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO scout;
 
 --
 -- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_chat_stats TO ticker;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agent_spawn_stats TO athena;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_spawn_stats TO coder;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_spawn_stats TO gem;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_spawn_stats TO gidget;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_spawn_stats TO iris;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_spawn_stats TO scout;
 
 --
 -- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agent_spawn_stats TO ticker;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_agents TO athena;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO coder;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO gem;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO gidget;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO iris;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO newhart;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_agents TO "nova-staging";
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO scout;
 
 --
 -- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_agents TO ticker;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_entity_facts TO athena;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO coder;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO gem;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO gidget;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO iris;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO newhart;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_entity_facts TO "nova-staging";
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO scout;
 
 --
 -- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_entity_facts TO ticker;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_event_timeline TO athena;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO coder;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO gem;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO gidget;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO iris;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO newhart;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_event_timeline TO "nova-staging";
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO scout;
 
 --
 -- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_event_timeline TO ticker;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_gambling_summary TO athena;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO coder;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO gem;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO gidget;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO iris;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO newhart;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_gambling_summary TO "nova-staging";
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO scout;
 
 --
 -- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_gambling_summary TO ticker;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_media_queue_pending TO athena;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO coder;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO gem;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO gidget;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO iris;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO newhart;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_media_queue_pending TO "nova-staging";
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO scout;
 
 --
 -- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_queue_pending TO ticker;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_media_with_tags TO athena;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO coder;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO gem;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO gidget;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO iris;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO newhart;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_media_with_tags TO "nova-staging";
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO scout;
 
 --
 -- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_media_with_tags TO ticker;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO athena;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO coder;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO gem;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO gidget;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO iris;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO scout;
 
 --
 -- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_metamours TO ticker;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO athena;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO coder;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO gem;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO gidget;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO iris;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO scout;
 
 --
 -- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_tasks TO ticker;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_pending_test_failures TO athena;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_test_failures TO coder;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_test_failures TO gem;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_test_failures TO gidget;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_test_failures TO iris;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_test_failures TO scout;
 
 --
 -- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_pending_test_failures TO ticker;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_portfolio_allocation TO athena;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO coder;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO gem;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO gidget;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO iris;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO newhart;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_portfolio_allocation TO "nova-staging";
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO scout;
 
 --
 -- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_portfolio_allocation TO ticker;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_ralph_active TO athena;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_ralph_active TO coder;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_ralph_active TO gem;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_ralph_active TO gidget;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_ralph_active TO iris;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_ralph_active TO "nova-staging";
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_ralph_active TO scout;
 
 --
 -- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_ralph_active TO ticker;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_relationships TO athena;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO coder;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO gem;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO gidget;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO iris;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO newhart;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_relationships TO "nova-staging";
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO scout;
 
 --
 -- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_relationships TO ticker;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE v_task_tree TO athena;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO coder;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO gem;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO gidget;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO iris;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO newhart;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE v_task_tree TO "nova-staging";
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO scout;
 
 --
 -- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_task_tree TO ticker;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO athena;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO coder;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO gem;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO gidget;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO iris;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO scout;
 
 --
 -- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE v_users TO ticker;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO athena;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO coder;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO gem;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO gidget;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO iris;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO scout;
 
 --
 -- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
-GRANT SELECT ON TABLE workflow_steps_detail TO ticker;
 
