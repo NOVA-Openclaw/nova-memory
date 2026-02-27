@@ -690,10 +690,21 @@ PLAN_JSON=""
 PLAN_VALIDATION_OK=0
 PLAN_EXIT_CODE=0
 
+# pg-schema-diff cannot parse pg_dump's \restrict/\unrestrict meta-commands
+# Create a temp copy with those lines stripped
+SCHEMA_CLEAN_DIR=$(mktemp -d)
+cleanup_schema_tmp() { rm -rf "$SCHEMA_CLEAN_DIR"; }
+trap cleanup_schema_tmp EXIT
+for f in "$SCHEMA_DIR"/*.sql; do
+    [ -f "$f" ] || continue
+    sed '/^\\restrict/d;/^\\unrestrict/d' "$f" > "$SCHEMA_CLEAN_DIR/$(basename "$f")"
+done
+SCHEMA_DIR_FOR_DIFF="$SCHEMA_CLEAN_DIR"
+
 echo "  Running schema diff plan (with validation)..."
 PLAN_JSON=$(pg-schema-diff plan \
     --from-dsn "$PG_DSN" \
-    --to-dir "$SCHEMA_DIR" \
+    --to-dir "$SCHEMA_DIR_FOR_DIFF" \
     --output-format json 2>&1)
 PLAN_EXIT_CODE=$?
 
@@ -702,7 +713,7 @@ if [ $PLAN_EXIT_CODE -ne 0 ]; then
     echo -e "  ${WARNING} Plan with validation failed; retrying with --disable-plan-validation"
     PLAN_JSON=$(pg-schema-diff plan \
         --from-dsn "$PG_DSN" \
-        --to-dir "$SCHEMA_DIR" \
+        --to-dir "$SCHEMA_DIR_FOR_DIFF" \
         --output-format json \
         --disable-plan-validation 2>&1)
     PLAN_EXIT_CODE=$?
@@ -755,7 +766,7 @@ if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 0 ]; then
     echo "  Applying schema changes..."
     APPLY_OUTPUT=$(pg-schema-diff apply \
         --from-dsn "$PG_DSN" \
-        --to-dir "$SCHEMA_DIR" \
+        --to-dir "$SCHEMA_DIR_FOR_DIFF" \
         --skip-confirm-prompt 2>&1)
     APPLY_EXIT_CODE=$?
 
