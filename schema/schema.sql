@@ -11,9 +11,9 @@
 -- Listed here so agent-install.sh can verify they are present.
 --
 
-CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+-- INSTALLER HANDLES: CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
-CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+-- INSTALLER HANDLES: CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 
 

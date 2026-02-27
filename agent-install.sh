@@ -658,7 +658,8 @@ echo "Schema management (pgschema)..."
 # Step 1: Ensure extensions
 # ----------------------------------------------------------
 echo "  Ensuring extensions..."
-EXTENSIONS=$(grep -E "^CREATE EXTENSION IF NOT EXISTS" "$SCHEMA_FILE" | sed "s/CREATE EXTENSION IF NOT EXISTS //;s/ .*//;s/;//" || true)
+# Parse extension requirements from schema.sql (handles both active and commented-out forms)
+EXTENSIONS=$(grep -E "(^|INSTALLER HANDLES: )CREATE EXTENSION IF NOT EXISTS" "$SCHEMA_FILE" | sed "s/.*CREATE EXTENSION IF NOT EXISTS //;s/ .*//;s/;//" || true)
 if [ -n "$EXTENSIONS" ]; then
     for ext in $EXTENSIONS; do
         # Only a superuser can install extensions; if already installed, no-op
