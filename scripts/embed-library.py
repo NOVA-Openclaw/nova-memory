@@ -36,14 +36,14 @@ LIBRARY_QUERY = """
             WHERE wa.work_id = w.id
         ), 'Unknown') ||
         ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
-        w.summary ||
-        COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '') ||
+        left(w.summary, 1200) ||
         COALESCE(' Topics: ' || (
             SELECT string_agg(t.name, ', ' ORDER BY t.name)
             FROM library_tags t
             JOIN library_work_tags wt ON t.id = wt.tag_id
             WHERE wt.work_id = w.id
-        ), '')
+        ), '') ||
+        COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '')
     FROM library_works w
     WHERE w.embed = true
 """
