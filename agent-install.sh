@@ -549,6 +549,19 @@ else
     exit 1
 fi
 
+# Check CREATEDB privilege (required for pg-schema-diff plan validation and initial DB creation)
+CAN_CREATEDB=$(psql -U "$DB_USER" -d postgres -tAc "SELECT rolcreatedb FROM pg_roles WHERE rolname = '$DB_USER'" 2>/dev/null | tr -d '[:space:]')
+if [ "$CAN_CREATEDB" = "t" ]; then
+    echo -e "  ${CHECK_MARK} $DB_USER has CREATEDB privilege"
+else
+    echo -e "  ${CROSS_MARK} $DB_USER lacks CREATEDB privilege (required for schema management)"
+    echo ""
+    echo "  pg-schema-diff validates plans by creating a temporary database."
+    echo "  Grant the privilege with:"
+    echo "    sudo -u postgres psql -c \"ALTER USER $DB_USER CREATEDB;\""
+    exit 1
+fi
+
 # ============================================
 # Part 1.5: Install Shared PG Loader Libraries
 # ============================================
@@ -685,9 +698,10 @@ echo ""
 echo "Applying schema (pg-schema-diff)..."
 
 # Step A: Run pg-schema-diff plan to detect hazards
-# Try with plan validation first; fall back to --disable-plan-validation if it fails
+# Plan validation requires CREATEDB privilege (creates a temp DB to validate the plan).
+# The installer already requires CREATEDB to create the target database, so this is
+# always available. If plan fails, we exit — no fallback to --disable-plan-validation.
 PLAN_JSON=""
-PLAN_VALIDATION_OK=0
 PLAN_EXIT_CODE=0
 
 # pg-schema-diff cannot parse pg_dump's \restrict/\unrestrict meta-commands
@@ -701,9 +715,9 @@ for f in "$SCHEMA_DIR"/*.sql; do
 done
 SCHEMA_DIR_FOR_DIFF="$SCHEMA_CLEAN_DIR"
 
-echo "  Running schema diff plan (with validation)..."
-# Capture output and exit code — use || true to prevent set -e from exiting
-set +e  # Disable errexit for plan commands
+echo "  Running schema diff plan..."
+# Capture output and exit code
+set +e  # Disable errexit for plan command
 PLAN_JSON=$(pg-schema-diff plan \
     --from-dsn "$PG_DSN" \
     --to-dir "$SCHEMA_DIR_FOR_DIFF" \
@@ -712,26 +726,12 @@ PLAN_EXIT_CODE=$?
 set -e  # Re-enable errexit
 
 if [ $PLAN_EXIT_CODE -ne 0 ]; then
-    # Plan with validation failed — try without
-    echo -e "  ${WARNING} Plan with validation failed; retrying with --disable-plan-validation"
-    PLAN_JSON=$(pg-schema-diff plan \
-        --from-dsn "$PG_DSN" \
-        --to-dir "$SCHEMA_DIR_FOR_DIFF" \
-        --output-format json \
-        --disable-plan-validation 2>&1)
-    PLAN_EXIT_CODE=$?
-else
-    PLAN_VALIDATION_OK=1
-fi
-
-if [ $PLAN_EXIT_CODE -ne 0 ]; then
     echo -e "  ${CROSS_MARK} Schema diff plan failed"
     echo "$PLAN_JSON"
+    echo ""
+    echo "  Plan validation requires CREATEDB privilege."
+    echo "  Grant it with: ALTER USER $DB_USER CREATEDB;"
     exit 1
-fi
-
-if [ "$PLAN_VALIDATION_OK" -eq 0 ]; then
-    echo -e "  ${WARNING} Plan validation was skipped (insufficient privileges to create temp DB)"
 fi
 
 # Step B: Parse plan output — check for DESTRUCTIVE hazardous statements
@@ -775,18 +775,12 @@ fi
 # Step C: If no hazards, apply the schema diff
 if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 0 ]; then
     echo "  Applying schema changes..."
-    # If plan validation was skipped, skip it for apply too
-    APPLY_EXTRA_FLAGS=""
-    if [ "$PLAN_VALIDATION_OK" -eq 0 ]; then
-        APPLY_EXTRA_FLAGS="--disable-plan-validation"
-    fi
     set +e
     APPLY_OUTPUT=$(pg-schema-diff apply \
         --from-dsn "$PG_DSN" \
         --to-dir "$SCHEMA_DIR_FOR_DIFF" \
         --skip-confirm-prompt \
-        --allow-hazards HAS_UNTRACKABLE_DEPENDENCIES,INDEX_BUILD \
-        $APPLY_EXTRA_FLAGS 2>&1)
+        --allow-hazards HAS_UNTRACKABLE_DEPENDENCIES,INDEX_BUILD 2>&1)
     APPLY_EXIT_CODE=$?
     set -e
 
