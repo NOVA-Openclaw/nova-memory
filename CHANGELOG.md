@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed
+- **`shell-install.sh`: source `pg-env.sh` early so `PGPASSWORD` is set during reachability check** ([#134](https://github.com/nova-openclaw/nova-memory/issues/134)) — `lib/pg-env.sh` is now sourced at the top of the script before any config validation or DB checks:
+  - Removed redundant manual `jq` parsing of `postgres.json` fields — `load_pg_env()` handles all env loading
+  - Reachability check now uses plain `psql` (picks up `PGPASSWORD` from env); previously used `pg_isready` which does not test authentication
+  - Added **empty password warning** for TCP hosts: if `PGHOST` is not a Unix socket and `PGPASSWORD` is unset, installer warns and suggests adding a password to `postgres.json`
+  - Added **non-interactive detection**: if config is needed and stdin is not a TTY, installer exits (non-zero) with a clear error message instead of hanging on `read`
+
 ### Changed
 - **Replaced `pg-schema-diff` with `pgschema` for declarative schema management** (#155) — The installer now uses [`pgschema`](https://github.com/pgplex/pgschema) (pgplex/pgschema) to diff and apply `schema/schema.sql` against the live database. Key changes:
   - **`pgschema` is now a required prerequisite** (`go install github.com/pgplex/pgschema@latest`)

@@ -112,9 +112,10 @@ git clone https://github.com/NOVA-Openclaw/nova-memory.git ~/.openclaw/workspace
 cd ~/.openclaw/workspace/nova-memory
 
 # Run the installer (handles schema application, hooks, and config)
-./shell-install.sh    # Interactive: prompts for DB details and API keys
+./shell-install.sh    # Interactive: prompts for DB details and API keys, then execs agent-install.sh
+                      # Exits immediately (non-zero) if config is missing and stdin is not a TTY
 # OR
-./agent-install.sh    # Non-interactive: reads ~/.openclaw/postgres.json
+./agent-install.sh    # Non-interactive: reads ~/.openclaw/postgres.json directly (no prompts)
 ```
 
 ## Environment Configuration

@@ -48,12 +48,28 @@ Before installing nova-memory, ensure you have the following:
 
 ```bash
 cd ~/.openclaw/workspace/nova-memory
-./install.sh
+./shell-install.sh    # Interactive: prompts for DB details and API keys, then calls agent-install.sh
 ```
 
-The installer is **idempotent** - safe to run multiple times.
+The installer is **idempotent** — safe to run multiple times. Use `./agent-install.sh` directly if the environment is already configured (e.g., CI or agent-driven installs).
 
 ## Recent Changes
+
+### 2026-02-27: shell-install.sh Reliability Improvements (#134)
+
+`shell-install.sh` was restructured to improve reliability during the database reachability check:
+
+**What Changed:**
+- `lib/pg-env.sh` is now sourced at the **top of the script** (before any config checks), so `load_pg_env()` is available throughout
+- Removed redundant manual `jq` parsing of `postgres.json` fields — `load_pg_env()` handles all env loading
+- Reachability check now uses plain `psql` (which picks up `PGPASSWORD` from the env exported by `load_pg_env()`)
+- Added **empty password warning** for TCP hosts: if `PGHOST` is not a Unix socket path and `PGPASSWORD` is unset, the installer prints a warning pointing to `postgres.json`
+- Added **non-interactive detection**: if stdin is not a TTY and the config is incomplete, the script exits with a clear error rather than hanging
+
+**Impact:**
+- Password-protected databases now work correctly during install without requiring manual env var export
+- Automated/agent installs that call `shell-install.sh` will fail fast instead of hanging on `read`
+- No change to the prompts or config file format
 
 ### 2026-02-11: Automatic Hook Configuration
 
@@ -253,7 +269,7 @@ The installer and hooks use these environment variables:
 - `PGUSER` - PostgreSQL user (default: current OS user)
 - `PGHOST` - Database host (default: localhost)
 - `PGDATABASE` - Database name (default: `${USER//-/_}_memory`, e.g., `nova_memory`)
-- `POSTGRES_PASSWORD` - Database password (optional)
+- `PGPASSWORD` - Database password (optional); set in `~/.openclaw/postgres.json` for persistence
 
 ### Hook-Specific Settings
 - `SEMANTIC_RECALL_TOKEN_BUDGET` - Max tokens for recall (default: 1000)
@@ -261,7 +277,7 @@ The installer and hooks use these environment variables:
 
 ## Post-Installation
 
-After running `install.sh`, **the hooks are automatically enabled**. Just restart the gateway:
+After running `shell-install.sh` or `agent-install.sh`, **the hooks are automatically enabled**. Just restart the gateway:
 
 ```bash
 openclaw gateway restart

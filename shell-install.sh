@@ -2,12 +2,14 @@
 # shell-install.sh — Interactive setup for nova-memory
 # Human-facing entry point that ensures all config is in place, then execs agent-install.sh.
 #
-# 1. Check/prompt for database config → write to ~/.openclaw/postgres.json
-# 2. Check/prompt for API keys → write to ~/.openclaw/openclaw.json env.vars
-# 3. Load all config into ENV
-# 4. exec agent-install.sh (which does all the real work)
-#
-# Fix: nova-memory #134 — source pg-env.sh early so PGPASSWORD is in env during reachability check
+# Flow:
+# 1. Source lib/pg-env.sh (early — makes load_pg_env() available before any DB checks)
+# 2. Check postgres.json for required fields; if complete, call load_pg_env() and test reachability
+#    - Warns if PGPASSWORD is empty for a TCP host
+#    - If config is incomplete or DB unreachable, prompts for connection details
+#    - Exits immediately (non-zero) if stdin is not a TTY and config is needed
+# 3. Check openclaw.json for API keys; prompts interactively if missing
+# 4. exec agent-install.sh (which does all the real work: schema, hooks, scripts, skills)
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
