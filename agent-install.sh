@@ -731,20 +731,28 @@ if [ "$PLAN_VALIDATION_OK" -eq 0 ]; then
     echo -e "  ${WARNING} Plan validation was skipped (insufficient privileges to create temp DB)"
 fi
 
-# Step B: Parse plan output — check for hazardous statements
+# Step B: Parse plan output — check for DESTRUCTIVE hazardous statements
 # pg-schema-diff outputs JSON; look for statements with hazards array
+# Only block on data-destroying hazards, not informational ones like HAS_UNTRACKABLE_DEPENDENCIES
+DESTRUCTIVE_HAZARDS='["DELETES_DATA", "INDEX_DROPPED", "TABLE_DROPPED", "COLUMN_DROPPED", "ACQUIRES_ACCESS_EXCLUSIVE_LOCK"]'
 HAZARD_COUNT=0
 if command -v jq &> /dev/null; then
-    HAZARD_COUNT=$(echo "$PLAN_JSON" | jq '[.statements[]? | select(.hazards != null and (.hazards | length) > 0)] | length' 2>/dev/null || echo "0")
+    HAZARD_COUNT=$(echo "$PLAN_JSON" | jq --argjson blocklist "$DESTRUCTIVE_HAZARDS" '
+        [.statements[]? 
+         | select(.hazards != null) 
+         | select([.hazards[].type] | any(. as $h | $blocklist | index($h) != null))
+        ] | length
+    ' 2>/dev/null || echo "0")
 fi
 
 if [ "${HAZARD_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    echo -e "  ${WARNING} Schema diff plan contains ${HAZARD_COUNT} hazardous statement(s):"
+    echo -e "  ${WARNING} Schema diff plan contains ${HAZARD_COUNT} DESTRUCTIVE statement(s):"
     echo ""
     if command -v jq &> /dev/null; then
-        echo "$PLAN_JSON" | jq -r '
+        echo "$PLAN_JSON" | jq -r --argjson blocklist "$DESTRUCTIVE_HAZARDS" '
             .statements[]?
-            | select(.hazards != null and (.hazards | length) > 0)
+            | select(.hazards != null)
+            | select([.hazards[].type] | any(. as $h | $blocklist | index($h) != null))
             | "    SQL: " + .ddl + "\n    Hazards: " + ([.hazards[].type] | join(", "))
         ' 2>/dev/null || true
     else
