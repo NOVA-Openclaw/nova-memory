@@ -6,6 +6,8 @@
 # 2. Check/prompt for API keys → write to ~/.openclaw/openclaw.json env.vars
 # 3. Load all config into ENV
 # 4. exec agent-install.sh (which does all the real work)
+#
+# Fix: nova-memory #134 — source pg-env.sh early so PGPASSWORD is in env during reachability check
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,6 +27,16 @@ echo "  nova-memory shell-install"
 echo "═══════════════════════════════════════════"
 echo ""
 
+# ============================================
+# Source libraries early (before any checks)
+# ============================================
+PG_ENV="$SCRIPT_DIR/lib/pg-env.sh"
+if [ ! -f "$PG_ENV" ]; then
+    echo -e "  ${RED}❌${NC} $PG_ENV not found"
+    exit 1
+fi
+source "$PG_ENV"
+
 # Create config directory if needed
 if [ ! -d "$CONFIG_DIR" ]; then
     mkdir -p "$CONFIG_DIR"
@@ -37,42 +49,74 @@ fi
 # ============================================
 echo "Database configuration..."
 
-# Check if postgres.json exists and has all required fields
-PG_COMPLETE=true
-if [ -f "$PG_CONFIG" ]; then
-    if command -v jq &>/dev/null; then
+# Check if postgres.json exists and has all required fields (field presence only — load_pg_env handles parsing)
+_pg_config_complete() {
+    if [ ! -f "$PG_CONFIG" ]; then
+        return 1
+    fi
+    if ! command -v jq &>/dev/null; then
+        return 1
+    fi
+    for field in host port database user; do
+        local val
+        val=$(jq -r ".$field // empty" "$PG_CONFIG" 2>/dev/null)
+        if [ -z "$val" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+PG_COMPLETE=false
+NEED_PROMPT=false
+
+if _pg_config_complete; then
+    # Config file looks structurally complete — load env and test reachability
+    load_pg_env
+
+    echo "  Resolved: PGHOST=$PGHOST PGDATABASE=${PGDATABASE:-(not set)} PGUSER=$PGUSER"
+
+    # Empty password warning for TCP hosts
+    if [[ "$PGHOST" != /* ]] && [ -z "${PGPASSWORD:-}" ]; then
+        echo -e "  ${YELLOW}⚠️  PGPASSWORD is empty for a network host ($PGHOST)${NC}"
+        echo "      The agent_chat plugin requires password auth for TCP connections."
+        echo "      Consider adding a password to $PG_CONFIG"
+    fi
+
+    # Reachability check — PGPASSWORD is now exported by load_pg_env
+    if psql -c "SELECT 1" &>/dev/null; then
+        echo -e "  ${GREEN}✅${NC} $PG_CONFIG exists and is complete"
+        PG_COMPLETE=true
+    else
+        echo -e "  ${YELLOW}⚠️  $PG_CONFIG exists but database '$PGDATABASE' is not reachable${NC}"
+        echo "  Reconfiguring database settings..."
+        NEED_PROMPT=true
+    fi
+else
+    if [ ! -f "$PG_CONFIG" ]; then
+        : # No config file — will prompt
+    elif ! command -v jq &>/dev/null; then
+        echo -e "  ${YELLOW}⚠️  jq not installed — cannot validate $PG_CONFIG${NC}"
+    else
+        # File exists but is missing fields
         for field in host port database user; do
             val=$(jq -r ".$field // empty" "$PG_CONFIG" 2>/dev/null)
             if [ -z "$val" ]; then
                 echo -e "  ${YELLOW}⚠️  $PG_CONFIG is missing '$field'${NC}"
-                PG_COMPLETE=false
             fi
         done
-        if [ "$PG_COMPLETE" = true ]; then
-            # Verify the configured DB is reachable
-            CONFIGURED_DB=$(jq -r '.database // empty' "$PG_CONFIG" 2>/dev/null)
-            CONFIGURED_USER=$(jq -r '.user // empty' "$PG_CONFIG" 2>/dev/null)
-            CONFIGURED_HOST=$(jq -r '.host // "localhost"' "$PG_CONFIG" 2>/dev/null)
-            CONFIGURED_PORT=$(jq -r '.port // 5432' "$PG_CONFIG" 2>/dev/null)
-
-            if [ -n "$CONFIGURED_DB" ] && psql -h "$CONFIGURED_HOST" -p "$CONFIGURED_PORT" -U "$CONFIGURED_USER" -d "$CONFIGURED_DB" -c "SELECT 1" &>/dev/null; then
-                echo -e "  ${GREEN}✅${NC} $PG_CONFIG exists and is complete"
-                echo "  Resolved: PGHOST=$CONFIGURED_HOST PGDATABASE=$CONFIGURED_DB PGUSER=$CONFIGURED_USER"
-            else
-                echo -e "  ${YELLOW}⚠️  $PG_CONFIG exists but database '$CONFIGURED_DB' is not reachable${NC}"
-                echo "  Reconfiguring database settings..."
-                PG_COMPLETE=false
-            fi
-        fi
-    else
-        echo -e "  ${YELLOW}⚠️  jq not installed — cannot validate $PG_CONFIG${NC}"
-        PG_COMPLETE=false
     fi
-else
-    PG_COMPLETE=false
+    NEED_PROMPT=true
 fi
 
-if [ "$PG_COMPLETE" = false ]; then
+if [ "$NEED_PROMPT" = true ]; then
+    # Non-interactive guard — don't hang if no TTY
+    if ! [ -t 0 ]; then
+        echo -e "  ${RED}❌${NC} Database configuration is required but stdin is not a TTY."
+        echo "      Run this script interactively, or create $PG_CONFIG manually."
+        exit 1
+    fi
+
     # Prompt for database connection details
     DEFAULT_HOST="localhost"
     DEFAULT_PORT="5432"
@@ -107,19 +151,18 @@ if [ "$PG_COMPLETE" = false ]; then
 EOF
     chmod 600 "$PG_CONFIG"
     echo -e "  ${GREEN}✅${NC} Wrote $PG_CONFIG (chmod 600)"
-fi
 
-# Load database config into ENV
-PG_ENV="$SCRIPT_DIR/lib/pg-env.sh"
-if [ -f "$PG_ENV" ]; then
-    source "$PG_ENV"
+    # Reload env with the new config
     load_pg_env
-else
-    echo -e "  ${RED}❌${NC} $PG_ENV not found"
-    exit 1
-fi
 
-echo "  Resolved: PGHOST=$PGHOST PGDATABASE=${PGDATABASE:-(not set)} PGUSER=$PGUSER"
+    echo "  Resolved: PGHOST=$PGHOST PGDATABASE=${PGDATABASE:-(not set)} PGUSER=$PGUSER"
+
+    # Empty password warning for TCP hosts (post-prompt)
+    if [[ "$PGHOST" != /* ]] && [ -z "${PGPASSWORD:-}" ]; then
+        echo -e "  ${YELLOW}⚠️  No password set for a network host ($PGHOST)${NC}"
+        echo "      The agent_chat plugin requires password auth for TCP connections."
+    fi
+fi
 
 # ============================================
 # Part 2: API keys (openclaw.json env.vars)
@@ -146,16 +189,20 @@ if [ -z "$OPENAI_KEY" ] && [ -z "${OPENAI_API_KEY:-}" ]; then
     echo "      Required for semantic recall (embeddings)."
     echo "      Get a key from: https://platform.openai.com/api-keys"
     echo ""
-    read -rp "    Enter your OpenAI API key (or press Enter to skip): " INPUT_OPENAI_KEY
-    if [ -n "$INPUT_OPENAI_KEY" ]; then
-        # Write to openclaw.json env.vars
-        TMP_CONFIG=$(mktemp)
-        jq --arg key "$INPUT_OPENAI_KEY" '.env.vars.OPENAI_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
-        mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
-        export OPENAI_API_KEY="$INPUT_OPENAI_KEY"
-        echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY written to $OPENCLAW_CONFIG"
+    if ! [ -t 0 ]; then
+        echo -e "  ${YELLOW}⚠️  Non-interactive mode — skipping OPENAI_API_KEY prompt${NC}"
     else
-        echo -e "  ${YELLOW}⚠️  Skipped — semantic recall will not work without OPENAI_API_KEY${NC}"
+        read -rp "    Enter your OpenAI API key (or press Enter to skip): " INPUT_OPENAI_KEY
+        if [ -n "$INPUT_OPENAI_KEY" ]; then
+            # Write to openclaw.json env.vars
+            TMP_CONFIG=$(mktemp)
+            jq --arg key "$INPUT_OPENAI_KEY" '.env.vars.OPENAI_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
+            mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
+            export OPENAI_API_KEY="$INPUT_OPENAI_KEY"
+            echo -e "  ${GREEN}✅${NC} OPENAI_API_KEY written to $OPENCLAW_CONFIG"
+        else
+            echo -e "  ${YELLOW}⚠️  Skipped — semantic recall will not work without OPENAI_API_KEY${NC}"
+        fi
     fi
 elif [ -n "$OPENAI_KEY" ]; then
     export OPENAI_API_KEY="$OPENAI_KEY"
@@ -171,16 +218,20 @@ if [ -z "$ANTHROPIC_KEY" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
     echo "      Used by OpenClaw as the primary LLM provider."
     echo "      Get a key from: https://console.anthropic.com/settings/keys"
     echo ""
-    read -rp "    Enter your Anthropic API key (or press Enter to skip): " INPUT_ANTHROPIC_KEY
-    if [ -n "$INPUT_ANTHROPIC_KEY" ]; then
-        # Write to openclaw.json env.vars
-        TMP_CONFIG=$(mktemp)
-        jq --arg key "$INPUT_ANTHROPIC_KEY" '.env.vars.ANTHROPIC_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
-        mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
-        export ANTHROPIC_API_KEY="$INPUT_ANTHROPIC_KEY"
-        echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY written to $OPENCLAW_CONFIG"
+    if ! [ -t 0 ]; then
+        echo -e "  ${YELLOW}⚠️  Non-interactive mode — skipping ANTHROPIC_API_KEY prompt${NC}"
     else
-        echo -e "  ${YELLOW}⚠️  Skipped — some hooks and LLM features may not work without ANTHROPIC_API_KEY${NC}"
+        read -rp "    Enter your Anthropic API key (or press Enter to skip): " INPUT_ANTHROPIC_KEY
+        if [ -n "$INPUT_ANTHROPIC_KEY" ]; then
+            # Write to openclaw.json env.vars
+            TMP_CONFIG=$(mktemp)
+            jq --arg key "$INPUT_ANTHROPIC_KEY" '.env.vars.ANTHROPIC_API_KEY = $key' "$OPENCLAW_CONFIG" > "$TMP_CONFIG"
+            mv "$TMP_CONFIG" "$OPENCLAW_CONFIG"
+            export ANTHROPIC_API_KEY="$INPUT_ANTHROPIC_KEY"
+            echo -e "  ${GREEN}✅${NC} ANTHROPIC_API_KEY written to $OPENCLAW_CONFIG"
+        else
+            echo -e "  ${YELLOW}⚠️  Skipped — some hooks and LLM features may not work without ANTHROPIC_API_KEY${NC}"
+        fi
     fi
 elif [ -n "$ANTHROPIC_KEY" ]; then
     export ANTHROPIC_API_KEY="$ANTHROPIC_KEY"
