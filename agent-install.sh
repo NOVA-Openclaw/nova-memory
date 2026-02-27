@@ -702,11 +702,14 @@ done
 SCHEMA_DIR_FOR_DIFF="$SCHEMA_CLEAN_DIR"
 
 echo "  Running schema diff plan (with validation)..."
+# Capture output and exit code — use || true to prevent set -e from exiting
+set +e  # Disable errexit for plan commands
 PLAN_JSON=$(pg-schema-diff plan \
     --from-dsn "$PG_DSN" \
     --to-dir "$SCHEMA_DIR_FOR_DIFF" \
     --output-format json 2>&1)
 PLAN_EXIT_CODE=$?
+set -e  # Re-enable errexit
 
 if [ $PLAN_EXIT_CODE -ne 0 ]; then
     # Plan with validation failed — try without
