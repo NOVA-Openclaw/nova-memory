@@ -78,11 +78,16 @@ All loaders accept an optional path argument to override the default location:
 
 ```
 shell-install.sh
-  └─ Creates DB → writes ~/.openclaw/postgres.json
+  └─ Sources lib/pg-env.sh early (load_pg_env available throughout)
+  └─ Prompts for DB credentials → writes ~/.openclaw/postgres.json
+  └─ Calls load_pg_env() → tests reachability via psql
+  └─ Warns if PGPASSWORD is empty for a TCP host
+  └─ Exits (non-zero) if config needed but stdin is not a TTY
+  └─ execs agent-install.sh
 
 agent-install.sh
   └─ Installs lib/ → ~/.openclaw/lib/
-  └─ source ~/.openclaw/lib/pg-env.sh → load_pg_env() → reads postgres.json → runs migrations
+  └─ source ~/.openclaw/lib/pg-env.sh → load_pg_env() → reads postgres.json → creates DB & runs migrations
 
 hooks & scripts
   └─ source ~/.openclaw/lib/pg-env.sh (or import equivalent) → PG* vars set → use psql/psycopg2/pg natively
