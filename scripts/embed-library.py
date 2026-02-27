@@ -10,7 +10,7 @@ Usage:
 Requires:
     - OPENAI_API_KEY environment variable
     - PostgreSQL with pgvector extension
-    - library_works, library_authors, library_work_authors tables
+    - library_works, library_authors, library_work_authors, library_tags, library_work_tags tables
 """
 
 import os

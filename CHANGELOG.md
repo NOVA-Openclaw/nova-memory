@@ -17,7 +17,7 @@
 ### Added
 - **`agent_turn_context` table and per-turn injection hook** (#143) — New table stores short critical-context records (≤500 chars each) injected before every agent response. `get_agent_turn_context(agent_name)` aggregates context in priority order (UNIVERSAL → GLOBAL → DOMAIN → AGENT) up to a 2000-character budget with truncation warning. The new `agent-turn-context` hook fires on `message:received`, queries the table, and injects results into the agent's turn context with a 5-minute cache TTL per agent. Migration: `migrations/065_agent_turn_context.sql`.
 - **Library domain schema** — New tables for storing written works (research papers, books, novels, poems, essays, articles, etc.) with normalized authors, flexible tagging, and work-to-work relationships. Database constraints enforce complete ingestion (summary, insights, and all core metadata are required). See `docs/library-schema.md` and `patches/add-library-schema.sql`.
-- **Library semantic embedding** — Added `library` source type to `embed-full-database.py`. Embeds concise summaries (not full text) for high-density semantic search. Full records are fetched on recall hit.
+- **Library semantic embedding** — Added `library` source type to `embed-full-database.py`. Embeds title, authors, summary, notable quotes, and tags for high-density semantic search. Full records are fetched on recall hit.
 - **embed-full-database.py** — Added full database embedding script covering all source types (entities, facts, tasks, projects, agents, lessons, events, positions, media, vocabulary, library works).
 
 ### Fixed

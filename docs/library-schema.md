@@ -7,7 +7,7 @@ A structured storage system for written works — research papers, books, novels
 The library stores all kinds of written works in a normalized schema with:
 
 - **Required metadata** — Database constraints enforce complete records (title, summary, insights, etc.)
-- **Semantic embedding** — Concise summaries are embedded for meaning-based recall
+- **Semantic embedding** — Title, authors, summary, notable quotes, and tags are combined into a single embedding per work for meaning-based recall
 - **Full-text search** — Weighted tsvector index for keyword queries
 - **Normalized authors** — Deduplicated author records linked via junction table
 - **Tagging system** — Flexible subject/topic tags
@@ -19,20 +19,24 @@ The library stores all kinds of written works in a normalized schema with:
 
 All core fields use `NOT NULL` constraints. This means an ingestion agent **cannot** store a work without generating:
 
-- A **summary** (>50 chars) — used for semantic embedding
+- A **summary** (>50 chars) — primary body of the semantic embedding
 - **Insights** (>20 chars) — key takeaways and relevance notes
 - **Publication date**, **work type**, **language**, and **shared_by** provenance
 
 If any required field is missing, the INSERT fails with a clear error indicating what's needed. This enforces a complete ingestion workflow at the database level, not just policy.
 
-### Summary-Only Embedding
+### Embedding Content
 
-Only the `summary` field gets embedded into `memory_embeddings`. This is intentional:
+Each library work produces a single embedding in `memory_embeddings`. The embedded text includes:
 
-- One high-density embedding per work (not dozens of fragmented chunks)
-- Summaries are written to maximize semantic searchability
-- On recall hit, the full record (abstract, content, insights) is fetched from the database
-- Reduces embedding token cost and improves search precision
+- **Title** — with edition when present
+- **Authors** — in original order, or "Unknown" if none recorded
+- **Work type and publication date**
+- **Summary** — the primary semantic content (200-400 words)
+- **Notable quotes** — if present, appended as `Notable quotes: ...` (improves recall for quoted passages)
+- **Tags** — if any tags are linked via `library_work_tags`, appended as `Topics: tag1, tag2, ...` (alphabetically ordered)
+
+This approach gives one high-density embedding per work rather than chunking full text. On a recall hit, the full record (abstract, content, insights) is fetched from the database. Tags and notable quotes are included so semantic search can match on topic keywords and key phrases.
 
 ## Tables
 
@@ -45,7 +49,7 @@ Only the `summary` field gets embedded into `memory_embeddings`. This is intenti
 | work_type | TEXT | ✅ | paper, book, novel, poem, short_story, essay, article, blog_post, whitepaper, report, thesis, dissertation, magazine, newsletter, speech, other |
 | publication_date | DATE | ✅ | Date of publication |
 | language | TEXT | ✅ | ISO language code (default: 'en') |
-| summary | TEXT | ✅ | Concise semantic summary (200-400 words). Generated during ingestion. Used for embedding. |
+| summary | TEXT | ✅ | Concise semantic summary (200-400 words). Generated during ingestion. Primary body of the semantic embedding. |
 | url | TEXT | | Link to the work |
 | doi | TEXT | | Digital Object Identifier |
 | arxiv_id | TEXT | | arXiv identifier |
@@ -142,7 +146,9 @@ Only works where `embed = true` are included in the semantic embedding pipeline.
 ```sql
 -- Fetch works to embed (respects the embed flag)
 SELECT w.id,
-    w.title || ' by ' ||
+    w.title ||
+    COALESCE(' (' || w.edition || ')', '') ||
+    ' by ' ||
     COALESCE((
         SELECT string_agg(a.name, ', ' ORDER BY wa.author_order)
         FROM library_authors a
@@ -150,7 +156,14 @@ SELECT w.id,
         WHERE wa.work_id = w.id
     ), 'Unknown') ||
     ' (' || w.work_type || ', ' || w.publication_date || '). ' ||
-    w.summary
+    w.summary ||
+    COALESCE(' Notable quotes: ' || array_to_string(w.notable_quotes, ' | '), '') ||
+    COALESCE(' Topics: ' || (
+        SELECT string_agg(t.name, ', ' ORDER BY t.name)
+        FROM library_tags t
+        JOIN library_work_tags wt ON t.id = wt.tag_id
+        WHERE wt.work_id = w.id
+    ), '')
 FROM library_works w
 WHERE w.embed = true
 ```
