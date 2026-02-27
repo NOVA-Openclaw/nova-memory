@@ -780,12 +780,15 @@ if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 0 ]; then
     if [ "$PLAN_VALIDATION_OK" -eq 0 ]; then
         APPLY_EXTRA_FLAGS="--disable-plan-validation"
     fi
+    set +e
     APPLY_OUTPUT=$(pg-schema-diff apply \
         --from-dsn "$PG_DSN" \
         --to-dir "$SCHEMA_DIR_FOR_DIFF" \
         --skip-confirm-prompt \
+        --allow-hazards HAS_UNTRACKABLE_DEPENDENCIES,INDEX_BUILD \
         $APPLY_EXTRA_FLAGS 2>&1)
     APPLY_EXIT_CODE=$?
+    set -e
 
     if [ $APPLY_EXIT_CODE -eq 0 ]; then
         TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
