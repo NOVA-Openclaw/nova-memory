@@ -30,11 +30,17 @@ sudo apt install -y \
     curl wget git \
     jq bc \
     python3 python3-pip \
-    build-essential
+    build-essential \
+    golang-go        # Required for pgschema install
 
 # Install Node.js (for OpenClaw)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
+
+# Install pgschema (declarative schema management — required by agent-install.sh)
+go install github.com/pgplex/pgschema@latest
+# Ensure ~/go/bin is in PATH:
+export PATH="$PATH:$HOME/go/bin"
 ```
 
 ## Database Setup

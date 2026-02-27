@@ -1,5 +1,7 @@
 # QA Test Design: Declarative Schema Migrations with pg-schema-diff (#128)
 
+> ⚠️ **SUPERSEDED by #155** — `pg-schema-diff` was replaced by `pgschema` (pgplex/pgschema) in issue #155. This document is retained for historical reference only. For current test cases, see [TEST-CASES-ISSUE-155.md](TEST-CASES-ISSUE-155.md).
+
 ## Overview
 This document outlines the test strategy and test cases for the replacement of manual `migrate_schema()` logic in `agent-install.sh` with `pg-schema-diff`.
 

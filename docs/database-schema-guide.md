@@ -653,42 +653,74 @@ SELECT name, status FROM projects
 WHERE status NOT IN ('active', 'paused', 'completed', 'blocked');
 ```
 
-## Migration Patterns
+## Schema Management
 
-### Adding New Columns
+Nova-memory uses **declarative schema management** via [`pgschema`](https://github.com/pgplex/pgschema). The file `schema/schema.sql` is the single source of truth. When you run `agent-install.sh`, it:
+
+1. Runs any scripts in `pre-migrations/` (data transformations before the diff)
+2. Calls `pgschema plan` to diff `schema.sql` against the live DB
+3. Blocks destructive drops automatically
+4. Calls `pgschema apply` with the approved plan
+
+### Adding or Changing Schema Objects
+
+Edit `schema/schema.sql` to reflect the desired end state. You do **not** write `ALTER TABLE` statements — `pgschema` generates the necessary DDL automatically.
 
 ```sql
--- Safe column addition (doesn't block reads)
-ALTER TABLE entities ADD COLUMN avatar_url TEXT;
-
--- Add with default and update in batches
-ALTER TABLE entities ADD COLUMN last_seen TIMESTAMP DEFAULT NOW();
-```
-
-### Schema Versioning
-
-```sql
--- Track schema versions
-CREATE TABLE schema_versions (
-    version VARCHAR(20) PRIMARY KEY,
-    description TEXT,
-    applied_at TIMESTAMP DEFAULT NOW()
+-- Example: to add a column, just add it to the CREATE TABLE in schema/schema.sql:
+-- BEFORE
+CREATE TABLE entities (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
 );
 
-INSERT INTO schema_versions (version, description) 
-VALUES ('2026-02-08', 'Added collaborative column to agents table');
+-- AFTER (add avatar_url)
+CREATE TABLE entities (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    avatar_url TEXT
+);
 ```
 
-### Data Migration Scripts
+Then re-run `./agent-install.sh` and `pgschema` will apply the `ALTER TABLE ... ADD COLUMN` for you.
+
+### Data Migration Scripts (pre-migrations)
+
+When a schema change requires a data transformation to happen first (e.g., rename a column with a backfill), place a `.sql` script in `pre-migrations/`:
+
+```
+pre-migrations/
+└── 001_rename_old_col_to_new.sql
+```
+
+Pre-migration scripts run in filename order, **before** `pgschema plan` executes. This ensures the live DB is in the correct state for the declarative diff.
 
 ```sql
--- Example: Migrate old project format
-UPDATE projects 
-SET git_config = json_build_object(
-    'repo', repo_name,
-    'branch_strategy', 'feature-branches'
-)
-WHERE git_config IS NULL AND repo_name IS NOT NULL;
+-- Example pre-migration: rename a column manually, then schema.sql reflects the new name
+ALTER TABLE entities RENAME COLUMN old_name TO new_name;
+UPDATE entities SET new_name = COALESCE(new_name, 'default') WHERE new_name IS NULL;
+```
+
+### Generating the Schema File
+
+The schema file is generated using `pgschema dump`, not `pg_dump`:
+
+```bash
+pgschema dump \
+  --host localhost --db nova_memory --user nova \
+  --schema public > schema/schema.sql
+```
+
+The output contains pure DDL — no `OWNER TO`, no `GRANT/REVOKE`, no `\connect` or `SET ROLE` directives. This keeps the schema file clean and portable across different user setups.
+
+### Ignoring Objects
+
+Use `.pgschemaignore` (TOML format) to exclude objects from `pgschema` management:
+
+```toml
+# .pgschemaignore
+[tables]
+patterns = ["temp_*", "pgschema_tmp_*"]
 ```
 
 ## Performance Optimization

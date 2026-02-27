@@ -206,23 +206,26 @@ WHERE name = 'nova-memory';
 
 ### Making Schema Changes
 ```bash
-# 1. Update schema.sql
-vim ~/.openclaw/workspace/nova-memory/schema.sql
+# 1. Edit the declarative schema file (source of truth)
+vim ~/.openclaw/workspace/nova-memory/schema/schema.sql
 
-# 2. Test on development database
-createdb nova_memory_test  
-psql_test -f schema.sql
+# 2. Preview the plan against your local database (optional)
+pgschema plan --host localhost --db nova_memory --user nova \
+  --schema public --file schema/schema.sql \
+  --plan-db nova_memory
 
-# 3. Run migration on production
-psql -f migration-YYYY-MM-DD.sql
+# 3. Apply via the installer (plans, hazard-checks, and applies)
+./agent-install.sh
 
 # 4. Update documentation
 vim docs/database-schema-guide.md
 
 # 5. Commit changes
-git add schema.sql docs/
+git add schema/schema.sql docs/
 git commit -m "feat: add new table for feature X"
 ```
+
+> **Note:** If the change requires a data migration (e.g., column rename + backfill), add a script to `pre-migrations/` first. See [database-schema-guide.md](database-schema-guide.md) for details.
 
 ### Adding New Extraction Categories
 ```bash
@@ -233,7 +236,7 @@ vim scripts/extract-memories.sh
 vim scripts/store-memories.sh
 
 # 3. Add database table if needed
-vim schema.sql
+vim schema/schema.sql
 
 # 4. Test end-to-end
 ./scripts/process-input.sh "Test message for new category"
@@ -294,4 +297,4 @@ vim docs/memory-extraction-pipeline.md
 
 **Built with ❤️ by the NOVA-Openclaw team**
 
-*Last updated: February 8, 2026*
+*Last updated: February 27, 2026*
