@@ -1,9 +1,8 @@
-pg_dump: warning: subscriptions not dumped because current user is not a superuser
 --
 -- PostgreSQL database dump
 --
 
-\restrict gTRYCYrdxDe2fg6GM9bUfKtxYeB857LLKNmqkvTjxwqzRMcCqQ9kpJbINGku9y9
+\restrict fVT5sieggzSBexvP8wTpYCrTPiJL7t7aroDtMnq2bYCEp3hiOJguxv8WKZH4ddT
 
 -- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
@@ -2143,7 +2142,7 @@ CREATE TABLE public.agents (
     is_default boolean DEFAULT false NOT NULL,
     context_type text DEFAULT 'persistent'::text NOT NULL,
     CONSTRAINT agents_context_type_check CHECK ((context_type = ANY (ARRAY['ephemeral'::text, 'persistent'::text]))),
-    CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY ((ARRAY['off'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying])::text[])))
+    CONSTRAINT agents_thinking_check CHECK (((thinking)::text = ANY (ARRAY[('off'::character varying)::text, ('minimal'::character varying)::text, ('low'::character varying)::text, ('medium'::character varying)::text, ('high'::character varying)::text, ('xhigh'::character varying)::text])))
 );
 
 
@@ -2619,7 +2618,7 @@ CREATE TABLE public.entity_facts (
     confirmation_count integer DEFAULT 1,
     decay_rate real,
     CONSTRAINT chk_confidence CHECK (((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))),
-    CONSTRAINT chk_data_type CHECK (((data_type)::text = ANY ((ARRAY['permanent'::character varying, 'identity'::character varying, 'preference'::character varying, 'temporal'::character varying, 'observation'::character varying])::text[])))
+    CONSTRAINT chk_data_type CHECK (((data_type)::text = ANY (ARRAY[('permanent'::character varying)::text, ('identity'::character varying)::text, ('preference'::character varying)::text, ('temporal'::character varying)::text, ('observation'::character varying)::text])))
 );
 
 
@@ -2686,7 +2685,7 @@ CREATE VIEW public.delegation_knowledge AS
     learned_at,
     updated_at
    FROM public.entity_facts ef
-  WHERE ((entity_id = 1) AND ((key)::text = ANY ((ARRAY['delegates_to'::character varying, 'task_delegation'::character varying, 'agent_capability'::character varying, 'agent_success'::character varying, 'agent_failure'::character varying])::text[])))
+  WHERE ((entity_id = 1) AND ((key)::text = ANY (ARRAY[('delegates_to'::character varying)::text, ('task_delegation'::character varying)::text, ('agent_capability'::character varying)::text, ('agent_success'::character varying)::text, ('agent_failure'::character varying)::text])))
   ORDER BY
         CASE key
             WHEN 'delegates_to'::text THEN 1
@@ -2723,7 +2722,7 @@ CREATE TABLE public.entities (
     capabilities jsonb,
     access_constraints jsonb,
     preferred_contact character varying(50),
-    CONSTRAINT entities_type_check CHECK (((type)::text = ANY ((ARRAY['person'::character varying, 'ai'::character varying, 'organization'::character varying, 'pet'::character varying, 'stuffed_animal'::character varying, 'character'::character varying, 'other'::character varying])::text[]))),
+    CONSTRAINT entities_type_check CHECK (((type)::text = ANY (ARRAY[('person'::character varying)::text, ('ai'::character varying)::text, ('organization'::character varying)::text, ('pet'::character varying)::text, ('stuffed_animal'::character varying)::text, ('character'::character varying)::text, ('other'::character varying)::text]))),
     CONSTRAINT valid_collaboration_scope CHECK (((collaboration_scope IS NULL) OR (collaboration_scope = ANY (ARRAY['full'::text, 'domain-specific'::text, 'supervised'::text]))))
 );
 
@@ -4659,7 +4658,7 @@ CREATE TABLE public.project_tasks (
     due_date timestamp without time zone,
     completed_at timestamp without time zone,
     priority integer DEFAULT 0,
-    CONSTRAINT project_tasks_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying, 'complete'::character varying])::text[])))
+    CONSTRAINT project_tasks_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('in_progress'::character varying)::text, ('blocked'::character varying)::text, ('complete'::character varying)::text])))
 );
 
 
@@ -4707,7 +4706,7 @@ CREATE TABLE public.projects (
     repo_url text,
     locked boolean DEFAULT false,
     skills text[],
-    CONSTRAINT projects_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'blocked'::character varying, 'complete'::character varying, 'paused'::character varying, 'abandoned'::character varying])::text[])))
+    CONSTRAINT projects_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('blocked'::character varying)::text, ('complete'::character varying)::text, ('paused'::character varying)::text, ('abandoned'::character varying)::text])))
 );
 
 
@@ -4779,7 +4778,7 @@ CREATE TABLE public.publications (
     context text,
     published_at timestamp with time zone DEFAULT now() NOT NULL,
     published_by character varying(50),
-    CONSTRAINT valid_publication_type CHECK (((publication_type)::text = ANY ((ARRAY['git_repo'::character varying, 'doc'::character varying, 'file'::character varying, 'agent_chat'::character varying, 'external'::character varying, 'other'::character varying])::text[])))
+    CONSTRAINT valid_publication_type CHECK (((publication_type)::text = ANY (ARRAY[('git_repo'::character varying)::text, ('doc'::character varying)::text, ('file'::character varying)::text, ('agent_chat'::character varying)::text, ('external'::character varying)::text, ('other'::character varying)::text])))
 );
 
 
@@ -4997,7 +4996,7 @@ CREATE TABLE public.tags (
     description text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT lowercase_name CHECK (((name)::text = lower((name)::text))),
-    CONSTRAINT valid_category CHECK (((category IS NULL) OR ((category)::text = ANY ((ARRAY['genre'::character varying, 'mood'::character varying, 'theme'::character varying, 'style'::character varying, 'audience'::character varying, 'project'::character varying])::text[]))))
+    CONSTRAINT valid_category CHECK (((category IS NULL) OR ((category)::text = ANY (ARRAY[('genre'::character varying)::text, ('mood'::character varying)::text, ('theme'::character varying)::text, ('style'::character varying)::text, ('audience'::character varying)::text, ('project'::character varying)::text]))))
 );
 
 
@@ -5349,7 +5348,7 @@ CREATE VIEW public.v_metamours AS
      JOIN public.entities e2 ON ((r1.entity_b = e2.id)))
      JOIN public.entity_relationships r2 ON (((e2.id = r2.entity_a) OR (e2.id = r2.entity_b))))
      JOIN public.entities e3 ON (((r2.entity_a = e3.id) OR (r2.entity_b = e3.id))))
-  WHERE (((e1.name)::text = 'I)ruid'::text) AND ((r1.relationship)::text = ANY ((ARRAY['partner'::character varying, 'casual'::character varying])::text[])) AND (e3.id <> e1.id) AND (e3.id <> e2.id) AND ((e3.type)::text = 'person'::text));
+  WHERE (((e1.name)::text = 'I)ruid'::text) AND ((r1.relationship)::text = ANY (ARRAY[('partner'::character varying)::text, ('casual'::character varying)::text])) AND (e3.id <> e1.id) AND (e3.id <> e2.id) AND ((e3.type)::text = 'person'::text));
 
 
 --
@@ -5367,7 +5366,7 @@ CREATE VIEW public.v_pending_tasks AS
     t.notes
    FROM (public.tasks t
      LEFT JOIN public.projects p ON ((t.project_id = p.id)))
-  WHERE ((t.status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'blocked'::character varying])::text[]))
+  WHERE ((t.status)::text = ANY (ARRAY[('pending'::character varying)::text, ('in_progress'::character varying)::text, ('blocked'::character varying)::text]))
   ORDER BY t.priority, t.due_date;
 
 
@@ -5541,7 +5540,7 @@ CREATE VIEW public.v_users AS
      JOIN public.entity_facts ef ON ((e.id = ef.entity_id)))
   WHERE (EXISTS ( SELECT 1
            FROM public.entity_facts ef2
-          WHERE ((ef2.entity_id = e.id) AND ((ef2.key)::text = ANY ((ARRAY['is_user'::character varying, 'onboarded'::character varying])::text[])))))
+          WHERE ((ef2.entity_id = e.id) AND ((ef2.key)::text = ANY (ARRAY[('is_user'::character varying)::text, ('onboarded'::character varying)::text])))))
   GROUP BY e.id, e.name, e.full_name, e.type;
 
 
@@ -5818,8 +5817,8 @@ CREATE TABLE public.works (
     parent_work_id integer,
     metadata jsonb,
     CONSTRAINT positive_counts CHECK (((word_count >= 0) AND (character_count >= 0))),
-    CONSTRAINT valid_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'complete'::character varying, 'published'::character varying, 'archived'::character varying])::text[]))),
-    CONSTRAINT valid_work_type CHECK (((work_type)::text = ANY ((ARRAY['haiku'::character varying, 'poem'::character varying, 'prose'::character varying, 'documentation'::character varying, 'story'::character varying, 'dialogue'::character varying, 'microfiction'::character varying, 'essay'::character varying, 'other'::character varying])::text[])))
+    CONSTRAINT valid_status CHECK (((status)::text = ANY (ARRAY[('draft'::character varying)::text, ('complete'::character varying)::text, ('published'::character varying)::text, ('archived'::character varying)::text]))),
+    CONSTRAINT valid_work_type CHECK (((work_type)::text = ANY (ARRAY[('haiku'::character varying)::text, ('poem'::character varying)::text, ('prose'::character varying)::text, ('documentation'::character varying)::text, ('story'::character varying)::text, ('dialogue'::character varying)::text, ('microfiction'::character varying)::text, ('essay'::character varying)::text, ('other'::character varying)::text])))
 );
 
 
@@ -7448,7 +7447,7 @@ CREATE INDEX idx_jobs_root ON public.agent_jobs USING btree (root_job_id);
 -- Name: idx_jobs_topic; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic) WHERE ((status)::text <> ALL ((ARRAY['completed'::character varying, 'cancelled'::character varying])::text[]));
+CREATE INDEX idx_jobs_topic ON public.agent_jobs USING btree (agent_name, topic) WHERE ((status)::text <> ALL (ARRAY[('completed'::character varying)::text, ('cancelled'::character varying)::text]));
 
 
 --
@@ -8809,6 +8808,13 @@ ALTER PUBLICATION graybeard_sync_pub ADD TABLE ONLY public.agent_turn_context WH
 
 
 --
+-- Name: agent_chat_from_graybeard; Type: SUBSCRIPTION; Schema: -; Owner: -
+--
+
+CREATE SUBSCRIPTION agent_chat_from_graybeard CONNECTION 'host=/var/run/postgresql dbname=graybeard_memory user=postgres' PUBLICATION agent_chat_pub WITH (connect = false, slot_name = 'agent_chat_from_graybeard', origin = none);
+
+
+--
 -- Name: schema_change_trigger; Type: EVENT TRIGGER; Schema: -; Owner: -
 --
 
@@ -8820,5 +8826,5 @@ CREATE EVENT TRIGGER schema_change_trigger ON ddl_command_end
 -- PostgreSQL database dump complete
 --
 
-\unrestrict gTRYCYrdxDe2fg6GM9bUfKtxYeB857LLKNmqkvTjxwqzRMcCqQ9kpJbINGku9y9
+\unrestrict fVT5sieggzSBexvP8wTpYCrTPiJL7t7aroDtMnq2bYCEp3hiOJguxv8WKZH4ddT
 

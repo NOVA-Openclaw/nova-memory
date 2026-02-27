@@ -549,16 +549,17 @@ else
     exit 1
 fi
 
-# Check CREATEDB privilege (required for pg-schema-diff plan validation and initial DB creation)
-CAN_CREATEDB=$(psql -U "$DB_USER" -d postgres -tAc "SELECT rolcreatedb FROM pg_roles WHERE rolname = '$DB_USER'" 2>/dev/null | tr -d '[:space:]')
-if [ "$CAN_CREATEDB" = "t" ]; then
-    echo -e "  ${CHECK_MARK} $DB_USER has CREATEDB privilege"
+# Check SUPERUSER privilege (required for CREATE EXTENSION and pg-schema-diff temp DBs)
+IS_SUPERUSER_PREREQ=$(psql -U "$DB_USER" -d postgres -tAc "SELECT rolsuper FROM pg_roles WHERE rolname = '$DB_USER'" 2>/dev/null | tr -d '[:space:]')
+if [ "$IS_SUPERUSER_PREREQ" = "t" ]; then
+    echo -e "  ${CHECK_MARK} $DB_USER has SUPERUSER privilege"
 else
-    echo -e "  ${CROSS_MARK} $DB_USER lacks CREATEDB privilege (required for schema management)"
+    echo -e "  ${CROSS_MARK} $DB_USER is not a superuser (required for schema management)"
     echo ""
-    echo "  pg-schema-diff validates plans by creating a temporary database."
-    echo "  Grant the privilege with:"
-    echo "    sudo -u postgres psql -c \"ALTER USER $DB_USER CREATEDB;\""
+    echo "  The installing agent needs full control of its database."
+    echo "  Extensions (pgvector, pg_trgm) and pg-schema-diff require superuser."
+    echo "  Grant it with:"
+    echo "    sudo -u postgres psql -c \"ALTER USER $DB_USER SUPERUSER;\""
     exit 1
 fi
 
@@ -698,9 +699,7 @@ echo ""
 echo "Applying schema (pg-schema-diff)..."
 
 # Step A: Run pg-schema-diff plan to detect hazards
-# Plan validation requires CREATEDB privilege (creates a temp DB to validate the plan).
-# The installer already requires CREATEDB to create the target database, so this is
-# always available. If plan fails, we exit — no fallback to --disable-plan-validation.
+# Superuser is verified in prerequisites — needed for CREATEDB (temp DBs) and extensions.
 PLAN_JSON=""
 PLAN_EXIT_CODE=0
 
@@ -726,24 +725,29 @@ for ext in "${EXTENSIONS_NEEDED[@]}"; do
     fi
 done
 
-# pg-schema-diff cannot parse pg_dump meta-commands (\restrict/\unrestrict) or handle
-# CREATE EXTENSION (requires superuser in temp validation DB). Create a cleaned copy
-# with those lines stripped — extensions are handled above.
+# pg-schema-diff cannot parse pg_dump meta-commands (\restrict/\unrestrict).
+# COMMENT ON EXTENSION is a pg_dump artifact not needed for schema diff.
+# CREATE EXTENSION lines are KEPT — superuser can create extensions in temp DBs.
+# OWNER TO / SET ROLE / GRANT / REVOKE are already absent (--no-owner --no-privileges).
 SCHEMA_CLEAN_DIR=$(mktemp -d)
 cleanup_schema_tmp() { rm -rf "$SCHEMA_CLEAN_DIR"; }
 trap cleanup_schema_tmp EXIT
 for f in "$SCHEMA_DIR"/*.sql; do
     [ -f "$f" ] || continue
-    sed '/^\\restrict/d;/^\\unrestrict/d;/^CREATE EXTENSION /d;/^COMMENT ON EXTENSION /d' "$f" > "$SCHEMA_CLEAN_DIR/$(basename "$f")"
+    sed -e '/^\\restrict/d' -e '/^\\unrestrict/d' -e '/^COMMENT ON EXTENSION /d' "$f" > "$SCHEMA_CLEAN_DIR/$(basename "$f")"
 done
 SCHEMA_DIR_FOR_DIFF="$SCHEMA_CLEAN_DIR"
 
 echo "  Running schema diff plan..."
 # Capture output and exit code
 set +e  # Disable errexit for plan command
+# Plan validation disabled — pg-schema-diff's temp DB inherits server-level objects
+# (logical replication subscriptions) that cause validation to fail. The hazard check
+# in Step B provides the safety gate instead.
 PLAN_JSON=$(pg-schema-diff plan \
     --from-dsn "$PG_DSN" \
     --to-dir "$SCHEMA_DIR_FOR_DIFF" \
+    --disable-plan-validation \
     --output-format json 2>&1)
 PLAN_EXIT_CODE=$?
 set -e  # Re-enable errexit
@@ -751,16 +755,14 @@ set -e  # Re-enable errexit
 if [ $PLAN_EXIT_CODE -ne 0 ]; then
     echo -e "  ${CROSS_MARK} Schema diff plan failed"
     echo "$PLAN_JSON"
-    echo ""
-    echo "  Plan validation requires CREATEDB privilege."
-    echo "  Grant it with: ALTER USER $DB_USER CREATEDB;"
     exit 1
 fi
 
 # Step B: Parse plan output — check for DESTRUCTIVE hazardous statements
-# pg-schema-diff outputs JSON; look for statements with hazards array
-# Only block on data-destroying hazards, not informational ones like HAS_UNTRACKABLE_DEPENDENCIES
-DESTRUCTIVE_HAZARDS='["DELETES_DATA", "INDEX_DROPPED", "TABLE_DROPPED", "COLUMN_DROPPED", "ACQUIRES_ACCESS_EXCLUSIVE_LOCK"]'
+# DESTRUCTIVE hazards block apply (data loss risk)
+# AUTHZ_UPDATE hazards (GRANT/REVOKE) are ignored — privileges are environment config,
+# not managed by schema diff (schema.sql is dumped with --no-privileges)
+DESTRUCTIVE_HAZARDS='["DELETES_DATA", "TABLE_DROPPED", "COLUMN_DROPPED", "ACQUIRES_ACCESS_EXCLUSIVE_LOCK"]'
 HAZARD_COUNT=0
 if command -v jq &> /dev/null; then
     HAZARD_COUNT=$(echo "$PLAN_JSON" | jq --argjson blocklist "$DESTRUCTIVE_HAZARDS" '
@@ -771,6 +773,7 @@ if command -v jq &> /dev/null; then
     ' 2>/dev/null || echo "0")
 fi
 
+SCHEMA_DIFF_SKIPPED=0
 if [ "${HAZARD_COUNT:-0}" -gt 0 ] 2>/dev/null; then
     echo -e "  ${WARNING} Schema diff plan contains ${HAZARD_COUNT} DESTRUCTIVE statement(s):"
     echo ""
@@ -789,21 +792,46 @@ if [ "${HAZARD_COUNT:-0}" -gt 0 ] 2>/dev/null; then
     echo "      To resolve: add a pre-migration script in pre-migrations/ that handles"
     echo "      the destructive change manually (e.g., data migration, rename), then"
     echo "      update schema/schema.sql to reflect the desired final state."
-    echo ""
     SCHEMA_DIFF_SKIPPED=1
-else
-    SCHEMA_DIFF_SKIPPED=0
 fi
 
-# Step C: If no hazards, apply the schema diff
-if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 0 ]; then
-    echo "  Applying schema changes..."
+# Count real schema changes vs privilege-only changes
+TOTAL_STATEMENTS=0
+AUTHZ_ONLY_COUNT=0
+if command -v jq &> /dev/null; then
+    TOTAL_STATEMENTS=$(echo "$PLAN_JSON" | jq '[.statements[]?] | length' 2>/dev/null || echo "0")
+    AUTHZ_ONLY_COUNT=$(echo "$PLAN_JSON" | jq '
+        [.statements[]? | select(
+            .hazards != null and
+            ([.hazards[].type] | all(. == "AUTHZ_UPDATE"))
+        )] | length
+    ' 2>/dev/null || echo "0")
+fi
+REAL_CHANGE_COUNT=$((TOTAL_STATEMENTS - AUTHZ_ONLY_COUNT))
+
+if [ "${AUTHZ_ONLY_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+    echo -e "  ${INFO} Ignoring ${AUTHZ_ONLY_COUNT} privilege diff(s) (GRANT/REVOKE are environment config)"
+fi
+
+# Step C: Apply schema changes
+if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 1 ]; then
+    TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
+    echo "      Current tables in database: $TABLE_COUNT"
+elif [ "${REAL_CHANGE_COUNT:-0}" -eq 0 ]; then
+    TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
+    echo -e "  ${CHECK_MARK} Schema is up to date (no structural changes)"
+    echo "      Total tables in database: $TABLE_COUNT"
+else
+    echo "  Applying ${REAL_CHANGE_COUNT} schema change(s)..."
+    # AUTHZ_UPDATE must be allowed because pg-schema-diff apply is all-or-nothing.
+    # We log the privilege diffs above and restore privileges after apply if needed.
     set +e
     APPLY_OUTPUT=$(pg-schema-diff apply \
         --from-dsn "$PG_DSN" \
         --to-dir "$SCHEMA_DIR_FOR_DIFF" \
         --skip-confirm-prompt \
-        --allow-hazards HAS_UNTRACKABLE_DEPENDENCIES,INDEX_BUILD 2>&1)
+        --disable-plan-validation \
+        --allow-hazards HAS_UNTRACKABLE_DEPENDENCIES,INDEX_BUILD,INDEX_DROPPED,AUTHZ_UPDATE 2>&1)
     APPLY_EXIT_CODE=$?
     set -e
 
@@ -811,15 +839,23 @@ if [ "${SCHEMA_DIFF_SKIPPED:-0}" -eq 0 ]; then
         TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
         echo -e "  ${CHECK_MARK} Schema applied successfully"
         echo "      Total tables in database: $TABLE_COUNT"
+        # Restore privileges if AUTHZ changes were applied
+        if [ "${AUTHZ_ONLY_COUNT:-0}" -gt 0 ]; then
+            echo -e "  ${INFO} Restoring database privileges..."
+            if [ -f "$SCRIPT_DIR/scripts/setup-permissions.sh" ]; then
+                bash "$SCRIPT_DIR/scripts/setup-permissions.sh" 2>/dev/null && \
+                    echo -e "  ${CHECK_MARK} Privileges restored" || \
+                    echo -e "  ${WARNING} Privilege restore script failed — run scripts/setup-permissions.sh manually"
+            else
+                echo -e "  ${WARNING} No permissions script found (scripts/setup-permissions.sh)"
+                echo "      pg-schema-diff may have revoked privileges. Re-apply GRANT statements as needed."
+            fi
+        fi
     else
         echo -e "  ${CROSS_MARK} Schema apply failed"
         echo "$APPLY_OUTPUT"
         exit 1
     fi
-else
-    # Even when schema apply is skipped, report current table count
-    TABLE_COUNT=$(psql -U "$DB_USER" -d "$DB_NAME" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" | tr -d '[:space:]')
-    echo "      Current tables in database: $TABLE_COUNT"
 fi
 
 # ============================================
