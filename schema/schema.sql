@@ -29,22 +29,16 @@ CREATE TYPE agent_chat_status AS ENUM (
 );
 
 --
--- Name: postgres:SEQUENCES:erato; Type: DEFAULT_PRIVILEGE; Schema: default_privileges; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO erato;
 
 --
--- Name: postgres:TABLES:erato; Type: DEFAULT_PRIVILEGE; Schema: default_privileges; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT DELETE, INSERT, SELECT, UPDATE ON TABLES TO erato;
 
 --
--- Name: postgres:TABLES:newhart; Type: DEFAULT_PRIVILEGE; Schema: default_privileges; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO newhart;
 
 --
 -- Name: agent_bootstrap_context; Type: TABLE; Schema: -; Owner: -
@@ -5336,4642 +5330,3714 @@ CREATE OR REPLACE VIEW workflow_steps_detail AS
   ORDER BY w.name, ws.step_order;
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: chat(p_message text, p_sender character varying); Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: send_agent_message(p_sender character varying, p_message text, p_channel character varying, p_mentions text[]); Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works_id_seq; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_actions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_aliases; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_bootstrap_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_chat_processed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_domains; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_jobs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_modifications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_spawns; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_system_config; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agent_turn_context; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ai_models; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: artwork; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: asset_classes; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: certificates; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: channel_activity; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: conversations; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_fact_conflicts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_facts_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: entity_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: event_projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: events_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: extraction_metrics; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: fact_change_log; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_entries; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: gambling_logs; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: git_issue_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: job_messages; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: lessons_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_authors; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: library_works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_consumed; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_queue; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: media_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_embeddings_archive; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: memory_type_priorities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: motivation_d100; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_analysis; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: music_library; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: place_properties; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: places; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: portfolio_snapshots; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: positions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: price_cache_v2; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_entities; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: project_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: projects; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: publications; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: ralph_sessions; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_history; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_preferences; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: shopping_wishlist; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: unsolved_problems; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vehicles; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: vocabulary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: work_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflows; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: works; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: delegation_knowledge; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_recent; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_chat_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agent_spawn_stats; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_agents; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_entity_facts; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_event_timeline; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_gambling_summary; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_queue_pending; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_media_with_tags; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_metamours; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_tasks; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_pending_test_failures; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_portfolio_allocation; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_ralph_active; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_relationships; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_task_tree; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: v_users; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
 --
--- Name: workflow_steps_detail; Type: PRIVILEGE; Schema: privileges; Owner: -
 --
 
 
